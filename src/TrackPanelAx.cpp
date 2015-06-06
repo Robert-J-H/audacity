@@ -302,6 +302,30 @@ wxAccStatus TrackPanelAx::GetName( int childId, wxString* name )
          {
             /* i18n-hint: The %d is replaced by th enumber of the track.*/
             name->Printf(_("Track %d"), TrackNum( t ) );
+            switch (t->GetKind())
+            {
+            case Track::Label:
+               name->Append(_(" Label Track"));
+               break;
+            case Track::Time:
+               name->Append(_(" Time Track"));
+               break;
+            case Track::Note:
+               name->Append(_(" Note Track"));
+               break;
+            default:
+               break;
+            }
+         }
+
+         if (t->GetKind() == Track::Wave)
+         {
+            if (t->GetLinked())
+               name->Append(_(" Stereo"));
+            else if (t->GetChannel() == Track::LeftChannel)
+               name->Append(_(" Left"));
+            else if (t->GetChannel() == Track::RightChannel)
+               name->Append(_( "Right"));
          }
 
          // LLL: Remove these during "refactor"
