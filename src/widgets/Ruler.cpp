@@ -1637,8 +1637,8 @@ AdornedRulerPanel::AdornedRulerPanel(wxWindow* parent,
                                      ViewInfo *viewinfo):
    wxPanel( parent, id, pos, size )
 {
-   SetLabel( _("Vertical Ruler") );
-   SetName( _("Vertical Ruler") );
+   SetLabel( _("Timeline") );
+   SetName( _("Timeline") );
 
    mLeftOffset = 0;
    mCurPos = -1;
