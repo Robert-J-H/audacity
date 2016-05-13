@@ -102,6 +102,8 @@ in the selection bar of Audacity.
 
     3758.5 seconds, "*.01000 frames|29.97002997" -> "112642.358 frames"
 
+  There's a special character 'P' that can be used after a "|"
+  to express the time as percentage of the project length (=100 %).
   Finally there is a further special character that can be used after a "|"
   and that is "N".  This applies special rule for NTSC drop-frame timecode.
 
@@ -117,6 +119,7 @@ in the selection bar of Audacity.
     as necessary. (Note: this no longer makes sense here and applies to a
     previous version).
   - The character '#' represents the current sample rate.
+  - The character 'P' represents the reciprocal of the current project length, multiplied by 100.
   - If a field specifier beings with a leading zero, it will be formatted
     with leading zeros, too - enough to display the maximum value
     that field can display.  So the number 7 in a field specified
@@ -130,6 +133,7 @@ in the selection bar of Audacity.
     decimal point) is treated as a scaling factor.  The number is
     multiplied by this factor before converting.
   - The special character 'N' after '|' is only used for NTSC drop-frame.
+  - The special character 'P' after '|' is only used for percentages.
 
 *******************************************************************//**
 
@@ -461,6 +465,15 @@ const BuiltinFormatString TimeConverterFormats[] =  {
     * translate 'frames' and leave the rest alone */
    _("01000,01000 frames|75")
    },
+
+   {
+      /* i18n-hint: Name of time display format that shows time as percentage of the project length */
+      _("percent"),
+      /* i18n-hint: Format string for displaying time as a percentage of the project length More than 100 % is possible.
+      * Change the decimal points for your locale. Don't change the numbers. */
+      // Scaling factor is 100 / project length 
+      _("*100.0100 %|P")
+   },
 };
 
 /** \brief array of formats the control knows about internally
@@ -568,6 +581,7 @@ NumericConverter::NumericConverter(Type type,
    mScalingFactor = 1.0f;
    mSampleRate = 1.0f;
    mNtscDrop = false;
+   mIsPercent = false;
 
    mFocusedDigit = 0;
 
@@ -592,8 +606,9 @@ void NumericConverter::ParseFormatString( const wxString & format)
    wxString numStr;
    wxString delimStr;
    unsigned int i;
-
+   
    mNtscDrop = false;
+   mIsPercent = false;
    for(i=0; i<format.Length(); i++) {
       bool handleDelim = false;
       bool handleNum = false;
@@ -603,6 +618,16 @@ void NumericConverter::ParseFormatString( const wxString & format)
 
          if (remainder == wxT("#"))
             mScalingFactor = mSampleRate;
+         else if (remainder == wxT("P")) {
+            mIsPercent = true;
+            mScalingFactor = 100.0;
+            AudacityProject *project = GetActiveProject();
+            if (project) {
+               TrackList *tracks = project->GetTracks();
+               if (tracks != NULL)
+                  mScalingFactor /= tracks->GetEndTime();
+            }
+         }
          else if (remainder == wxT("N")) {
             mNtscDrop = true;
          }
@@ -1993,7 +2018,7 @@ wxAccStatus NumericTextCtrlAx::GetName(int childId, wxString *name)
          if (mFields[field - 2].label == decimal) {
             int digits = mFields[field - 1].digits;
             if (digits == 2) {
-               if (isTime)
+               if (isTime && !mCtrl->mIsPercent)
                   label = _("centiseconds");
                else {
                   // other units

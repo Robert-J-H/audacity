@@ -119,7 +119,7 @@ protected:
    double         mScalingFactor;
    double         mSampleRate;
    bool           mNtscDrop;
-
+   bool mIsPercent;
    int            mFocusedDigit;
    DigitInfoArray mDigits;
 
