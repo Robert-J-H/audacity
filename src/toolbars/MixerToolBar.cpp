@@ -68,6 +68,7 @@ MixerToolBar::~MixerToolBar()
 void MixerToolBar::Create(wxWindow *parent)
 {
    ToolBar::Create(parent);
+   UpdatePrefs();
 }
 
 void MixerToolBar::Populate()

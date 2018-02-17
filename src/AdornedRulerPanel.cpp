@@ -1784,8 +1784,12 @@ void AdornedRulerPanel::OnAutoScroll(wxCommandEvent&)
       gPrefs->Write(wxT("/GUI/AutoScroll"), false);
    else
       gPrefs->Write(wxT("/GUI/AutoScroll"), true);
-   mProject->UpdatePrefs();
+
    gPrefs->Flush();
+
+   // to do: hide this call inside a Prefs Variable object
+   wxTheApp->AddPendingEvent(wxCommandEvent{
+      EVT_PREFS_UPDATE, ViewInfo::UpdateScrollPrefsId() });
 }
 
 

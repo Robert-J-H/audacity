@@ -24,6 +24,8 @@
 #include "widgets/wxPanelWrapper.h"
 #include "commands/CommandManagerWindowClasses.h"
 
+#include "Prefs.h"
+
 class wxArrayString;
 class wxBitmapButton;
 class wxMemoryDC;
@@ -191,7 +193,7 @@ public:
 class MixerBoardFrame;
 class TrackList;
 
-class MixerBoard final : public wxWindow
+class MixerBoard final : public wxWindow, private PrefsListener
 {
    friend class MixerBoardFrame;
 
@@ -201,7 +203,7 @@ public:
                const wxPoint& pos = wxDefaultPosition,
                const wxSize& size = wxDefaultSize);
 
-   void UpdatePrefs();
+   void UpdatePrefs() override;
 
    // Add clusters for any tracks we're not yet showing.
    // Update pointers for tracks we're aleady showing.

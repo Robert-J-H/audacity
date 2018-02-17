@@ -3218,15 +3218,22 @@ void TrackArt::DrawTimeTrack(TrackPanelDrawingContext &context,
         track->GetDisplayLog(), dbRange, lower, upper, false );
 }
 
+void TrackArtist::UpdateSelectedPrefs( int id )
+{
+   if( id == ShowClippingPrefsId())
+      mShowClipping = gPrefs->Read(wxT("/GUI/ShowClipping"), mShowClipping);
+}
+
 void TrackArtist::UpdatePrefs()
 {
    mdBrange = gPrefs->Read(ENV_DB_KEY, mdBrange);
-   mShowClipping = gPrefs->Read(wxT("/GUI/ShowClipping"), mShowClipping);
    mSampleDisplay = TracksPrefs::SampleViewChoice();
 
    mbShowTrackNameInWaveform =
       gPrefs->ReadBool(wxT("/GUI/ShowTrackNameInWaveform"), false);
    
+   UpdateSelectedPrefs(ShowClippingPrefsId() );
+
    SetColours(0);
 }
 
@@ -3423,5 +3430,11 @@ void TrackArt::DrawBackgroundWithSelection(
       dc->SetBrush(unselBrush);
       dc->DrawRectangle(rect);
    }
+}
+
+int TrackArtist::ShowClippingPrefsId()
+{
+   static int value = wxNewId();
+   return value;
 }
 

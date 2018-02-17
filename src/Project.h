@@ -24,6 +24,7 @@
 
 #include "ClientData.h"
 #include "Track.h"
+#include "Prefs.h"
 #include "SelectionState.h"
 #include "ViewInfo.h"
 #include "commands/CommandManagerWindowClasses.h"
@@ -171,11 +172,9 @@ class WaveTrack;
 
 class MenuManager;
 
-class PrefsListener;
-
 class AudacityProject;
 using AttachedObjects = ClientData::Site<
-   AudacityProject, PrefsListener
+   AudacityProject, ClientData::Base, ClientData::SkipCopying, std::shared_ptr
 >;
 
 class AUDACITY_DLL_API AudacityProject final : public wxFrame,
@@ -183,7 +182,8 @@ class AUDACITY_DLL_API AudacityProject final : public wxFrame,
                                      public SelectionBarListener,
                                      public SpectralSelectionBarListener,
                                      public XMLTagHandler,
-                                     public AudioIOListener
+                                     public AudioIOListener,
+                                     private PrefsListener
    , public AttachedObjects
 {
  public:
@@ -385,7 +385,7 @@ public:
    int GetProjectNumber(){ return mProjectNo;};
    static int CountUnnamed();
    static void RefreshAllTitles(bool bShowProjectNumbers );
-   void UpdatePrefs();
+   void UpdatePrefs() override;
    void UpdatePrefsVariables();
    void RedrawProject(const bool bForceWaveTracks = false);
    void RefreshCursor();
@@ -635,7 +635,6 @@ private:
    HistoryWindow *mHistoryWindow{};
    LyricsWindow* mLyricsWindow{};
    MixerBoardFrame* mMixerBoardFrame{};
-   MixerBoard* mMixerBoard{};
 
    Destroy_ptr<FreqWindow> mFreqWindow;
    Destroy_ptr<ContrastDialog> mContrastDialog;

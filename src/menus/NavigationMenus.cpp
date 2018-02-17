@@ -302,6 +302,7 @@ namespace NavigationActions {
 struct Handler
    : CommandHandlerObject // MUST be the first base class!
    , PrefsListener
+   , ClientData::Base
 {
 
 void OnPrevWindow(const CommandContext &context)

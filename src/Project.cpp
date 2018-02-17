@@ -1117,7 +1117,6 @@ AudacityProject::AudacityProject(wxWindow * parent, wxWindowID id,
                                              &mViewInfo,
                                              this,
                                              mRuler);
-   mTrackPanel->UpdatePrefs();
 
    mCursorOverlay = std::make_shared<EditCursorOverlay>(this);
 
@@ -1314,7 +1313,6 @@ void AudacityProject::UpdatePrefsVariables()
 {
    gPrefs->Read(wxT("/AudioFiles/ShowId3Dialog"), &mShowId3Dialog, true);
    gPrefs->Read(wxT("/AudioFiles/NormalizeOnLoad"),&mNormalizeOnLoad, false);
-   gPrefs->Read(wxT("/GUI/AutoScroll"), &mViewInfo.bUpdateTrackIndicator, true);
    gPrefs->Read(wxT("/GUI/EmptyCanBeDirty"), &mEmptyCanBeDirty, true );
 // DA: Default for DA is manual from internet.
 #ifdef EXPERIMENTAL_DA
@@ -1354,24 +1352,6 @@ void AudacityProject::UpdatePrefs()
    UpdatePrefsVariables();
 
    SetProjectTitle();
-
-   AttachedObjects::ForEach( std::mem_fn( &PrefsListener::UpdatePrefs ) );
-
-   GetMenuManager(*this).UpdatePrefs();
-
-   if (mTrackPanel) {
-      mTrackPanel->UpdatePrefs();
-   }
-   if (mMixerBoard)
-      mMixerBoard->UpdatePrefs();
-
-   if (mToolManager) {
-      mToolManager->UpdatePrefs();
-   }
-
-   if (mRuler) {
-      mRuler->UpdatePrefs();
-   }
 }
 
 void AudacityProject::SetMissingAliasFileDialog(wxDialog *dialog)
@@ -3450,8 +3430,6 @@ bool AudacityProject::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
             NumericConverter::LookupFormat( NumericConverter::BANDWIDTH, value ) );
    } // while
 
-   mViewInfo.UpdatePrefs();
-
    if (longVpos != 0) {
       // PRL: It seems this must happen after SetSnapTo
        mViewInfo.vpos = longVpos;
@@ -5480,10 +5458,8 @@ LyricsWindow* AudacityProject::GetLyricsWindow(bool create)
 
 MixerBoardFrame* AudacityProject::GetMixerBoardFrame(bool create)
 {
-   if (create && !mMixerBoardFrame) {
+   if (create && !mMixerBoardFrame)
       mMixerBoardFrame = safenew MixerBoardFrame{ this };
-      mMixerBoard = mMixerBoardFrame->mMixerBoard;
-   }
    return mMixerBoardFrame;
 }
 

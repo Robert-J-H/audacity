@@ -51,7 +51,6 @@ class ToolManager final : public wxEvtHandler, public wxEventFilter
    ~ToolManager();
 
    void LayoutToolBars();
-   void UpdatePrefs();
 
    bool IsDocked( int type );
 

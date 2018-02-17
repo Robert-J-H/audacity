@@ -25,6 +25,7 @@
 #include <wx/brush.h>
 #include <wx/pen.h>
 #include "audacity/Types.h"
+#include "Prefs.h"
 
 class wxRect;
 class wxHashTable;
@@ -151,12 +152,14 @@ namespace TrackArt {
                     const wxRect & rect, int x0, int y0, int cy, bool top);
 }
 
-class AUDACITY_DLL_API TrackArtist {
+class AUDACITY_DLL_API TrackArtist final : private PrefsListener {
 
 public:
    TrackArtist( TrackPanel *parent_ );
    ~TrackArtist();
    static TrackArtist *Get( TrackPanelDrawingContext & );
+
+   void SetColours(int iColorIndex);
 
    void SetBackgroundBrushes(wxBrush unselectedBrushIn, wxBrush selectedBrushIn,
                              wxPen unselectedPenIn, wxPen selectedPenIn) {
@@ -166,9 +169,9 @@ public:
      this->selectedPen = selectedPenIn;
    }
 
-   void SetColours(int iColorIndex);
-
-   void UpdatePrefs();
+   static int ShowClippingPrefsId();
+   void UpdatePrefs() override;
+   void UpdateSelectedPrefs( int id ) override;
 
    void UpdateVRuler(const Track *t, const wxRect & rect);
 

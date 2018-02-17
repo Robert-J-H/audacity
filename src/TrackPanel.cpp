@@ -264,6 +264,8 @@ TrackPanel::TrackPanel(wxWindow * parent, wxWindowID id,
    wxTheApp->Bind(EVT_AUDIOIO_PLAYBACK,
                      &TrackPanel::OnPlayback,
                      this);
+
+   UpdatePrefs();
 }
 
 
@@ -310,15 +312,7 @@ wxString TrackPanel::gSoloPref;
 
 void TrackPanel::UpdatePrefs()
 {
-   gPrefs->Read(wxT("/GUI/AutoScroll"), &mViewInfo->bUpdateTrackIndicator,
-      true);
    gPrefs->Read(wxT("/GUI/Solo"), &gSoloPref, wxT("Simple"));
-
-   mViewInfo->UpdatePrefs();
-
-   if (mTrackArtist) {
-      mTrackArtist->UpdatePrefs();
-   }
 
    // All vertical rulers must be recalculated since the minimum and maximum
    // frequences may have been changed.

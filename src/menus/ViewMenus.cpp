@@ -114,6 +114,9 @@ double GetZoomOfPreset( const AudacityProject &project, int preset )
 
 }
 
+// to do: hide this
+#include "TrackArtist.h"
+
 namespace ViewActions {
 
 // exported helper functions
@@ -367,7 +370,11 @@ void OnShowClipping(const CommandContext &context)
    gPrefs->Write(wxT("/GUI/ShowClipping"), checked);
    gPrefs->Flush();
    commandManager->Check(wxT("ShowClipping"), checked);
-   trackPanel->UpdatePrefs();
+
+   // to do: hide the emission of this event inside a PrefsVariable object
+   wxTheApp->AddPendingEvent(wxCommandEvent{
+      EVT_PREFS_UPDATE, TrackArtist::ShowClippingPrefsId() });
+
    trackPanel->Refresh(false);
 }
 
