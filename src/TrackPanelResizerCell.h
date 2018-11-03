@@ -34,6 +34,12 @@ protected:
    { return mpTrack.lock(); };
 
 private:
+
+   // TrackPanelDrawable implementation
+   void Draw(
+      TrackPanelDrawingContext &context,
+      const wxRect &rect, unsigned iPass ) override;
+
    std::weak_ptr<Track> mpTrack;
 
    std::weak_ptr<TrackPanelResizeHandle> mResizeHandle;
