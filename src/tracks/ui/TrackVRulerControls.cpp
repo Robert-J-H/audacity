@@ -16,8 +16,11 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "TrackView.h"
 
-#include "../../TrackPanel.h"
+#include "../../AColor.h"
 #include "../../Track.h"
+#include "../../TrackArtist.h"
+#include "../../TrackPanel.h"
+#include "../../TrackPanelDrawingContext.h"
 
 #include <wx/cursor.h>
 #include <wx/translation.h>
@@ -85,4 +88,30 @@ void TrackVRulerControls::DrawZooming
    rect.SetRight(panelRect.GetWidth() - kRightMargin);
 
    dc->DrawRectangle(rect);
+}
+
+void TrackVRulerControls::Draw(
+   TrackPanelDrawingContext &context,
+   const wxRect &rect_, unsigned iPass )
+{
+   // Common initial part of drawing for all subtypes
+   if ( iPass == TrackArtist::PassMargins ) {
+      auto rect = rect_;
+      --rect.width;
+      
+      auto dc = &context.dc;
+      
+      
+      // Paint the background
+      auto pTrack = FindTrack();
+      AColor::MediumTrackInfo(dc, pTrack && pTrack->GetSelected() );
+      dc->DrawRectangle( rect );
+      
+      // Stroke the left border
+      dc->SetPen(*wxBLACK_PEN);
+      {
+         const auto left = rect.GetLeft();
+         AColor::Line( *dc, left, rect.GetTop(), left, rect.GetBottom() );
+      }
+   }
 }
