@@ -12,9 +12,11 @@ Paul Licameli
 #define __AUDACITY_TRACK_PANEL_CELL__
 
 #include "MemoryX.h"
+#include "TrackPanelDrawable.h"
 
 class AudacityProject;
 struct HitTestPreview;
+struct TrackPanelDrawingContext;
 struct TrackPanelMouseEvent;
 struct TrackPanelMouseState;
 class ViewInfo;
@@ -29,9 +31,9 @@ using UIHandlePtr = std::shared_ptr<UIHandle>;
 #include <vector>
 
 /// \brief The TrackPanel is built up of nodes, subtrees of the CellularPanel's area
-/// This class itself has almost nothing in it.  Other classes derived from it
-/// build up the capabilities.
+/// Common base class for TrackPanelCell (leaf) and TrackPanelGroup (nonleaf)
 class AUDACITY_DLL_API /* not final */ TrackPanelNode
+   : public TrackPanelDrawable
 {
 public:
    TrackPanelNode();

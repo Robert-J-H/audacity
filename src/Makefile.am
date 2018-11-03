@@ -256,6 +256,7 @@ audacity_SOURCES = \
 	TrackPanelAx.cpp \
 	TrackPanelAx.h \
 	TrackPanelCell.h \
+	TrackPanelDrawable.h \
 	TrackPanelDrawingContext.h \
 	TrackPanelListener.h \
 	TrackPanelMouseEvent.h \
