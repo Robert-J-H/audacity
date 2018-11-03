@@ -94,6 +94,11 @@ protected:
 
    Track *GetTrack() const;
 
+   // TrackPanelDrawable implementation
+   void Draw(
+      TrackPanelDrawingContext &context,
+      const wxRect &rect, unsigned iPass ) override;
+
    std::weak_ptr<Track> mwTrack;
 
    std::weak_ptr<CloseButtonHandle> mCloseHandle;

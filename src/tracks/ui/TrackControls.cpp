@@ -13,11 +13,14 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "TrackButtonHandles.h"
 #include "TrackSelectHandle.h"
+#include "../../AColor.h"
 #include "../../HitTestResult.h"
 #include "../../RefreshCode.h"
 #include "../../Menus.h"
 #include "../../Project.h"
+#include "../../TrackArtist.h"
 #include "../../TrackPanel.h" // for TrackInfo
+#include "../../TrackPanelDrawingContext.h"
 #include "../../TrackPanelMouseEvent.h"
 #include "../../Track.h"
 #include <wx/textdlg.h>
@@ -291,4 +294,46 @@ unsigned TrackControls::DoContextMenu
       (pMenu.get(), buttonRect.x + 1, buttonRect.y + buttonRect.height + 1);
 
    return data.result;
+}
+
+void TrackControls::Draw(
+   TrackPanelDrawingContext &context,
+   const wxRect &rect, unsigned iPass )
+{
+   if ( iPass == TrackArtist::PassMargins ) {
+      // fill in label
+      auto dc = &context.dc;
+      const auto pTrack = FindTrack();
+      AColor::MediumTrackInfo( dc, pTrack && pTrack->GetSelected() );
+      dc->DrawRectangle( rect );
+   }
+
+   // Some old cut-and-paste legacy from TrackPanel.cpp here:
+#undef USE_BEVELS
+#ifdef USE_BEVELS
+   // This branch is not now used
+   // PRL:  todo:  banish magic numbers.
+   // PRL: vrul was the x coordinate of left edge of the vertical ruler.
+   // PRL: bHasMuteSolo was true iff the track was WaveTrack.
+   if( bHasMuteSolo )
+   {
+      int ylast = rect.height-20;
+      int ybutton = wxMin(32,ylast-17);
+      int ybuttonEnd = 67;
+
+      fill=wxRect( rect.x+1, rect.y+17, vrul-6, ybutton);
+      AColor::BevelTrackInfo( *dc, true, fill );
+   
+      if( ybuttonEnd < ylast ){
+         fill=wxRect( rect.x+1, rect.y+ybuttonEnd, fill.width, ylast - ybuttonEnd);
+         AColor::BevelTrackInfo( *dc, true, fill );
+      }
+   }
+   else
+   {
+      fill=wxRect( rect.x+1, rect.y+17, vrul-6, rect.height-37);
+      AColor::BevelTrackInfo( *dc, true, fill );
+   }
+#endif
+
 }
