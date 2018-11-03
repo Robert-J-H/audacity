@@ -129,6 +129,11 @@ private:
 
    void DoSetHeight(int h) override;
 
+   // TrackPanelDrawable implementation
+   void Draw(
+      TrackPanelDrawingContext &context,
+      const wxRect &rect, unsigned iPass ) override;
+
    // mBottom is the Y offset of pitch 0 (normally off screen)
    mutable int mBottom;
    int mBottomNote{ 24 };

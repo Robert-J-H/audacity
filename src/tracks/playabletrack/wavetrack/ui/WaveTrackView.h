@@ -31,6 +31,11 @@ public:
    std::shared_ptr<TrackVRulerControls> DoGetVRulerControls() override;
 
 private:
+   // TrackPanelDrawable implementation
+   void Draw(
+      TrackPanelDrawingContext &context,
+      const wxRect &rect, unsigned iPass ) override;
+
    friend WaveTrack;
 
    // Preserve some view state too for undo/redo purposes

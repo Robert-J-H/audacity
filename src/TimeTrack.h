@@ -23,6 +23,7 @@ class Envelope;
 class Ruler;
 class ZoomInfo;
 struct TrackPanelDrawingContext;
+class TimeTrackView;
 
 class TimeTrack final : public Track {
 
@@ -58,9 +59,6 @@ class TimeTrack final : public Track {
 
    double GetStartTime() const override { return 0.0; }
    double GetEndTime() const override { return 0.0; }
-
-   void Draw
-      ( TrackPanelDrawingContext &context, const wxRect & r ) const;
 
    // XMLTagHandler callback methods for loading and saving
 
@@ -152,6 +150,7 @@ private:
    Track::Holder Clone() const override;
 
    friend class TrackFactory;
+   friend TimeTrackView;
 
 protected:
    std::shared_ptr<TrackView> DoGetView() override;

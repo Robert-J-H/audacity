@@ -1028,7 +1028,6 @@ bool LabelTrackView::PasteSelectedText(double sel0, double sel1)
    return true;
 }
 
-
 /// @return true if the text data is available in the clipboard, false otherwise
 bool LabelTrackView::IsTextClipSupported()
 {
@@ -2039,4 +2038,12 @@ std::shared_ptr<LabelTrack> LabelTrackView::FindLabelTrack()
 std::shared_ptr<const LabelTrack> LabelTrackView::FindLabelTrack() const
 {
    return const_cast<LabelTrackView*>(this)->FindLabelTrack();
+}
+
+void LabelTrackView::Draw(
+   TrackPanelDrawingContext &context,
+   const wxRect &rect, unsigned iPass )
+{
+   if ( iPass == TrackArtist::PassTracks )
+      Draw( context, rect );
 }
