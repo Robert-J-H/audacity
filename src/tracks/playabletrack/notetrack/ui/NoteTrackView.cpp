@@ -155,6 +155,34 @@ const float NoteTrackView::ZoomStep = powf( 2.0f, 0.25f );
 namespace {
 
 /*
+const int octaveHeight = 62;
+const int blackPos[5] = { 6, 16, 32, 42, 52 };
+const int whitePos[7] = { 0, 9, 17, 26, 35, 44, 53 };
+const int notePos[12] = { 1, 6, 11, 16, 21, 27,
+                        32, 37, 42, 47, 52, 57 };
+
+// map pitch number to window coordinate of the *top* of the note
+// Note the "free" variable bottom, which is assumed to be a local
+// variable set to the offset of pitch 0 relative to the window
+#define IPITCH_TO_Y(t, p) (bottom - ((p) / 12) * octaveHeight - \
+                          notePos[(p) % 12] - (t)->GetPitchHeight())
+
+// GetBottom is called from a couple of places to compute the hypothetical
+// coordinate of the bottom of pitch 0 in window coordinates. See
+// IPITCH_TO_Y above, which computes coordinates relative to GetBottom()
+// Note the -NOTE_MARGIN, which leaves a little margin to draw notes that
+// are out of bounds. I'm not sure why the -2 is necessary.
+int TrackArt::GetBottom(NoteTrack *t, const wxRect &rect)
+{
+   int bottomNote = t->GetBottomNote();
+   int bottom = rect.y + rect.height - 2 - t->GetNoteMargin() +
+          ((bottomNote / 12) * octaveHeight + notePos[bottomNote % 12]);
+   return bottom;
+
+}
+*/
+
+/*
 Note: recall that Allegro attributes end in a type identifying letter.
 
 In addition to standard notes, an Allegro_Note can denote a graphic.

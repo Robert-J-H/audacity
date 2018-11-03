@@ -28,8 +28,6 @@
 
 class wxRect;
 
-class NoteTrack;
-class Ruler;
 class SelectedRegion;
 class Track;
 class TrackPanel;
@@ -37,9 +35,6 @@ struct TrackPanelDrawingContext;
 class ZoomInfo;
 
 namespace TrackArt {
-   void DrawVRuler(TrackPanelDrawingContext &context,
-                   const Track *t, const wxRect & rect, bool bSelected );
-
    // Helper: draws the "sync-locked" watermark tiled to a rectangle
    void DrawSyncLockTiles(
       TrackPanelDrawingContext &context, const wxRect &rect );
@@ -49,10 +44,6 @@ namespace TrackArt {
          const wxRect &rect, const Track *track,
          const wxBrush &selBrush, const wxBrush &unselBrush,
          bool useSelection = true);
-
-#ifdef USE_MIDI
-   int GetBottom(NoteTrack *t, const wxRect &rect);
-#endif // USE_MIDI
 
    void DrawNegativeOffsetTrackArrows( TrackPanelDrawingContext &context,
                                        const wxRect & rect );
@@ -66,6 +57,7 @@ public:
       PassTracks,
       PassMargins,
       PassBorders,
+      PassControls,
       
       NPasses
    };
@@ -120,8 +112,6 @@ public:
    wxPen clippedPen;
    wxPen muteClippedPen;
    wxPen blankSelectedPen;
-
-   std::unique_ptr<Ruler> vruler;
 
 #ifdef EXPERIMENTAL_FFT_Y_GRID
    bool fftYGridOld;
