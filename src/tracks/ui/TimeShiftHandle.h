@@ -104,13 +104,16 @@ public:
 
    Result Cancel(AudacityProject *pProject) override;
 
-   void DrawExtras
-      (DrawingPass pass,
-       wxDC * dc, const wxRegion &, const wxRect &panelRect) override;
-
    bool StopsOnKeystroke() override { return true; }
 
 private:
+   void Draw(
+      TrackPanelDrawingContext &context,
+      const wxRect &rect, unsigned iPass ) override;
+
+   wxRect DrawingArea(
+      const wxRect &rect, const wxRect &panelRect, unsigned iPass ) override;
+
    std::shared_ptr<Track> mCapturedTrack;
    wxRect mRect{};
 
