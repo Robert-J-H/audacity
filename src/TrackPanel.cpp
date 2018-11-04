@@ -971,8 +971,6 @@ void TrackPanel::DrawEverythingElse(TrackPanelDrawingContext &context,
    }
 
    auto target = Target();
-   if (target)
-      target->DrawExtras(UIHandle::Cells, dc, region, clip);
 
    // Paint over the part below the tracks
    trackRect.y += trackRect.height;
