@@ -74,10 +74,6 @@ namespace TrackInfo
 
    unsigned MinimumTrackHeight();
 
-   void DrawItems
-      ( TrackPanelDrawingContext &context,
-        const wxRect &rect, const Track &track );
-
    void CloseTitleDrawFunction
       ( TrackPanelDrawingContext &context,
         const wxRect &rect, const Track *pTrack );
