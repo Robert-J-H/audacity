@@ -1127,7 +1127,6 @@ void TrackPanel::DrawEverythingElse(TrackPanelDrawingContext &context,
          focusRect = trackRect;
          focusRect.height -= kSeparatorThickness;
       }
-      DrawOutside(context, leaderTrack, trackRect);
 
       // Believe it or not, we can speed up redrawing if we don't
       // redraw the vertical ruler when only the waveform data has
@@ -1637,37 +1636,6 @@ void TrackInfo::Status2DrawFunction
    auto format = wt ? wt->GetSampleFormat() : floatSample;
    auto s = GetSampleFormatStr(format);
    StatusDrawFunction( s, dc, rect );
-}
-
-void TrackPanel::DrawOutside
-(TrackPanelDrawingContext &context,
- const Track * t, const wxRect & rec)
-{
-   // Given rectangle excludes left and right margins, and encompasses a
-   // channel group of tracks, plus the resizer area below
-
-   auto dc = &context.dc;
-
-   // Start with whole track rect
-   wxRect rect = rec;
-
-   // Now exclude the resizer below
-   rect.height -= kSeparatorThickness;
-
-   // Vaughan, 2010-08-24: No longer doing this.
-   // Draw sync-lock tiles in ruler area.
-   //if (t->IsSyncLockSelected()) {
-   //   wxRect tileFill = rect;
-   //   tileFill.x = GetVRulerOffset();
-   //   tileFill.width = GetVRulerWidth();
-   //   TrackArt::DrawSyncLockTiles(dc, tileFill);
-   //}
-
-   // Draw things within the track control panel
-   rect.width = kTrackInfoWidth;
-   TrackInfo::DrawItems( context, rect, *t );
-
-   //mTrackInfo.DrawBordersWithin( dc, rect, *t );
 }
 
 void TrackPanel::SetBackgroundCell
@@ -2398,59 +2366,6 @@ void TrackInfo::SetTrackInfoFont(wxDC * dc)
 {
    dc->SetFont(gFont);
 }
-
-#if 0
-void TrackInfo::DrawBordersWithin
-   ( wxDC* dc, const wxRect & rect, const Track &track ) const
-{
-   AColor::Dark(dc, false); // same color as border of toolbars (ToolBar::OnPaint())
-
-   // below close box and title bar
-   wxRect buttonRect;
-   GetTitleBarRect( rect, buttonRect );
-   AColor::Line
-      (*dc, rect.x,              buttonRect.y + buttonRect.height,
-            rect.width - 1,      buttonRect.y + buttonRect.height);
-
-   // between close box and title bar
-   AColor::Line
-      (*dc, buttonRect.x, buttonRect.y,
-            buttonRect.x, buttonRect.y + buttonRect.height - 1);
-
-   GetMuteSoloRect( rect, buttonRect, false, true, &track );
-
-   bool bHasMuteSolo = dynamic_cast<const PlayableTrack*>( &track ) != NULL;
-   if( bHasMuteSolo && !TrackInfo::HideTopItem( rect, buttonRect ) )
-   {
-      // above mute/solo
-      AColor::Line
-         (*dc, rect.x,          buttonRect.y,
-               rect.width - 1,  buttonRect.y);
-
-      // between mute/solo
-      // Draw this little line; if there is no solo, wide mute button will
-      // overpaint it later:
-      AColor::Line
-         (*dc, buttonRect.x + buttonRect.width, buttonRect.y,
-               buttonRect.x + buttonRect.width, buttonRect.y + buttonRect.height - 1);
-
-      // below mute/solo
-      AColor::Line
-         (*dc, rect.x,          buttonRect.y + buttonRect.height,
-               rect.width - 1,  buttonRect.y + buttonRect.height);
-   }
-
-   // left of and above minimize button
-   wxRect minimizeRect;
-   this->GetMinimizeRect(rect, minimizeRect);
-   AColor::Line
-      (*dc, minimizeRect.x - 1, minimizeRect.y,
-            minimizeRect.x - 1, minimizeRect.y + minimizeRect.height - 1);
-   AColor::Line
-      (*dc, minimizeRect.x,                          minimizeRect.y - 1,
-            minimizeRect.x + minimizeRect.width - 1, minimizeRect.y - 1);
-}
-#endif
 
 namespace {
 unsigned DefaultTrackHeight( const TCPLines &topLines )

@@ -296,6 +296,60 @@ unsigned TrackControls::DoContextMenu
    return data.result;
 }
 
+// Some old cut-and-paste legacy from TrackPanel.cpp here:
+#if 0
+void TrackInfo::DrawBordersWithin
+   ( wxDC* dc, const wxRect & rect, const Track &track ) const
+{
+   AColor::Dark(dc, false); // same color as border of toolbars (ToolBar::OnPaint())
+
+   // below close box and title bar
+   wxRect buttonRect;
+   GetTitleBarRect( rect, buttonRect );
+   AColor::Line
+      (*dc, rect.x,              buttonRect.y + buttonRect.height,
+            rect.width - 1,      buttonRect.y + buttonRect.height);
+
+   // between close box and title bar
+   AColor::Line
+      (*dc, buttonRect.x, buttonRect.y,
+            buttonRect.x, buttonRect.y + buttonRect.height - 1);
+
+   GetMuteSoloRect( rect, buttonRect, false, true, &track );
+
+   bool bHasMuteSolo = dynamic_cast<const PlayableTrack*>( &track ) != NULL;
+   if( bHasMuteSolo && !TrackInfo::HideTopItem( rect, buttonRect ) )
+   {
+      // above mute/solo
+      AColor::Line
+         (*dc, rect.x,          buttonRect.y,
+               rect.width - 1,  buttonRect.y);
+
+      // between mute/solo
+      // Draw this little line; if there is no solo, wide mute button will
+      // overpaint it later:
+      AColor::Line
+         (*dc, buttonRect.x + buttonRect.width, buttonRect.y,
+               buttonRect.x + buttonRect.width, buttonRect.y + buttonRect.height - 1);
+
+      // below mute/solo
+      AColor::Line
+         (*dc, rect.x,          buttonRect.y + buttonRect.height,
+               rect.width - 1,  buttonRect.y + buttonRect.height);
+   }
+
+   // left of and above minimize button
+   wxRect minimizeRect;
+   this->GetMinimizeRect(rect, minimizeRect);
+   AColor::Line
+      (*dc, minimizeRect.x - 1, minimizeRect.y,
+            minimizeRect.x - 1, minimizeRect.y + minimizeRect.height - 1);
+   AColor::Line
+      (*dc, minimizeRect.x,                          minimizeRect.y - 1,
+            minimizeRect.x + minimizeRect.width - 1, minimizeRect.y - 1);
+}
+#endif
+
 void TrackControls::Draw(
    TrackPanelDrawingContext &context,
    const wxRect &rect, unsigned iPass )

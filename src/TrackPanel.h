@@ -142,9 +142,6 @@ namespace TrackInfo
    void SetTrackInfoFont(wxDC *dc);
 
 
-   // void DrawBordersWithin(
-   //   wxDC * dc, const wxRect & rect, const Track &track ) const;
-
    void GetCloseBoxHorizontalBounds( const wxRect & rect, wxRect &dest );
    void GetCloseBoxRect(const wxRect & rect, wxRect &dest);
 
@@ -377,9 +374,6 @@ protected:
    void DrawEverythingElse(TrackPanelDrawingContext &context,
                            const wxRegion & region,
                            const wxRect & clip);
-   void DrawOutside(
-      TrackPanelDrawingContext &context,
-      const Track *leaderTrack, const wxRect & teamRect);
 
    void HighlightFocusedTrack (wxDC* dc, const wxRect &rect);
 
