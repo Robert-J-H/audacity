@@ -1110,19 +1110,20 @@ void TrackInfo::Status2DrawFunction
 
 void TrackControls::Draw(
    TrackPanelDrawingContext &context,
-   const wxRect &rect, unsigned iPass )
+   const wxRect &rect_, unsigned iPass )
 {
    if ( iPass == TrackArtist::PassMargins ) {
       // fill in label
       auto dc = &context.dc;
       const auto pTrack = FindTrack();
       AColor::MediumTrackInfo( dc, pTrack && pTrack->GetSelected() );
-      dc->DrawRectangle( rect );
+      dc->DrawRectangle( rect_ );
    }
    
    if ( iPass == TrackArtist::PassControls ) {
-      // rectangle?
       auto pTrack = FindTrack();
+      // First counteract DrawingArea() correction
+      wxRect rect{ rect_.x, rect_.y, rect_.width - 1, rect_.height };
       if (pTrack)
          DrawItems( context, rect, GetControlLines(), *pTrack );
    }
@@ -1155,6 +1156,16 @@ void TrackControls::Draw(
    }
 #endif
 
+}
+
+wxRect TrackControls::DrawingArea(
+   const wxRect &rect, const wxRect &, unsigned iPass )
+{
+   if ( iPass == TrackArtist::PassControls )
+      // Some bevels spill out right
+      return { rect.x, rect.y, rect.width + 1, rect.height };
+   else
+      return rect;
 }
 
 unsigned TrackInfo::MinimumTrackHeight()

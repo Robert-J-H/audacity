@@ -110,6 +110,9 @@ protected:
       TrackPanelDrawingContext &context,
       const wxRect &rect, unsigned iPass ) override;
 
+   wxRect DrawingArea(
+      const wxRect &rect, const wxRect &panelRect, unsigned iPass ) override;
+
    std::weak_ptr<Track> mwTrack;
 
    std::weak_ptr<CloseButtonHandle> mCloseHandle;
