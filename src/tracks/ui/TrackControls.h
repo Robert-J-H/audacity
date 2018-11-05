@@ -48,7 +48,9 @@ public:
 
    void Reparent( Track &parent );
 
+   // an entry in a table describing the controls in a Track Control Panel
    struct TCPLine {
+
       enum : unsigned {
          // The sequence is not significant, just keep bits distinct
          kItemBarButtons       = 1 << 0,
