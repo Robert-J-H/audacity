@@ -2305,7 +2305,13 @@ std::unique_ptr<LWSlider>
 
 }
 
+#include "tracks/playabletrack/notetrack/ui/NoteTrackControls.h"
+#include "tracks/playabletrack/wavetrack/ui/WaveTrackControls.h"
+
 void TrackInfo::ReCreateSliders( wxWindow *pParent ){
+   WaveTrackControls::ReCreateSliders( pParent );
+   NoteTrackControls::ReCreateSliders( pParent );
+
    const wxPoint point{ 0, 0 };
    wxRect sliderRect;
    GetGainRect(point, sliderRect);

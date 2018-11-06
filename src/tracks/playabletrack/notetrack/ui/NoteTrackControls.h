@@ -40,6 +40,8 @@ public:
        const AudacityProject *pProject) override;
 
    PopupMenuTable *GetMenuExtension(Track *pTrack) override;
+
+   static void ReCreateSliders( wxWindow *pParent );
 };
 
 #endif
