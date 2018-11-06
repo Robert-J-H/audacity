@@ -780,23 +780,11 @@ void TrackPanel::OnTrackListDeletion(wxEvent & e)
    e.Skip();
 }
 
-struct TrackInfo::TCPLine {
-   using DrawFunction = void (*)(
-      TrackPanelDrawingContext &context,
-      const wxRect &rect,
-      const Track *maybeNULL
-   );
-
-   unsigned items; // a bitwise OR of values of the enum above
-   int height;
-   int extraSpace;
-   DrawFunction drawFunction;
-};
+#define RANGE(array) (array), (array) + (WXSIZEOF(array))
+using TCPLine = TrackControls::TCPLine;
+using TCPLines = TrackControls::TCPLines;
 
 namespace {
-
-#define RANGE(array) (array), (array) + sizeof(array)/sizeof(*(array))
-using TCPLines = std::vector< TrackInfo::TCPLine >;
 
 enum : unsigned {
    // The sequence is not significant, just keep bits distinct
@@ -849,12 +837,12 @@ enum : unsigned {
 #define COMMON_ITEMS \
    TITLE_ITEMS
 
-const TrackInfo::TCPLine defaultCommonTrackTCPLines[] = {
+const TCPLine defaultCommonTrackTCPLines[] = {
    COMMON_ITEMS
 };
 TCPLines commonTrackTCPLines{ RANGE(defaultCommonTrackTCPLines) };
 
-const TrackInfo::TCPLine defaultWaveTrackTCPLines[] = {
+const TCPLine defaultWaveTrackTCPLines[] = {
    COMMON_ITEMS
    MUTE_SOLO_ITEMS(2)
    { kItemGain, kTrackInfoSliderHeight, kTrackInfoSliderExtra,
@@ -865,7 +853,7 @@ const TrackInfo::TCPLine defaultWaveTrackTCPLines[] = {
 };
 TCPLines waveTrackTCPLines{ RANGE(defaultWaveTrackTCPLines) };
 
-const TrackInfo::TCPLine defaultNoteTrackTCPLines[] = {
+const TCPLine defaultNoteTrackTCPLines[] = {
    COMMON_ITEMS
 #ifdef EXPERIMENTAL_MIDI_OUT
    MUTE_SOLO_ITEMS(0)
@@ -930,7 +918,7 @@ std::pair< int, int > CalcItemY( const TCPLines &lines, unsigned iItem )
 
 // Items for the bottom of the panel, listed bottom-upwards
 // As also with the top items, the extra space is below the item
-const TrackInfo::TCPLine defaultCommonTrackTCPBottomLines[] = {
+const TCPLine defaultCommonTrackTCPBottomLines[] = {
    // The '0' avoids impinging on bottom line of TCP
    // Use -1 if you do want to do so.
    { kItemSyncLock | kItemMinimize, kTrackInfoBtnSize, 0,
@@ -1237,20 +1225,11 @@ void TrackPanel::DrawEverythingElse(TrackPanelDrawingContext &context,
 // Make this #include go away!
 #include "tracks/ui/TrackControls.h"
 
-void TrackInfo::DrawItems
-( TrackPanelDrawingContext &context,
-  const wxRect &rect, const Track &track  )
-{
-   const auto topLines = getTCPLines( track );
-   const auto bottomLines = commonTrackTCPBottomLines;
-   DrawItems
-      ( context, rect, &track, topLines, bottomLines );
-}
-
-void TrackInfo::DrawItems
+namespace {
+void DrawItems_
 ( TrackPanelDrawingContext &context,
   const wxRect &rect, const Track *pTrack,
-  const std::vector<TCPLine> &topLines, const std::vector<TCPLine> &bottomLines )
+  const TCPLines &topLines, const TCPLines &bottomLines )
 {
    auto dc = &context.dc;
    TrackInfo::SetTrackInfoFont(dc);
@@ -1282,6 +1261,17 @@ void TrackInfo::DrawItems
          }
       }
    }
+}
+}
+
+void TrackInfo::DrawItems
+( TrackPanelDrawingContext &context,
+ const wxRect &rect, const Track &track  )
+{
+   const auto &topLines = getTCPLines( track );
+   const auto &bottomLines = commonTrackTCPBottomLines;
+   DrawItems_
+   ( context, rect, &track, topLines, bottomLines );
 }
 
 #include "tracks/ui/TrackButtonHandles.h"

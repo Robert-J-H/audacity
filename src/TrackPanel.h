@@ -74,17 +74,9 @@ namespace TrackInfo
 
    unsigned MinimumTrackHeight();
 
-   struct TCPLine;
-
    void DrawItems
       ( TrackPanelDrawingContext &context,
         const wxRect &rect, const Track &track );
-
-   void DrawItems
-      ( TrackPanelDrawingContext &context,
-        const wxRect &rect, const Track *pTrack,
-        const std::vector<TCPLine> &topLines,
-        const std::vector<TCPLine> &bottomLines );
 
    void CloseTitleDrawFunction
       ( TrackPanelDrawingContext &context,

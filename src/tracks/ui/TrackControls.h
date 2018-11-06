@@ -21,6 +21,7 @@ class CloseButtonHandle;
 class MenuButtonHandle;
 class MinimizeButtonHandle;
 class SelectButtonHandle;
+struct TrackPanelDrawingContext;
 class TrackSelectHandle;
 
 class TrackControls /* not final */ : public CommonTrackPanelCell
@@ -46,6 +47,20 @@ public:
    };
 
    void Reparent( Track &parent );
+
+   struct TCPLine {
+      using DrawFunction = void (*)(
+         TrackPanelDrawingContext &context,
+         const wxRect &rect,
+         const Track *maybeNULL
+      );
+
+      unsigned items; // a bitwise OR of values of the enum above
+      int height;
+      int extraSpace;
+      DrawFunction drawFunction;
+   };
+   using TCPLines = std::vector< TCPLine >;
 
 protected:
    std::shared_ptr<Track> DoFindTrack() override;
