@@ -169,10 +169,6 @@ namespace TrackInfo
 
    void GetPanRect(const wxPoint & topLeft, wxRect &dest);
 
-#ifdef EXPERIMENTAL_MIDI_OUT
-   void GetVelocityRect(const wxPoint & topLeft, wxRect &dest);
-#endif
-
    void GetMinimizeHorizontalBounds( const wxRect &rect, wxRect &dest );
    void GetMinimizeRect(const wxRect & rect, wxRect &dest);
 
@@ -201,17 +197,10 @@ namespace TrackInfo
       (const wxRect &sliderRect, const WaveTrack *t, bool captured,
        wxWindow *pParent);
 
-#ifdef EXPERIMENTAL_MIDI_OUT
-   LWSlider * VelocitySlider
-      (const wxRect &sliderRect, const NoteTrack *t, bool captured,
-       wxWindow *pParent);
-#endif
-
    // Non-member, namespace function relying on TrackPanel to invoke it
    // when it handles preference update events
    void UpdatePrefs( wxWindow *pParent );
 };
-
 
 const int DragThreshold = 3;// Anything over 3 pixels is a drag, else a click.
 

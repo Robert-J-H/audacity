@@ -103,4 +103,10 @@ protected:
    std::weak_ptr<TrackSelectHandle> mSelectHandle;
 };
 
+extern const TrackControls::TCPLines noteTrackTCPLines;
+extern const TrackControls::TCPLines waveTrackTCPLines;
+
+extern std::pair< int, int >
+CalcItemY( const TrackControls::TCPLines &lines, unsigned iItem );
+
 #endif

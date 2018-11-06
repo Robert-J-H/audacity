@@ -13,7 +13,11 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "../../../ui/TrackControls.h"
 #include "../../../../MemoryX.h"
+#include "../../../../Experimental.h"
+
+class LWSlider;
 class MuteButtonHandle;
+class NoteTrack;
 class SoloButtonHandle;
 class NoteTrackButtonHandle;
 class VelocitySliderHandle;
@@ -30,6 +34,15 @@ class NoteTrackControls : public TrackControls
    std::weak_ptr<VelocitySliderHandle> mVelocityHandle;
 
 public:
+
+#ifdef EXPERIMENTAL_MIDI_OUT
+   static LWSlider * VelocitySlider
+   (const wxRect &sliderRect, const NoteTrack *t, bool captured,
+    wxWindow *pParent);
+
+   static void GetVelocityRect(const wxPoint & topLeft, wxRect &dest);
+#endif
+   
    explicit
    NoteTrackControls( std::shared_ptr<Track> pTrack )
       : TrackControls( pTrack ) {}

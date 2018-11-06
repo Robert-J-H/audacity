@@ -336,17 +336,6 @@ LWSlider *TrackPanel::PanSlider( const WaveTrack *wt )
    return TrackInfo::PanSlider(sliderRect, wt, false, this);
 }
 
-#ifdef EXPERIMENTAL_MIDI_OUT
-LWSlider *TrackPanel::VelocitySlider( const NoteTrack *nt )
-{
-   auto pControls = &TrackControls::Get( *nt );
-   auto rect = FindRect( *pControls );
-   wxRect sliderRect;
-   TrackInfo::GetVelocityRect( rect.GetTopLeft(), sliderRect );
-   return TrackInfo::VelocitySlider(sliderRect, nt, false, this);
-}
-#endif
-
 wxString TrackPanel::gSoloPref;
 
 void TrackPanel::UpdatePrefs()
@@ -833,7 +822,6 @@ const TCPLine defaultWaveTrackTCPLines[] = {
      &TrackInfo::PanSliderDrawFunction },
    STATUS_ITEMS
 };
-TCPLines waveTrackTCPLines{ RANGE(defaultWaveTrackTCPLines) };
 
 const TCPLine defaultNoteTrackTCPLines[] = {
    COMMON_ITEMS
@@ -845,7 +833,6 @@ const TCPLine defaultNoteTrackTCPLines[] = {
      &TrackInfo::VelocitySliderDrawFunction },
 #endif
 };
-TCPLines noteTrackTCPLines{ RANGE(defaultNoteTrackTCPLines) };
 
 int totalTCPLines( const TCPLines &lines, bool omitLastExtra )
 {
@@ -862,7 +849,7 @@ int totalTCPLines( const TCPLines &lines, bool omitLastExtra )
 
 const TCPLines &getTCPLines( const Track &track )
 {
-   auto lines = track.TypeSwitch< TCPLines * >(
+   auto lines = track.TypeSwitch< const TCPLines * >(
 #ifdef USE_MIDI
       [](const NoteTrack*){
          return &noteTrackTCPLines;
@@ -880,22 +867,6 @@ const TCPLines &getTCPLines( const Track &track )
       return *lines;
 
    return commonTrackTCPLines;
-}
-
-// return y value and height
-std::pair< int, int > CalcItemY( const TCPLines &lines, unsigned iItem )
-{
-   int y = 0;
-   auto pLines = lines.begin();
-   while ( pLines != lines.end() &&
-           0 == (pLines->items & iItem) ) {
-      y += pLines->height + pLines->extraSpace;
-      ++pLines;
-   }
-   int height = 0;
-   if ( pLines != lines.end() )
-      height = pLines->height;
-   return { y, height };
 }
 
 // Items for the bottom of the panel, listed bottom-upwards
@@ -925,6 +896,25 @@ std::pair< int, int > CalcBottomItemY
 }
 
 }
+
+// return y value and height
+std::pair< int, int > CalcItemY( const TCPLines &lines, unsigned iItem )
+{
+   int y = 0;
+   auto pLines = lines.begin();
+   while ( pLines != lines.end() &&
+           0 == (pLines->items & iItem) ) {
+      y += pLines->height + pLines->extraSpace;
+      ++pLines;
+   }
+   int height = 0;
+   if ( pLines != lines.end() )
+      height = pLines->height;
+   return { y, height };
+}
+
+const TCPLines noteTrackTCPLines{ RANGE(defaultNoteTrackTCPLines) };
+const TCPLines waveTrackTCPLines{ RANGE(defaultWaveTrackTCPLines) };
 
 unsigned TrackInfo::MinimumTrackHeight()
 {
@@ -1499,6 +1489,7 @@ void TrackInfo::GainSliderDrawFunction
 }
 
 #ifdef EXPERIMENTAL_MIDI_OUT
+#include "tracks/playabletrack/notetrack/ui/NoteTrackControls.h"
 #include "tracks/playabletrack/notetrack/ui/NoteTrackSliderHandles.h"
 void TrackInfo::VelocitySliderDrawFunction
 ( TrackPanelDrawingContext &context,
@@ -1509,7 +1500,7 @@ void TrackInfo::VelocitySliderDrawFunction
    bool hit = target && target->GetTrack().get() == pTrack;
    bool captured = hit && target->IsClicked();
    SliderDrawFunction<NoteTrack>
-      ( &TrackInfo::VelocitySlider, dc, rect, pTrack, captured, hit);
+      ( &NoteTrackControls::VelocitySlider, dc, rect, pTrack, captured, hit);
 }
 #endif
 
@@ -2297,14 +2288,11 @@ std::unique_ptr<LWSlider>
    , gPanCaptured
    , gGain
    , gPan
-#ifdef EXPERIMENTAL_MIDI_OUT
-   , gVelocityCaptured
-   , gVelocity
-#endif
 ;
 
 }
 
+// TODO:  remove this compilation dependency
 #include "tracks/playabletrack/notetrack/ui/NoteTrackControls.h"
 #include "tracks/playabletrack/wavetrack/ui/WaveTrackControls.h"
 
@@ -2345,23 +2333,6 @@ void TrackInfo::ReCreateSliders( wxWindow *pParent ){
                                wxSize(sliderRect.width, sliderRect.height),
                                PAN_SLIDER);
    gPanCaptured->SetDefaultValue(defPos);
-
-#ifdef EXPERIMENTAL_MIDI_OUT
-   GetVelocityRect(point, sliderRect);
-
-   /* i18n-hint: Title of the Velocity slider, used to adjust the volume of note tracks */
-   gVelocity = std::make_unique<LWSlider>(pParent, _("Velocity"),
-      wxPoint(sliderRect.x, sliderRect.y),
-      wxSize(sliderRect.width, sliderRect.height),
-      VEL_SLIDER);
-   gVelocity->SetDefaultValue(0.0);
-   gVelocityCaptured = std::make_unique<LWSlider>(pParent, _("Velocity"),
-      wxPoint(sliderRect.x, sliderRect.y),
-      wxSize(sliderRect.width, sliderRect.height),
-      VEL_SLIDER);
-   gVelocityCaptured->SetDefaultValue(0.0);
-#endif
-
 }
 
 void TrackInfo::GetCloseBoxHorizontalBounds( const wxRect & rect, wxRect &dest )
@@ -2471,16 +2442,6 @@ void TrackInfo::GetPanRect(const wxPoint &topleft, wxRect & dest)
    auto results = CalcItemY( waveTrackTCPLines, TCPLine::kItemPan );
    dest.y = topleft.y + results.first;
 }
-
-#ifdef EXPERIMENTAL_MIDI_OUT
-void TrackInfo::GetVelocityRect(const wxPoint &topleft, wxRect & dest)
-{
-   GetSliderHorizontalBounds( topleft, dest );
-   auto results = CalcItemY( noteTrackTCPLines, TCPLine::kItemVelocity );
-   dest.y = topleft.y + results.first;
-   dest.height = results.second;
-}
-#endif
 
 void TrackInfo::GetMinimizeHorizontalBounds( const wxRect &rect, wxRect &dest )
 {
@@ -2718,25 +2679,6 @@ LWSlider * TrackInfo::PanSlider
       &ProjectWindow::Get( *::GetActiveProject() ) );
    return slider;
 }
-
-#ifdef EXPERIMENTAL_MIDI_OUT
-LWSlider * TrackInfo::VelocitySlider
-(const wxRect &sliderRect, const NoteTrack *t, bool captured, wxWindow *pParent)
-{
-   wxPoint pos = sliderRect.GetPosition();
-   float velocity = t ? t->GetVelocity() : 0.0;
-
-   gVelocity->Move(pos);
-   gVelocity->Set(velocity);
-   gVelocityCaptured->Move(pos);
-   gVelocityCaptured->Set(velocity);
-
-   auto slider = (captured ? gVelocityCaptured : gVelocity).get();
-   slider->SetParent( pParent ? pParent :
-      &ProjectWindow::Get( *::GetActiveProject() ) );
-   return slider;
-}
-#endif
 
 void TrackInfo::UpdatePrefs( wxWindow *pParent )
 {
