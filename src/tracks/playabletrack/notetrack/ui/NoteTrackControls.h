@@ -48,6 +48,8 @@ public:
       : TrackControls( pTrack ) {}
    ~NoteTrackControls();
 
+   static unsigned DefaultNoteTrackHeight();
+
    std::vector<UIHandlePtr> HitTest
       (const TrackPanelMouseState &state,
        const AudacityProject *pProject) override;
@@ -55,6 +57,10 @@ public:
    PopupMenuTable *GetMenuExtension(Track *pTrack) override;
 
    static void ReCreateSliders( wxWindow *pParent );
+   
+private:
+   // TrackControls implementation
+   const TCPLines &GetControlLines() const override;
 };
 
 #endif

@@ -81,6 +81,15 @@ public:
    };
    using TCPLines = std::vector< TCPLine >;
 
+   // Virtual function retrieves a description of control layout appopriate
+   // to the subclass of track
+   virtual const TCPLines &GetControlLines() const;
+
+   static unsigned FindDefaultTrackHeight( const TCPLines &topLines );
+
+   // Compute default track height from the control lines
+   unsigned DefaultTrackHeight() const;
+
 protected:
    std::shared_ptr<Track> DoFindTrack() override;
 

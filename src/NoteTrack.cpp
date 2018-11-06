@@ -34,6 +34,7 @@
 #include "Internat.h"
 #include "Prefs.h"
 #include "effects/TimeWarper.h"
+#include "tracks/ui/TrackControls.h"
 
 #include "InconsistencyException.h"
 

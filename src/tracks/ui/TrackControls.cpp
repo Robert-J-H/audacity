@@ -358,6 +358,22 @@ void TrackInfo::DrawBordersWithin
 using TCPLine = TrackControls::TCPLine;
 using TCPLines = TrackControls::TCPLines;
 
+// return y value and height
+std::pair< int, int > CalcItemY( const TCPLines &lines, unsigned iItem )
+{
+   int y = 0;
+   auto pLines = lines.begin();
+   while ( pLines != lines.end() &&
+           0 == (pLines->items & iItem) ) {
+      y += pLines->height + pLines->extraSpace;
+      ++pLines;
+   }
+   int height = 0;
+   if ( pLines != lines.end() )
+      height = pLines->height;
+   return { y, height };
+}
+
 namespace {
 
 
@@ -409,17 +425,6 @@ const TCPLine defaultWaveTrackTCPLines[] = {
    STATUS_ITEMS
 };
 
-const TCPLine defaultNoteTrackTCPLines[] = {
-   COMMON_ITEMS
-#ifdef EXPERIMENTAL_MIDI_OUT
-   MUTE_SOLO_ITEMS(0)
-   { TCPLine::kItemMidiControlsRect, kMidiCellHeight * 4, 0,
-     &TrackInfo::MidiControlsDrawFunction },
-   { TCPLine::kItemVelocity, kTrackInfoSliderHeight, kTrackInfoSliderExtra,
-     &TrackInfo::VelocitySliderDrawFunction },
-#endif
-};
-
 int totalTCPLines( const TCPLines &lines, bool omitLastExtra )
 {
    int total = 0;
@@ -431,28 +436,6 @@ int totalTCPLines( const TCPLines &lines, bool omitLastExtra )
    if (omitLastExtra)
       total -= lastExtra;
    return total;
-}
-
-const TCPLines &getTCPLines( const Track &track )
-{
-   auto lines = track.TypeSwitch< const TCPLines * >(
-#ifdef USE_MIDI
-      [](const NoteTrack*){
-         return &noteTrackTCPLines;
-      },
-#endif
-      [](const WaveTrack*){
-         return &waveTrackTCPLines;
-      },
-      [](const Track*){
-         return &commonTrackTCPLines;
-      }
-   );
-
-   if (lines)
-      return *lines;
-
-   return commonTrackTCPLines;
 }
 
 // Items for the bottom of the panel, listed bottom-upwards
@@ -520,29 +503,17 @@ void DrawItems_
 
 void DrawItems
 ( TrackPanelDrawingContext &context,
-  const wxRect &rect, const Track &track  )
+  const wxRect &rect, const TCPLines &topLines, const Track &track  )
 {
-   const auto topLines = getTCPLines( track );
    const auto bottomLines = commonTrackTCPBottomLines;
    DrawItems_( context, rect, &track, topLines, bottomLines );
 }
 
 }
 
-// return y value and height
-std::pair< int, int > CalcItemY( const TCPLines &lines, unsigned iItem )
+const TCPLines &TrackControls::GetControlLines() const
 {
-   int y = 0;
-   auto pLines = lines.begin();
-   while ( pLines != lines.end() &&
-           0 == (pLines->items & iItem) ) {
-      y += pLines->height + pLines->extraSpace;
-      ++pLines;
-   }
-   int height = 0;
-   if ( pLines != lines.end() )
-      height = pLines->height;
-   return { y, height };
+   return commonTrackTCPLines;
 }
 
 void TrackInfo::GetCloseBoxHorizontalBounds( const wxRect & rect, wxRect &dest )
@@ -605,8 +576,9 @@ void TrackInfo::GetMuteSoloRect
  const Track *pTrack)
 {
 
-   auto resultsM = CalcItemY( getTCPLines( *pTrack ), TCPLine::kItemMute );
-   auto resultsS = CalcItemY( getTCPLines( *pTrack ), TCPLine::kItemSolo );
+   const auto &lines = TrackControls::Get( *pTrack ).GetControlLines();
+   auto resultsM = CalcItemY( lines, TCPLine::kItemMute );
+   auto resultsS = CalcItemY( lines, TCPLine::kItemSolo );
    dest.height = resultsS.second;
 
    int yMute = resultsM.first;
@@ -715,26 +687,6 @@ void TrackInfo::GetSyncLockIconRect(const wxRect & rect, wxRect &dest)
    dest.y = rect.y + results.first;
    dest.height = results.second;
 }
-
-#ifdef USE_MIDI
-void TrackInfo::GetMidiControlsHorizontalBounds
-( const wxRect &rect, wxRect &dest )
-{
-   dest.x = rect.x + 1; // To center slightly
-   // PRL: TODO: kMidiCellWidth is defined in terms of the other constant
-   // kTrackInfoWidth but I am trying to avoid use of that constant.
-   // Can cell width be computed from dest.width instead?
-   dest.width = kMidiCellWidth * 4;
-}
-
-void TrackInfo::GetMidiControlsRect(const wxRect & rect, wxRect & dest)
-{
-   GetMidiControlsHorizontalBounds( rect, dest );
-   auto results = CalcItemY( noteTrackTCPLines, TCPLine::kItemMidiControlsRect );
-   dest.y = rect.y + results.first;
-   dest.height = results.second;
-}
-#endif
 
 #include "../../tracks/ui/TrackButtonHandles.h"
 void TrackInfo::CloseTitleDrawFunction
@@ -1172,7 +1124,7 @@ void TrackControls::Draw(
       // rectangle?
       auto pTrack = FindTrack();
       if (pTrack)
-         DrawItems( context, rect, *pTrack );
+         DrawItems( context, rect, GetControlLines(), *pTrack );
    }
 
    // Some old cut-and-paste legacy from TrackPanel.cpp here:
@@ -1226,26 +1178,29 @@ bool TrackInfo::HideTopItem( const wxRect &rect, const wxRect &subRect,
    return subRect.y + subRect.height - allowance >= rect.y + limit;
 }
 
-namespace {
-unsigned DefaultTrackHeight( const TCPLines &topLines )
+unsigned TrackControls::FindDefaultTrackHeight( const TCPLines &topLines )
 {
    int needed =
-      kTopMargin + kBottomMargin +
-      totalTCPLines( topLines, true ) +
-      totalTCPLines( commonTrackTCPBottomLines, false ) + 1;
+   kTopMargin + kBottomMargin +
+   totalTCPLines( topLines, true ) +
+   totalTCPLines( commonTrackTCPBottomLines, false ) + 1;
    return (unsigned) std::max( needed, (int) TrackView::DefaultHeight );
 }
-}
 
-unsigned TrackInfo::DefaultNoteTrackHeight()
+unsigned TrackControls::DefaultTrackHeight() const
 {
-   return DefaultTrackHeight( noteTrackTCPLines );
+   return FindDefaultTrackHeight( GetControlLines() );
 }
 
 unsigned TrackInfo::DefaultWaveTrackHeight()
 {
-   return DefaultTrackHeight( waveTrackTCPLines );
+   return TrackControls::FindDefaultTrackHeight( waveTrackTCPLines );
 }
 
-const TCPLines noteTrackTCPLines{ RANGE(defaultNoteTrackTCPLines) };
+#include "../playabletrack/wavetrack/ui/WaveTrackControls.h"
+const TCPLines &WaveTrackControls::GetControlLines() const
+{
+   return waveTrackTCPLines;
+}
+
 const TCPLines waveTrackTCPLines{ RANGE(defaultWaveTrackTCPLines) };

@@ -16,12 +16,12 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "NoteTrackVRulerControls.h"
 #include "../../../../NoteTrack.h"
-
+#include "NoteTrackControls.h"
+\
 #include "../../../../AColor.h"
 #include "../../../../AllThemeResources.h"
 #include "../../../../HitTestResult.h"
 #include "../../../../Project.h"
-#include "../../../../TrackPanel.h" // for TrackInfo
 #include "../../../../TrackArtist.h"
 #include "../../../../TrackPanelDrawingContext.h"
 #include "../../../../TrackPanelMouseEvent.h"
@@ -32,7 +32,7 @@ Paul Licameli split from TrackPanel.cpp
 NoteTrackView::NoteTrackView( const std::shared_ptr<Track> &pTrack )
    : TrackView{ pTrack }
 {
-   DoSetHeight( TrackInfo::DefaultNoteTrackHeight() );
+   DoSetHeight( NoteTrackControls::DefaultNoteTrackHeight() );
 }
 
 NoteTrackView::~NoteTrackView()
