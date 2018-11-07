@@ -343,11 +343,6 @@ void Track::SyncLockAdjust(double oldT1, double newT1)
    }
 }
 
-std::shared_ptr<Track> Track::DoFindTrack()
-{
-   return SharedPointer();
-}
-
 PlayableTrack::GroupData::~GroupData()
 {
 }

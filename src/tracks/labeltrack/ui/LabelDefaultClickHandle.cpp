@@ -71,7 +71,7 @@ UIHandle::Result LabelDefaultClickHandle::Click
 
       const auto pLT = evt.pCell.get();
       for (auto lt : TrackList::Get( *pProject ).Any<LabelTrack>()) {
-         if (pLT != lt) {
+         if (pLT != &TrackView::Get( *lt )) {
             auto &view = LabelTrackView::Get( *lt );
             view.ResetFlags();
             view.SetSelectedIndex( -1 );

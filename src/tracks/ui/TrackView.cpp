@@ -54,13 +54,6 @@ std::vector<UIHandlePtr> TrackView::HitTest
 (const TrackPanelMouseState &st,
  const AudacityProject *pProject)
 {
-   return {};
-}
-
-std::vector<UIHandlePtr> Track::HitTest
-(const TrackPanelMouseState &st,
- const AudacityProject *pProject)
-{
    UIHandlePtr result;
    std::vector<UIHandlePtr> results;
    const ToolsToolBar * pTtb = pProject->GetToolsToolBar();
@@ -85,7 +78,7 @@ std::vector<UIHandlePtr> Track::HitTest
    // Sliding applies in more than one track type.
    if ( !isMultiTool && currentTool == slideTool ) {
       result = TimeShiftHandle::HitAnywhere(
-         mTimeShiftHandle, SharedPointer(), false);
+         mTimeShiftHandle, FindTrack(), false);
       if (result)
          results.push_back(result);
    }
@@ -102,17 +95,12 @@ std::vector<UIHandlePtr> Track::HitTest
    // Finally, default of all is adjustment of the selection box.
    if ( isMultiTool || currentTool == selectTool ) {
       result = SelectHandle::HitTest(
-         mSelectHandle, st, pProject, SharedPointer());
+         mSelectHandle, st, pProject, FindTrack() );
       if (result)
          results.push_back(result);
    }
 
    return results;
-}
-
-std::shared_ptr<TrackPanelCell> Track::ContextMenuDelegate()
-{
-   return TrackControls::Get( *this ).shared_from_this();
 }
 
 std::shared_ptr<TrackPanelCell> TrackView::ContextMenuDelegate()

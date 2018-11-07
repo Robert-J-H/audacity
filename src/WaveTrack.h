@@ -25,10 +25,6 @@
 
 class TimeWarper;
 
-class CutlineHandle;
-class SampleHandle;
-class EnvelopeHandle;
-
 class Sequence;
 class WaveClip;
 
@@ -124,11 +120,6 @@ private:
    ~WaveTrack() override;
    
    wxString GetDefaultName() const override;
-
-   std::vector<UIHandlePtr> DetailedHitTest
-      (const TrackPanelMouseState &state,
-       const AudacityProject *pProject, int currentTool, bool bMultiTool)
-      override;
 
    double GetOffset() const override;
    void SetOffset(double o) override;
@@ -557,10 +548,6 @@ private:
    wxCriticalSection mAppendCriticalSection;
    double mLegacyProjectFileOffset{ 0 };
    int mAutoSaveIdent;
-
-   std::weak_ptr<CutlineHandle> mCutlineHandle;
-   std::weak_ptr<SampleHandle> mSampleHandle;
-   std::weak_ptr<EnvelopeHandle> mEnvelopeHandle;
 
 protected:
    std::shared_ptr<TrackView> DoGetView() override;

@@ -101,20 +101,6 @@ class AUDACITY_DLL_API LabelTrack final : public Track
    const LabelArray &GetLabels() const { return mLabels; }
    void SetLabel( size_t iLabel, const LabelStruct &newLabel );
 
-   std::vector<UIHandlePtr> DetailedHitTest
-      (const TrackPanelMouseState &state,
-       const AudacityProject *pProject, int currentTool, bool bMultiTool)
-      override;
-
-   unsigned CaptureKey
-     (wxKeyEvent &event, ViewInfo &viewInfo, wxWindow *pParent) override;
-
-   unsigned KeyDown
-      (wxKeyEvent &event, ViewInfo &viewInfo, wxWindow *pParent) override;
-
-   unsigned Char
-      (wxKeyEvent &event, ViewInfo &viewInfo, wxWindow *pParent) override;
-
    void SetOffset(double dOffset) override;
 
    double GetOffset() const override;

@@ -15,6 +15,8 @@ Paul Licameli split from class Track
 
 class Track;
 class TrackVRulerControls;
+class SelectHandle;
+class TimeShiftHandle;
 
 class TrackView /* not final */ : public CommonTrackPanelCell
    , public std::enable_shared_from_this<TrackView>
@@ -38,12 +40,22 @@ public:
    std::shared_ptr<TrackVRulerControls> GetVRulerControls();
    std::shared_ptr<const TrackVRulerControls> GetVRulerControls() const;
    
+   // Delegates the handling to the related TCP cell
+   std::shared_ptr<TrackPanelCell> ContextMenuDelegate() override;
+
+   // Cause certain overriding tool modes (Zoom; future ones?) to behave
+   // uniformly in all tracks, disregarding track contents.
+   // Do not further override this...
    std::vector<UIHandlePtr> HitTest
       (const TrackPanelMouseState &, const AudacityProject *pProject)
       final override;
 
-   // Delegates the handling to the related TCP cell
-   std::shared_ptr<TrackPanelCell> ContextMenuDelegate() override;
+protected:
+   // Rather override this for subclasses:
+   virtual std::vector<UIHandlePtr> DetailedHitTest
+      (const TrackPanelMouseState &,
+       const AudacityProject *pProject, int currentTool, bool bMultiTool)
+      = 0;
 
    // Private factory to make appropriate object; class TrackView handles
    // memory management thereafter
@@ -51,13 +63,16 @@ public:
 
    std::shared_ptr<Track> DoFindTrack() override;
 
-protected:
    Track *GetTrack() const;
 
    std::shared_ptr<TrackVRulerControls> mpVRulerControls;
 
    // back-pointer to parent is weak to avoid a cycle
    std::weak_ptr<Track> mwTrack;
+
+protected:
+   std::weak_ptr<SelectHandle> mSelectHandle;
+   std::weak_ptr<TimeShiftHandle> mTimeShiftHandle;
 };
 
 #endif

@@ -72,14 +72,23 @@ public:
 private:
    void CreateCustomGlyphs();
 
-public:
    std::vector<UIHandlePtr> DetailedHitTest
       (const TrackPanelMouseState &state,
        const AudacityProject *pProject, int currentTool, bool bMultiTool)
-      ;
+      override;
+
+   unsigned CaptureKey
+     (wxKeyEvent &event, ViewInfo &viewInfo, wxWindow *pParent) override;
+
+   unsigned KeyDown
+      (wxKeyEvent &event, ViewInfo &viewInfo, wxWindow *pParent) override;
+
+   unsigned Char
+      (wxKeyEvent &event, ViewInfo &viewInfo, wxWindow *pParent) override;
 
    bool DoCaptureKey(wxKeyEvent &event);
 
+public:
    static wxFont GetFont(const wxString &faceName, int size = DefaultFontSize);   
    static void ResetFont();
 
@@ -121,7 +130,6 @@ public:
 private:
    static bool IsTextClipSupported();
 
-public:
    bool DoKeyDown(SelectedRegion &sel, wxKeyEvent & event);
    bool DoChar(SelectedRegion &sel, wxKeyEvent & event);
 

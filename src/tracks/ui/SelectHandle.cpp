@@ -15,6 +15,7 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "Scrubbing.h"
 #include "TrackControls.h"
+#include "TrackView.h"
 
 #include "../playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
 #include "../../AColor.h"
@@ -1114,7 +1115,12 @@ void SelectHandle::TimerHandler::OnTimer(wxCommandEvent &event)
       // AS: For some reason, GCC won't let us pass this directly.
       wxMouseEvent evt(wxEVT_MOTION);
       const auto size = trackPanel.GetSize();
-      mParent->Drag(TrackPanelMouseEvent{ evt, mParent->mRect, size, pTrack }, project);
+      mParent->Drag(
+         TrackPanelMouseEvent{
+            evt, mParent->mRect, size,
+            TrackView::Get( *pTrack ).shared_from_this() },
+         project
+      );
       mParent->mAutoScrolling = false;
       TrackPanel::Get( *mConnectedProject ).Refresh(false);
    }

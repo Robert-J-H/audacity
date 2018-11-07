@@ -42,6 +42,7 @@
 #include "prefs/TracksPrefs.h"
 #include "toolbars/ControlToolBar.h"
 #include "tracks/ui/Scrubbing.h"
+#include "tracks/ui/TrackView.h"
 #include "widgets/AButton.h"
 #include "widgets/Grabber.h"
 
@@ -316,8 +317,8 @@ void AdornedRulerPanel::QuickPlayIndicatorOverlay::Draw(
       // Draw indicator in all visible tracks
       static_cast<TrackPanel&>(panel)
          .VisitCells( [&]( const wxRect &rect, TrackPanelCell &cell ) {
-            const auto pTrack = dynamic_cast<Track*>(&cell);
-            if (!pTrack)
+            const auto pTrackView = dynamic_cast<TrackView*>(&cell);
+            if (!pTrackView)
                return;
 
             // Draw the NEW indicator in its NEW location

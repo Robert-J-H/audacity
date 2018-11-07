@@ -78,14 +78,6 @@ const LabelTrackView &LabelTrackView::Get( const LabelTrack &track )
    return static_cast< const LabelTrackView& >( TrackView::Get( track ) );
 }
 
-std::vector<UIHandlePtr> LabelTrack::DetailedHitTest
-(const TrackPanelMouseState &st,
- const AudacityProject *pProject, int currentTool, bool bMultiTool)
-{
-   return LabelTrackView::Get( *this )
-      .DetailedHitTest( st, pProject, currentTool, bMultiTool );
-}
-
 std::vector<UIHandlePtr> LabelTrackView::DetailedHitTest
 (const TrackPanelMouseState &st,
  const AudacityProject *WXUNUSED(pProject), int, bool)

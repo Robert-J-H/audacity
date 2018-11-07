@@ -29,7 +29,7 @@ NoteTrackView::~NoteTrackView()
 {
 }
 
-std::vector<UIHandlePtr> NoteTrack::DetailedHitTest
+std::vector<UIHandlePtr> NoteTrackView::DetailedHitTest
 (const TrackPanelMouseState &WXUNUSED(state),
  const AudacityProject *WXUNUSED(pProject), int, bool )
 {
