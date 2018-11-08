@@ -42,6 +42,7 @@ struct TrackPanelDrawingContext;
 class LabelStruct
 {
 public:
+   LabelStruct() = default;
    // Copies region
    LabelStruct(const SelectedRegion& region, const wxString &aTitle);
    // Copies region but then overwrites other times
@@ -88,15 +89,15 @@ public:
 public:
    SelectedRegion selectedRegion;
    wxString title; /// Text of the label.
-   mutable int width; /// width of the text in pixels.
+   mutable int width{}; /// width of the text in pixels.
 
 // Working storage for on-screen layout.
-   mutable int x;     /// Pixel position of left hand glyph
-   mutable int x1;    /// Pixel position of right hand glyph
-   mutable int xText; /// Pixel position of left hand side of text box
-   mutable int y;     /// Pixel position of label.
+   mutable int x{};     /// Pixel position of left hand glyph
+   mutable int x1{};    /// Pixel position of right hand glyph
+   mutable int xText{}; /// Pixel position of left hand side of text box
+   mutable int y{};     /// Pixel position of label.
 
-   bool updated;                  /// flag to tell if the label times were updated
+   bool updated{};                  /// flag to tell if the label times were updated
 };
 
 using LabelArray = std::vector<LabelStruct>;
@@ -131,6 +132,9 @@ class AUDACITY_DLL_API LabelTrack final : public Track
 
    wxString GetDefaultName() const override;
 
+   const LabelArray &GetLabels() const { return mLabels; }
+   void SetLabel( size_t iLabel, const LabelStruct &newLabel );
+
    std::vector<UIHandlePtr> DetailedHitTest
       (const TrackPanelMouseState &state,
        const AudacityProject *pProject, int currentTool, bool bMultiTool)
@@ -156,6 +160,7 @@ class AUDACITY_DLL_API LabelTrack final : public Track
    void Draw( TrackPanelDrawingContext &context, const wxRect & r ) const;
 
    int GetSelectedIndex() const;
+   void SetSelectedIndex( int index );
 
    double GetOffset() const override;
    double GetStartTime() const override;
@@ -327,8 +332,6 @@ private:
 protected:
    std::shared_ptr<TrackControls> DoGetControls() override;
    std::shared_ptr<TrackVRulerControls> DoGetVRulerControls() override;
-   friend class GetInfoCommand; // to get labels.
-   friend class SetLabelCommand; // to set labels.
-};
+   };
 
 #endif
