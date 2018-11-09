@@ -108,41 +108,6 @@ std::shared_ptr<TrackPanelCell> TrackView::ContextMenuDelegate()
    return TrackControls::Get( *FindTrack() ).shared_from_this();
 }
 
-std::shared_ptr<TrackView> Track::GetTrackView()
-{
-   if (!mpView)
-      // create on demand
-      mpView = DoGetView();
-   return mpView;
-}
-
-std::shared_ptr<const TrackView> Track::GetTrackView() const
-{
-   return const_cast<Track*>(this)->GetTrackView();
-}
-
-std::shared_ptr<TrackControls> Track::GetTrackControls()
-{
-   if (!mpControls)
-      // create on demand
-      mpControls = DoGetControls();
-   return mpControls;
-}
-
-std::shared_ptr<const TrackControls> Track::GetTrackControls() const
-{
-   return const_cast< Track* >( this )->GetTrackControls();
-}
-
-#include "../../TrackPanelResizeHandle.h"
-std::shared_ptr<TrackPanelCell> Track::GetResizer()
-{
-   if (!mpResizer)
-      // create on demand
-      mpResizer = std::make_shared<TrackPanelResizerCell>( SharedPointer() );
-   return mpResizer;
-}
-
 std::shared_ptr<TrackVRulerControls> TrackView::GetVRulerControls()
 {
    if (!mpVRulerControls)

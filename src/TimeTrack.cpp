@@ -350,3 +350,16 @@ void TimeTrack::testMe()
           t0, t1 );
      }*/
 }
+
+#include "tracks/timetrack/ui/TimeTrackControls.h"
+#include "tracks/timetrack/ui/TimeTrackView.h"
+
+std::shared_ptr<TrackView> TimeTrack::DoGetView()
+{
+   return std::make_shared<TimeTrackView>( SharedPointer() );
+}
+
+std::shared_ptr<TrackControls> TimeTrack::DoGetControls()
+{
+   return std::make_shared<TimeTrackControls>( SharedPointer() );
+}

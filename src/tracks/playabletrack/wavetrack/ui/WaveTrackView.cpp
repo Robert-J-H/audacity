@@ -11,10 +11,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "WaveTrackView.h"
 #include "../../../../WaveTrack.h"
 
-#include "WaveTrackControls.h"
 #include "WaveTrackViewGroupData.h"
-#include "WaveTrackVRulerControls.h"
-
 #include "WaveTrackVRulerControls.h"
 #include "../../../../HitTestResult.h"
 #include "../../../../Project.h"
@@ -109,16 +106,6 @@ std::vector<UIHandlePtr> WaveTrackView::DetailedHitTest
    }
 
    return results;
-}
-
-std::shared_ptr<TrackView> WaveTrack::DoGetView()
-{
-   return std::make_shared<WaveTrackView>( SharedPointer() );
-}
-
-std::shared_ptr<TrackControls> WaveTrack::DoGetControls()
-{
-   return std::make_shared<WaveTrackControls>( SharedPointer() );
 }
 
 std::shared_ptr<TrackVRulerControls> WaveTrackView::DoGetVRulerControls()

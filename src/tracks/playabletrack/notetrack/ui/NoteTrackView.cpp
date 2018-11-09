@@ -10,14 +10,12 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "../../../../Audacity.h" // for USE_* macros
 #include "NoteTrackView.h"
+#include "NoteTrackVRulerControls.h"
 
 #ifdef USE_MIDI
 #include "../../../../NoteTrack.h"
 
 #include "../../../../Experimental.h"
-
-#include "NoteTrackControls.h"
-#include "NoteTrackVRulerControls.h"
 
 #include "../../../../HitTestResult.h"
 #include "../../../../Project.h"
@@ -48,20 +46,9 @@ std::vector<UIHandlePtr> NoteTrackView::DetailedHitTest
    return results;
 }
 
-std::shared_ptr<TrackView> NoteTrack::DoGetView()
-{
-   return std::make_shared<NoteTrackView>( SharedPointer() );
-}
-
-std::shared_ptr<TrackControls> NoteTrack::DoGetControls()
-{
-   return std::make_shared<NoteTrackControls>( SharedPointer() );
-}
-
 std::shared_ptr<TrackVRulerControls> NoteTrackView::DoGetVRulerControls()
 {
    return
       std::make_shared<NoteTrackVRulerControls>( shared_from_this() );
 }
-
 #endif

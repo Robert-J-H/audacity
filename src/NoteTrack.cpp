@@ -1014,4 +1014,19 @@ int NoteTrack::YToIPitch(int y)
 
 const float NoteTrack::ZoomStep = powf( 2.0f, 0.25f );
 
+
+#include "tracks/playabletrack/notetrack/ui/NoteTrackControls.h"
+#include "tracks/playabletrack/notetrack/ui/NoteTrackView.h"
+#include "tracks/playabletrack/notetrack/ui/NoteTrackVRulerControls.h"
+
+std::shared_ptr<TrackView> NoteTrack::DoGetView()
+{
+   return std::make_shared<NoteTrackView>( SharedPointer() );
+}
+
+std::shared_ptr<TrackControls> NoteTrack::DoGetControls()
+{
+   return std::make_shared<NoteTrackControls>( SharedPointer() );
+}
+
 #endif // USE_MIDI

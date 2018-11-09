@@ -45,6 +45,7 @@ and TimeTrack.
 #include "InconsistencyException.h"
 
 #include "TrackPanel.h" // for TrackInfo
+#include "TrackPanelResizerCell.h"
 
 #include "tracks/ui/TrackView.h"
 
@@ -1376,6 +1377,40 @@ void Track::AdjustPositions()
       pList->RecalcPositions(mNode);
       pList->ResizingEvent(mNode);
    }
+}
+
+std::shared_ptr<TrackView> Track::GetTrackView()
+{
+   if (!mpView)
+      // create on demand
+      mpView = DoGetView();
+   return mpView;
+}
+
+std::shared_ptr<const TrackView> Track::GetTrackView() const
+{
+   return const_cast<Track*>(this)->GetTrackView();
+}
+
+std::shared_ptr<TrackControls> Track::GetTrackControls()
+{
+   if (!mpControls)
+      // create on demand
+      mpControls = DoGetControls();
+   return mpControls;
+}
+
+std::shared_ptr<const TrackControls> Track::GetTrackControls() const
+{
+   return const_cast< Track* >( this )->GetTrackControls();
+}
+
+std::shared_ptr<TrackPanelCell> Track::GetResizer()
+{
+   if (!mpResizer)
+      // create on demand
+      mpResizer = std::make_shared<TrackPanelResizerCell>( SharedPointer() );
+   return mpResizer;
 }
 
 bool TrackList::HasPendingTracks() const

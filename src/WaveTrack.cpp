@@ -2584,3 +2584,17 @@ void WaveTrack::AllClipsIterator::push( WaveClipHolders &clips )
       pClips = &(*first)->GetCutLines();
    }
 }
+
+#include "tracks/playabletrack/wavetrack/ui/WaveTrackControls.h"
+#include "tracks/playabletrack/wavetrack/ui/WaveTrackView.h"
+#include "tracks/playabletrack/wavetrack/ui/WaveTrackVRulerControls.h"
+
+std::shared_ptr<TrackView> WaveTrack::DoGetView()
+{
+   return std::make_shared<WaveTrackView>( SharedPointer() );
+}
+
+std::shared_ptr<TrackControls> WaveTrack::DoGetControls()
+{
+   return std::make_shared<WaveTrackControls>( SharedPointer() );
+}

@@ -11,9 +11,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "LabelTrackView.h"
 #include "../../../LabelTrack.h"
 
-#include "LabelTrackControls.h"
 #include "LabelDefaultClickHandle.h"
-#include "LabelTrackVRulerControls.h"
 #include "LabelGlyphHandle.h"
 #include "LabelTextHandle.h"
 #include "LabelTrackVRulerControls.h"
@@ -98,16 +96,6 @@ std::vector<UIHandlePtr> LabelTrackView::DetailedHitTest
       results.push_back(result);
 
    return results;
-}
-
-std::shared_ptr<TrackView> LabelTrack::DoGetView()
-{
-   return std::make_shared<LabelTrackView>( SharedPointer() );
-}
-
-std::shared_ptr<TrackControls> LabelTrack::DoGetControls()
-{
-   return std::make_shared<LabelTrackControls>( SharedPointer() );
 }
 
 std::shared_ptr<TrackVRulerControls> LabelTrackView::DoGetVRulerControls()

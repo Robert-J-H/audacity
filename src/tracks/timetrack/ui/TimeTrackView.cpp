@@ -11,9 +11,6 @@ Paul Licameli split from TrackPanel.cpp
 #include "TimeTrackView.h"
 #include "../../../TimeTrack.h"
 
-#include "TimeTrackControls.h"
-#include "TimeTrackVRulerControls.h"
-
 #include "TimeTrackVRulerControls.h"
 #include "../../../HitTestResult.h"
 #include "../../../TrackPanelMouseEvent.h"
@@ -36,16 +33,6 @@ std::vector<UIHandlePtr> TimeTrackView::DetailedHitTest
    if (result)
       results.push_back(result);
    return results;
-}
-
-std::shared_ptr<TrackView> TimeTrack::DoGetView()
-{
-   return std::make_shared<TimeTrackView>( SharedPointer() );
-}
-
-std::shared_ptr<TrackControls> TimeTrack::DoGetControls()
-{
-   return std::make_shared<TimeTrackControls>( SharedPointer() );
 }
 
 std::shared_ptr<TrackVRulerControls> TimeTrackView::DoGetVRulerControls()

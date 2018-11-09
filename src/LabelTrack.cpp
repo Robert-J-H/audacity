@@ -3320,3 +3320,17 @@ std::shared_ptr<const LabelTrack> LabelTrackView::FindLabelTrack() const
 {
    return const_cast<LabelTrackView*>(this)->FindLabelTrack();
 }
+
+#include "tracks/labeltrack/ui/LabelTrackControls.h"
+#include "tracks/labeltrack/ui/LabelTrackView.h"
+#include "tracks/labeltrack/ui/LabelTrackVRulerControls.h"
+
+std::shared_ptr<TrackView> LabelTrack::DoGetView()
+{
+   return std::make_shared<LabelTrackView>( SharedPointer() );
+}
+
+std::shared_ptr<TrackControls> LabelTrack::DoGetControls()
+{
+   return std::make_shared<LabelTrackControls>( SharedPointer() );
+}
