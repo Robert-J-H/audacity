@@ -98,6 +98,7 @@ public:
 private:
    static wxBitmap & GetGlyph( int i);
 
+public:
    struct Flags {
       int mInitialCursorPos, mCurrentCursorPos, mSelIndex;
       bool mDrawCursor;
@@ -113,7 +114,6 @@ private:
    }
    void RestoreFlags( const Flags& flags );
 
-public:
    static int OverATextBox( const LabelTrack &track, int xx, int yy );
 
    static bool OverTextBox( const LabelStruct *pLabel, int x, int y );
@@ -199,8 +199,6 @@ public:
 
    std::weak_ptr<LabelGlyphHandle> mGlyphHandle;
    std::weak_ptr<LabelTextHandle> mTextHandle;
-
-   friend LabelDefaultClickHandle;
 };
 
 #endif
