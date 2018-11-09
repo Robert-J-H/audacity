@@ -131,7 +131,7 @@ UIHandle::Result LabelGlyphHandle::Click
    const wxMouseEvent &event = evt.event;
 
    auto &viewInfo = ViewInfo::Get( *pProject );
-   LabelTrackView::Get( *mpLT ).HandleGlyphClick(
+   HandleGlyphClick(
       *mpHit, event, mRect, viewInfo, &viewInfo.selectedRegion);
 
    if (! mpHit->mIsAdjustingLabel )
@@ -161,7 +161,7 @@ UIHandle::Result LabelGlyphHandle::Drag
 
    const wxMouseEvent &event = evt.event;
    auto &viewInfo = ViewInfo::Get( *pProject );
-   LabelTrackView::Get( *mpLT ).HandleGlyphDragRelease(
+   HandleGlyphDragRelease(
       *mpHit, event, mRect, viewInfo, &viewInfo.selectedRegion);
 
    // Refresh all so that the change of selection is redrawn in all tracks
@@ -182,7 +182,7 @@ UIHandle::Result LabelGlyphHandle::Release
 
    const wxMouseEvent &event = evt.event;
    auto &viewInfo = ViewInfo::Get( *pProject );
-   if (LabelTrackView::Get( *mpLT ).HandleGlyphDragRelease(
+   if (HandleGlyphDragRelease(
          *mpHit, event, mRect, viewInfo, &viewInfo.selectedRegion)) {
       pProject->PushState(_("Modified Label"),
          _("Label Edit"),
