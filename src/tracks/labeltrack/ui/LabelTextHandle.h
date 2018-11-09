@@ -19,6 +19,7 @@ Paul Licameli split from TrackPanel.cpp
 class wxMouseState;
 class LabelTrack;
 class SelectionStateChanger;
+class ZoomInfo;
 
 class LabelTextHandle final : public LabelDefaultClickHandle
 {
@@ -57,12 +58,20 @@ public:
    Result Cancel(AudacityProject *pProject) override;
 
 private:
+   void HandleTextClick
+      (const wxMouseEvent & evt, const wxRect & r, const ZoomInfo &zoomInfo,
+       SelectedRegion *newSel);
+   void HandleTextDragRelease(const wxMouseEvent & evt);
+
    std::weak_ptr<LabelTrack> mpLT {};
    int mLabelNum{ -1 };
    int mLabelTrackStartXPos { -1 };
    int mLabelTrackStartYPos { -1 };
    SelectedRegion mSelectedRegion{};
    std::shared_ptr<SelectionStateChanger> mChanger;
+
+   /// flag to tell if it's a valid dragging
+   bool mRightDragging{ false };
 };
 
 #endif
