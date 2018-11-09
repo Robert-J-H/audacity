@@ -97,6 +97,8 @@ public:
    int GetSelectedIndex() const;
    void SetSelectedIndex( int index );
 
+   bool HasSelection() const;
+
    bool CutSelectedText();
    bool CopySelectedText();
    bool PasteSelectedText(double sel0, double sel1);
@@ -191,7 +193,6 @@ public:
    void SetTextHighlight( int initialPosition, int currentPosition );
 
    static void calculateFontHeight(wxDC & dc);
-   bool HasSelection() const;
    void RemoveSelectedText();
 
    void OnLabelAdded( LabelTrackEvent& );
