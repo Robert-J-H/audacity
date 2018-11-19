@@ -141,7 +141,7 @@ void TimeTrack::InsertSilence(double t, double len)
    mEnvelope->InsertSpace(t, len);
 }
 
-Track::Holder TimeTrack::Duplicate() const
+Track::Holder TimeTrack::Clone() const
 {
    return std::make_shared<TimeTrack>(*this);
 }
