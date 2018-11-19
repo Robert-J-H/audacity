@@ -46,6 +46,8 @@ and TimeTrack.
 
 #include "TrackPanel.h" // for TrackInfo
 
+#include "tracks/ui/TrackView.h"
+
 #ifdef _MSC_VER
 //Disable truncation warnings
 #pragma warning( disable : 4786 )
@@ -154,7 +156,11 @@ Track::Holder Track::Duplicate() const
    // (the delayed cloning of them may happen later when the duplicate track
    // is added to a TrackList, or else avoided when the track replaces its
    // original in the same TrackList)
+
    result->mpGroupData = this->mpGroupData;
+   
+   if (mpView)
+      TrackView::Get( *result ).Copy( *mpView );
 
    return result;
 }

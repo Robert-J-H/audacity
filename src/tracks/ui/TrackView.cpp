@@ -31,6 +31,10 @@ TrackView::~TrackView()
 {
 }
 
+void TrackView::Copy( const TrackView & )
+{
+}
+
 std::shared_ptr<Track> TrackView::DoFindTrack()
 {
    return mwTrack.lock();

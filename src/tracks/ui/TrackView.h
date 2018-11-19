@@ -28,6 +28,9 @@ public:
    static TrackView &Get( Track & );
    static const TrackView &Get( const Track & );
 
+   // Copy view state, for undo/redo purposes
+   virtual void Copy( const TrackView &other );
+
    std::vector<UIHandlePtr> HitTest
       (const TrackPanelMouseState &, const AudacityProject *pProject)
       final override;
