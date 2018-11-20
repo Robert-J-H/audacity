@@ -184,14 +184,8 @@ bool TimeTrack::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
             break;
 
          const wxString strValue = value;
-         if (!wxStrcmp(attr, wxT("name")) && XMLValueChecker::IsGoodString(strValue))
-            mName = strValue;
-         else if (!wxStrcmp(attr, wxT("height")) &&
-                  XMLValueChecker::IsGoodInt(strValue) && strValue.ToLong(&nValue))
-            mHeight = nValue;
-         else if (!wxStrcmp(attr, wxT("minimized")) &&
-                  XMLValueChecker::IsGoodInt(strValue) && strValue.ToLong(&nValue))
-            mMinimized = (nValue != 0);
+         if (this->Track::HandleCommonXMLAttribute(attr, strValue))
+            ;
          else if (!wxStrcmp(attr, wxT("rangelower")))
          {
             mRangeLower = Internat::CompatibleToDouble(value);
@@ -246,12 +240,10 @@ void TimeTrack::WriteXML(XMLWriter &xmlFile) const
 // may throw
 {
    xmlFile.StartTag(wxT("timetrack"));
+   this->Track::WriteCommonXMLAttributes( xmlFile );
 
-   xmlFile.WriteAttr(wxT("name"), mName);
    //xmlFile.WriteAttr(wxT("channel"), mChannel);
    //xmlFile.WriteAttr(wxT("offset"), mOffset, 8);
-   xmlFile.WriteAttr(wxT("height"), GetActualHeight());
-   xmlFile.WriteAttr(wxT("minimized"), GetMinimized());
    xmlFile.WriteAttr(wxT("rangelower"), mRangeLower, 12);
    xmlFile.WriteAttr(wxT("rangeupper"), mRangeUpper, 12);
    xmlFile.WriteAttr(wxT("displaylog"), GetDisplayLog());
