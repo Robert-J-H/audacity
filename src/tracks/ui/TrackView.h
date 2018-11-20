@@ -25,8 +25,10 @@ class TrackView /* not final */ : public CommonTrackPanelCell
    TrackView &operator=( const TrackView& ) = delete;
 
 public:
+   enum : unsigned { DefaultHeight = 150 };
+
    explicit
-   TrackView( const std::shared_ptr<Track> &pTrack ) : mwTrack{ pTrack } {}
+   TrackView( const std::shared_ptr<Track> &pTrack );
    virtual ~TrackView() = 0;
 
    static TrackView &Get( Track & );
@@ -67,16 +69,31 @@ public:
 protected:
    std::shared_ptr<Track> DoFindTrack() override;
 
-   Track *GetTrack() const;
+public:
+   int GetY() const { return mY; }
+   int GetActualHeight() const { return mHeight; }
+   int GetMinimizedHeight() const;
+   int GetHeight() const;
+
+   void SetY(int y) { DoSetY( y ); }
+   void SetHeight(int height);
+
+protected:
+   // No need yet to make this virtual
+   void DoSetY(int y);
+
+   virtual void DoSetHeight(int h);
 
    std::shared_ptr<TrackVRulerControls> mpVRulerControls;
 
    // back-pointer to parent is weak to avoid a cycle
    std::weak_ptr<Track> mwTrack;
 
-protected:
    std::weak_ptr<SelectHandle> mSelectHandle;
    std::weak_ptr<TimeShiftHandle> mTimeShiftHandle;
+
+   int            mY{ 0 };
+   int            mHeight{ DefaultHeight };
 };
 
 #endif

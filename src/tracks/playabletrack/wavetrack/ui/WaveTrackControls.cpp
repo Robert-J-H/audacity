@@ -33,6 +33,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../../../prefs/SpectrumPrefs.h"
 #include "../../../../prefs/TracksBehaviorsPrefs.h"
 #include "../../../../prefs/WaveformPrefs.h"
+#include "../../../../tracks/ui/TrackView.h"
 #include "../../../../widgets/ErrorDialog.h"
 
 #include <wx/combobox.h>
@@ -870,9 +871,12 @@ void WaveTrackMenuTable::OnMergeStereo(wxCommandEvent &)
    // Set NEW track heights and minimized state
    auto &viewData = TrackViewGroupData::Get( *pTrack );
    viewData.SetMinimized(false);
-   int AverageHeight = (pTrack->GetHeight() + partner->GetHeight()) / 2;
-   pTrack->SetHeight(AverageHeight);
-   partner->SetHeight(AverageHeight);
+   auto
+      &view = TrackView::Get( *pTrack ),
+      &partnerView = TrackView::Get( *partner );
+   int AverageHeight = (view.GetHeight() + partnerView.GetHeight()) / 2;
+   view.SetHeight(AverageHeight);
+   partnerView.SetHeight(AverageHeight);
    viewData.SetMinimized(bBothMinimizedp);
 
    //On Demand - join the queues together.
@@ -906,6 +910,8 @@ void WaveTrackMenuTable::SplitStereo(bool stereo)
    int nChannels = 0;
    std::vector<WaveTrack *> pointers;
    for (auto channel : channels) {
+      auto &view = TrackView::Get( *channel );
+
       if (stereo)
          pointers.push_back(channel);
 
@@ -913,9 +919,9 @@ void WaveTrackMenuTable::SplitStereo(bool stereo)
       if (ODManager::IsInstanceCreated())
          ODManager::Instance()->MakeWaveTrackIndependent(channel);
       //make sure no channel is smaller than its minimum height
-      if (channel->GetHeight() < channel->GetMinimizedHeight())
-         channel->SetHeight(channel->GetMinimizedHeight());
-      totalHeight += channel->GetHeight();
+      if (view.GetHeight() < view.GetMinimizedHeight())
+         view.SetHeight(view.GetMinimizedHeight());
+      totalHeight += view.GetHeight();
       ++nChannels;
    }
 
@@ -937,7 +943,7 @@ void WaveTrackMenuTable::SplitStereo(bool stereo)
 
    for (auto channel : channels)
       // Make tracks the same height
-      channel->SetHeight( averageHeight );
+      TrackView::Get( *channel ).SetHeight( averageHeight );
 
    mpData->result = RefreshCode::RefreshAll;
 }

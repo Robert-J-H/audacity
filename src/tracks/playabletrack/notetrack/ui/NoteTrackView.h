@@ -20,8 +20,7 @@ class NoteTrackView final : public TrackView
 
 public:
    explicit
-   NoteTrackView( const std::shared_ptr<Track> &pTrack )
-      : TrackView{ pTrack } {}
+   NoteTrackView( const std::shared_ptr<Track> &pTrack );
    ~NoteTrackView() override;
 
    std::shared_ptr<TrackVRulerControls> DoGetVRulerControls() override;
@@ -31,6 +30,8 @@ private:
       (const TrackPanelMouseState &state,
        const AudacityProject *pProject, int currentTool, bool bMultiTool)
       override;
+
+   void DoSetHeight(int h) override;
 };
 
 #endif

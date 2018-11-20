@@ -9,12 +9,21 @@ Paul Licameli split from TrackPanel.cpp
 **********************************************************************/
 
 #include "WaveTrackView.h"
+
+#include "../../../../Experimental.h"
+
 #include "../../../../WaveTrack.h"
+// We need to activate
+// VZooming (that lives in WaveTrackVRulerHandle) from an action on the
+// TCP collapse/expand.  So we need visibility here.
+#include "WaveTrackVRulerControls.h"
 
 #include "WaveTrackViewGroupData.h"
 #include "WaveTrackVRulerControls.h"
 #include "../../../../HitTestResult.h"
+#include "../../../../Prefs.h"
 #include "../../../../Project.h"
+#include "../../../../TrackPanel.h" // for TrackInfo
 #include "../../../../TrackPanelMouseEvent.h"
 #include "../../../../toolbars/ToolsToolBar.h"
 
@@ -23,6 +32,12 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../../ui/EnvelopeHandle.h"
 #include "SampleHandle.h"
 #include "../../../ui/TimeShiftHandle.h"
+
+WaveTrackView::WaveTrackView( const std::shared_ptr<Track> &pTrack )
+   : TrackView{ pTrack }
+{
+   DoSetHeight( TrackInfo::DefaultWaveTrackHeight() );
+}
 
 WaveTrackView::~WaveTrackView()
 {

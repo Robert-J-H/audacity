@@ -62,11 +62,6 @@ Track classes.
 #include "InconsistencyException.h"
 
 #include "TrackPanel.h" // for TrackInfo
-#include "tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.h"
-// Assumptions in objects separation were wrong.  We need to activate
-// VZooming (that lives in WaveTrackVRulerHandle) from an action on the
-// TCP collapse/expand.  So we need visibility here.
-#include "tracks/playabletrack/wavetrack/ui/WaveTrackVRulerControls.h"
 
 using std::max;
 
@@ -100,8 +95,6 @@ WaveTrack::WaveTrack(const std::shared_ptr<DirManager> &projDirManager, sampleFo
    mWaveColorIndex = 0;
 
    mAutoSaveIdent = 0;
-
-   SetHeight( TrackInfo::DefaultWaveTrackHeight() );
 }
 
 WaveTrack::WaveTrack(const WaveTrack &orig):

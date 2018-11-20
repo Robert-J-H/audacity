@@ -124,8 +124,6 @@ Track::Track(const std::shared_ptr<DirManager> &projDirManager)
 :  vrulerSize(36,0),
    mDirManager(projDirManager)
 {
-   mY = 0;
-   mHeight = DefaultHeight;
    mIndex = 0;
 
    mOffset = 0.0;
@@ -134,7 +132,6 @@ Track::Track(const std::shared_ptr<DirManager> &projDirManager)
 Track::Track(const Track &orig)
 : vrulerSize( orig.vrulerSize )
 {
-   mY = 0;
    mIndex = 0;
    Init(orig);
    mOffset = orig.mOffset;
@@ -146,8 +143,6 @@ void Track::Init(const Track &orig)
    mId = orig.mId;
 
    mDirManager = orig.mDirManager;
-
-   mHeight = orig.mHeight;
 }
 
 Track::Holder Track::Duplicate() const
@@ -188,16 +183,6 @@ void Track::SetOwner
    mNode = node;
 }
 
-int Track::GetMinimizedHeight() const
-{
-   auto height = TrackInfo::MinimumTrackHeight();
-   auto channels = TrackList::Channels(this->SubstituteOriginalTrack().get());
-   auto nChannels = channels.size();
-   auto begin = channels.begin();
-   auto index = std::distance(begin, std::find(begin, channels.end(), this));
-   return (height * (index + 1) / nChannels) - (height * index / nChannels);
-}
-
 int Track::GetIndex() const
 {
    return mIndex;
@@ -206,67 +191,6 @@ int Track::GetIndex() const
 void Track::SetIndex(int index)
 {
    mIndex = index;
-}
-
-int Track::GetY() const
-{
-   return mY;
-}
-
-void Track::SetY(int y)
-{
-   auto pList = mList.lock();
-   if (pList && !pList->mPendingUpdates.empty()) {
-      auto orig = pList->FindById( GetId() );
-      if (orig && orig != this) {
-         // delegate, and rely on the update to copy back
-         orig->SetY(y);
-         pList->UpdatePendingTracks();
-         return;
-      }
-   }
-
-   DoSetY(y);
-}
-
-void Track::DoSetY(int y)
-{
-   mY = y;
-}
-
-#include "tracks/ui/TrackViewGroupData.h"
-int Track::GetHeight() const
-{
-   if ( TrackViewGroupData::Get( *this ).GetMinimized() ) {
-      return GetMinimizedHeight();
-   }
-
-   return mHeight;
-}
-
-void Track::SetHeight(int h)
-{
-   auto pList = mList.lock();
-   if (pList && !pList->mPendingUpdates.empty()) {
-      auto orig = pList->FindById( GetId() );
-      if (orig && orig != this) {
-         // delegate, and rely on RecalcPositions to copy back
-         orig->SetHeight(h);
-         return;
-      }
-   }
-
-   DoSetHeight(h);
-
-   if (pList) {
-      pList->RecalcPositions(mNode);
-      pList->ResizingEvent(mNode);
-   }
-}
-
-void Track::DoSetHeight(int h)
-{
-   mHeight = h;
 }
 
 namespace {
@@ -575,15 +499,17 @@ void TrackList::RecalcPositions(TrackNodePointer node)
    if ( !isNull( prev ) ) {
       t = prev.first->get();
       i = t->GetIndex() + 1;
-      y = t->GetY() + t->GetHeight();
+      auto &view = TrackView::Get( *t );
+      y = view.GetY() + view.GetHeight();
    }
 
    const auto theEnd = end();
    for (auto n = Find( node.first->get() ); n != theEnd; ++n) {
       t = *n;
+      auto &view = TrackView::Get( *t );
       t->SetIndex(i++);
-      t->DoSetY(y);
-      y += t->GetHeight();
+      view.SetY(y);
+      y += view.GetHeight();
    }
 
    UpdatePendingTracks();
@@ -889,7 +815,9 @@ void TrackList::Clear(bool sendEvent)
 /// For stereo track combined height of both channels.
 int TrackList::GetGroupHeight(const Track * t) const
 {
-   return Channels(t).sum( &Track::GetHeight );
+   const auto GetHeight = []( const Track *track )
+      { return TrackView::Get( *track ).GetHeight(); };
+   return Channels(t).sum( GetHeight );
 }
 
 bool TrackList::CanMoveUp(Track * t) const
@@ -1064,7 +992,8 @@ int TrackList::GetHeight() const
 
    if (!empty()) {
       auto track = getPrev( getEnd() ).first->get();
-      height = track->GetY() + track->GetHeight();
+      auto &view = TrackView::Get( *track );
+      height = view.GetY() + view.GetHeight();
    }
 
    return height;
@@ -1150,8 +1079,6 @@ void TrackList::UpdatePendingTracks()
       if (pendingTrack && src) {
          if (updater)
             updater( *pendingTrack, *src );
-         pendingTrack->DoSetY(src->GetY());
-         pendingTrack->DoSetHeight(src->GetActualHeight());
       }
       ++pUpdater;
    }
@@ -1339,7 +1266,9 @@ void Track::WriteCommonXMLAttributes(XMLWriter &xmlFile, bool includeName) const
       // to write it for all channels.
       xmlFile.WriteAttr(wxT("name"), GetGroupData().GetName());
    }
-   xmlFile.WriteAttr(wxT("height"), this->GetActualHeight());
+
+   auto &view = TrackView::Get( *this );
+   xmlFile.WriteAttr(wxT("height"), view.GetActualHeight());
 
    // It would be sufficient to write and read the minimized flag only for leader
    // tracks in 2.3.2 and later, but for forward compatibility we continue
@@ -1366,7 +1295,7 @@ bool Track::HandleCommonXMLAttribute(const wxChar *attr, const wxChar *value)
    }
    else if (!wxStrcmp(attr, wxT("height")) &&
          XMLValueChecker::IsGoodInt(strValue) && strValue.ToLong(&nValue)) {
-      SetHeight(nValue);
+      TrackView::Get( *this ).SetHeight(nValue);
       return true;
    }
    else if (!wxStrcmp(attr, wxT("minimized")) &&

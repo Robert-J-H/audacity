@@ -40,6 +40,8 @@
 #include "TrackPanel.h" // For TrackInfo
 #include "AllThemeResources.h"
 
+#include "tracks/ui/TrackView.h"
+
 #ifdef SONIFY
 #include "../lib-src/portmidi/pm_common/portmidi.h"
 
@@ -111,8 +113,6 @@ NoteTrack::Holder TrackFactory::NewNoteTrack()
 NoteTrack::NoteTrack(const std::shared_ptr<DirManager> &projDirManager)
    : NoteTrackBase(projDirManager)
 {
-   SetHeight( TrackInfo::DefaultNoteTrackHeight() );
-
    mSeq = NULL;
    mSerializationLength = 0;
 
@@ -211,22 +211,6 @@ double NoteTrack::GetEndTime() const
 {
    return GetStartTime() + GetSeq().get_real_dur();
 }
-
-void NoteTrack::DoSetHeight(int h)
-{
-   auto oldHeight = GetHeight();
-   auto oldMargin = GetNoteMargin(oldHeight);
-   PlayableTrack::DoSetHeight(h);
-   auto margin = GetNoteMargin(h);
-   Zoom(
-      wxRect{ 0, 0, 1, h }, // only height matters
-      h - margin - 1, // preserve bottom note
-      (float)(h - 2 * margin) /
-           std::max(1, oldHeight - 2 * oldMargin),
-      false
-   );
-}
-
 
 void NoteTrack::WarpAndTransposeNotes(double t0, double t1,
                                       const TimeWarper &warper,

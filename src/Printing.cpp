@@ -33,6 +33,8 @@
 #include "TrackPanelDrawingContext.h"
 #include "Internat.h"
 
+#include "tracks/ui/TrackView.h"
+
 // Globals, so that we remember settings from session to session
 wxPrintData &gPrintData()
 {
@@ -99,7 +101,7 @@ bool AudacityPrintout::OnPrintPage(int WXUNUSED(page))
       r.x = 0;
       r.y = y;
       r.width = width;
-      r.height = (int)(n->GetHeight() * scale);
+      r.height = (int)(TrackView::Get( *n ).GetHeight() * scale);
 
       TrackPanelDrawingContext context{
          *dc, {}, {}, &artist

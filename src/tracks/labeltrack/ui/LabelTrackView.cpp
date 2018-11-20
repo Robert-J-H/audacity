@@ -40,6 +40,11 @@ Paul Licameli split from TrackPanel.cpp
 LabelTrackView::LabelTrackView( const std::shared_ptr<Track> &pTrack )
 : TrackView{ pTrack }
 {
+   // Label tracks are narrow
+   // Default is to allow two rows so that NEW users get the
+   // idea that labels can 'stack' when they would overlap.
+   DoSetHeight(73);
+
    ResetFont();
    CreateCustomGlyphs();
    ResetFlags();

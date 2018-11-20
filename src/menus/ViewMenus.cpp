@@ -9,6 +9,7 @@
 #include "../commands/CommandContext.h"
 #include "../commands/CommandManager.h"
 #include "../prefs/TracksPrefs.h"
+#include "../tracks/ui/TrackView.h"
 #include "../tracks/ui/TrackViewGroupData.h"
 
 #ifdef EXPERIMENTAL_EFFECTS_RACK
@@ -176,15 +177,17 @@ void DoZoomFitV(AudacityProject &project)
    height -= 28;
    
    // The height of minimized and non-audio tracks cannot be apportioned
+   const auto GetHeight = []( const Track *track )
+      { return TrackView::Get( *track ).GetHeight(); };
    height -=
-      tracks.Any().sum( &Track::GetHeight ) - range.sum( &Track::GetHeight );
+      tracks.Any().sum( GetHeight ) - range.sum( GetHeight );
    
    // Give each resized track the average of the remaining height
    height = height / count;
    height = std::max( (int)TrackInfo::MinimumTrackHeight(), height );
 
    for (auto t : range)
-      t->SetHeight(height);
+      TrackView::Get( *t ).SetHeight(height);
 }
 
 // Menu handler functions

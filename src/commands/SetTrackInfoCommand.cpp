@@ -46,6 +46,7 @@ SetTrackAudioCommand and SetTrackVisualsCommand.
 #include "../Shuttle.h"
 #include "../ShuttleGui.h"
 #include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
+#include "../tracks/ui/TrackView.h"
 #include "CommandContext.h"
 
 SetTrackBase::SetTrackBase(){
@@ -365,7 +366,7 @@ bool SetTrackVisualsCommand::ApplyInner(const CommandContext & context, Track * 
       wt->SetWaveColorIndex( mColour );
 
    if( t && bHasHeight )
-      t->SetHeight( mHeight );
+      TrackView::Get( *t ).SetHeight( mHeight );
 
    if( wt && bHasDisplayType  )
       data.SetDisplay(

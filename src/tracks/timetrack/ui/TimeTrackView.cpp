@@ -18,6 +18,12 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "../../ui/EnvelopeHandle.h"
 
+TimeTrackView::TimeTrackView( const std::shared_ptr<Track> &pTrack )
+   : TrackView{ pTrack }
+{
+   mHeight = 100;
+}
+
 TimeTrackView::~TimeTrackView()
 {
 }

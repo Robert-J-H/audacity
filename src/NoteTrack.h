@@ -83,8 +83,6 @@ public:
    double GetStartTime() const override;
    double GetEndTime() const override;
 
-   void DoSetHeight(int h) override;
-
    Alg_seq &GetSeq() const;
 
    void WarpAndTransposeNotes(double t0, double t1,

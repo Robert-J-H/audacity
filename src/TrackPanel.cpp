@@ -109,7 +109,7 @@ wxDEFINE_EVENT(EVT_TRACK_PANEL_TIMER, wxCommandEvent);
 \class TrackPanel
 
 This is a diagram of TrackPanel's division of one (non-stereo) track rectangle.
-Total height equals Track::GetHeight()'s value.  Total width is the wxWindow's
+Total height equals TrackView::GetHeight()'s value.  Total width is the wxWindow's
 width.  Each charater that is not . represents one pixel.
 
 Inset space of this track, and top inset of the next track, are used to draw the
@@ -1035,14 +1035,17 @@ void TrackPanel::RefreshTrack(Track *trk, bool refreshbacking)
       return;
 
    trk = *GetTracks()->FindLeader(trk);
+   auto &view = TrackView::Get( *trk );
+   const auto GetHeight = []( const Track *track )
+      { return TrackView::Get( *track ).GetHeight(); };
    auto height =
-      TrackList::Channels(trk).sum( &Track::GetHeight )
+      TrackList::Channels(trk).sum( GetHeight )
       - kTopInset - kShadowThickness;
 
    // subtract insets and shadows from the rectangle, but not border
    // This matters because some separators do paint over the border
    wxRect rect(kLeftInset,
-            -mViewInfo->vpos + trk->GetY() + kTopInset,
+            -mViewInfo->vpos + view.GetY() + kTopInset,
             GetRect().GetWidth() - kLeftInset - kRightInset - kShadowThickness,
             height);
 
@@ -1160,11 +1163,11 @@ void TrackPanel::DrawEverythingElse(TrackPanelDrawingContext &context,
       bool first = true;
       for (auto channel : channels) {
          focused = focused || mAx->IsFocused(channel);
-         channel = channel->SubstitutePendingChangedTrack().get();
+         auto &view = TrackView::Get( *channel );
          if (first)
             first = false,
-            teamRect.y = channel->GetY() - mViewInfo->vpos + kTopMargin;
-         teamRect.height += channel->GetHeight();
+            teamRect.y = view.GetY() - mViewInfo->vpos + kTopMargin;
+         teamRect.height += view.GetHeight();
       }
 
       if (focused) {
@@ -1184,10 +1187,11 @@ void TrackPanel::DrawEverythingElse(TrackPanelDrawingContext &context,
 #endif
 
       for (auto channel : channels) {
+         auto &view = TrackView::Get( *channel );
          bool bSelected = channel->GetSelected();
          channel = channel->SubstitutePendingChangedTrack().get();
-         trackRect.y = channel->GetY() - mViewInfo->vpos + kTopMargin;
-         trackRect.height = channel->GetHeight();
+         trackRect.y = view.GetY() - mViewInfo->vpos + kTopMargin;
+         trackRect.height = view.GetHeight();
          if (region.Contains(
             0, trackRect.y, GetLeftOffset(), trackRect.height)) {
             wxRect rect{
@@ -1735,10 +1739,10 @@ void TrackPanel::DrawOutside
          // omit last (perhaps, only) channel
          --channels.second;
          for (auto channel : channels) {
+            auto &view = TrackView::Get( *channel );
             // draw the sash below this channel
-            channel = channel->SubstitutePendingChangedTrack().get();
             auto yy =
-               channel->GetY() - mViewInfo->vpos + channel->GetHeight()
+               view.GetY() - mViewInfo->vpos + view.GetHeight()
                   - kBottomMargin;
             wxRect sashRect{
                vrul, yy, rect.GetRight() - vrul, kSeparatorThickness
@@ -1921,7 +1925,8 @@ void TrackPanel::UpdateTrackVRuler(const Track *t)
 
 
    for (auto channel : TrackList::Channels(t)) {
-      rect.height = channel->GetHeight() - (kTopMargin + kBottomMargin);
+      auto &view = TrackView::Get( *channel );
+      rect.height = view.GetHeight() - (kTopMargin + kBottomMargin);
       mTrackArtist->UpdateVRuler(channel, rect);
    }
 }
@@ -1989,7 +1994,9 @@ void TrackPanel::EnsureVisible(Track * t)
       trackTop += trackHeight;
 
       auto channels = TrackList::Channels(it);
-      trackHeight = channels.sum( &Track::GetHeight );
+   const auto GetHeight = []( const Track *track )
+      { return TrackView::Get( *track ).GetHeight(); };
+      trackHeight = channels.sum( GetHeight );
 
       //We have found the track we want to ensure is visible.
       if (channels.contains(t)) {
@@ -2133,9 +2140,8 @@ struct ChannelGroup final : TrackPanelGroup {
             std::make_shared< VRulerAndChannel >(
                channel->SharedPointer(), mLeftOffset ) );
          if ( channel != pLast ) {
-            const auto substitute =
-               channel->SubstitutePendingChangedTrack();
-            yy += substitute->GetHeight();
+            auto &view = TrackView::Get( *channel );
+            yy += view.GetHeight();
             refinement.emplace_back(
                yy - kSeparatorThickness, channel->GetResizer() );
          }
@@ -2197,9 +2203,8 @@ struct Subgroup final : TrackPanelGroup {
       for ( const auto leader : tracks.Leaders() ) {
          wxCoord height = 0;
          for ( auto channel : TrackList::Channels( leader ) ) {
-            auto substitute =
-               channel->SubstitutePendingChangedTrack();
-            height += substitute->GetHeight();
+            auto &view = TrackView::Get( *channel );
+            height += view.GetHeight();
          }
          refinement.emplace_back( yy,
             std::make_shared< ResizingChannelGroup >(
@@ -2688,7 +2693,7 @@ unsigned DefaultTrackHeight( const TCPLines &topLines )
       kTopMargin + kBottomMargin +
       totalTCPLines( topLines, true ) +
       totalTCPLines( commonTrackTCPBottomLines, false ) + 1;
-   return (unsigned) std::max( needed, (int) Track::DefaultHeight );
+   return (unsigned) std::max( needed, (int) TrackView::DefaultHeight );
 }
 }
 
@@ -2890,7 +2895,8 @@ bool IsVisibleTrack::operator () (const Track *pTrack) const
    return
    TrackList::Channels(pTrack).StartingWith(pTrack).any_of(
       [this]( const Track *pT ) {
-         wxRect r(0, pT->GetY(), 1, pT->GetHeight());
+         auto &view = TrackView::Get( *pT );
+         wxRect r(0, view.GetY(), 1, view.GetHeight());
          return r.Intersects(mPanelRect);
       }
    );

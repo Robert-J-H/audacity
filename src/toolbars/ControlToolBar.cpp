@@ -79,6 +79,7 @@
 #include "../FileNames.h"
 
 #include "../tracks/ui/Scrubbing.h"
+#include "../tracks/ui/TrackView.h"
 #include "../tracks/ui/TrackViewGroupData.h"
 #include "../prefs/TracksPrefs.h"
 #include "../toolbars/ToolManager.h"

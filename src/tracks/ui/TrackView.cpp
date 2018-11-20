@@ -13,6 +13,7 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "../../TrackPanelMouseEvent.h"
 #include "TrackControls.h"
+#include "TrackViewGroupData.h"
 #include "TrackVRulerControls.h"
 
 #include "../../HitTestResult.h"
@@ -24,15 +25,24 @@ Paul Licameli split from TrackPanel.cpp
 #include "../playabletrack/wavetrack/ui/SampleHandle.h"
 #include "ZoomHandle.h"
 #include "TimeShiftHandle.h"
+#include "../../TrackPanel.h" // for TrackInfo
 #include "../../TrackPanelResizerCell.h"
 #include "BackgroundCell.h"
+
+TrackView::TrackView( const std::shared_ptr<Track> &pTrack )
+   : mwTrack{ pTrack }
+{
+}
 
 TrackView::~TrackView()
 {
 }
 
-void TrackView::Copy( const TrackView & )
+void TrackView::Copy( const TrackView &orig )
 {
+   // Let mY remain 0 -- TrackList::RecalcPositions corrects it later
+   mY = 0;
+   mHeight = orig.mHeight;
 }
 
 std::shared_ptr<Track> TrackView::DoFindTrack()
@@ -124,4 +134,43 @@ std::shared_ptr<TrackVRulerControls> TrackView::GetVRulerControls()
 std::shared_ptr<const TrackVRulerControls> TrackView::GetVRulerControls() const
 {
    return const_cast< TrackView* >( this )->GetVRulerControls();
+}
+
+void TrackView::DoSetY(int y)
+{
+   mY = y;
+}
+
+int TrackView::GetHeight() const
+{
+   auto pTrack = FindTrack().get();
+   if ( pTrack &&
+        TrackViewGroupData::Get( *pTrack ).GetMinimized() ) {
+      return GetMinimizedHeight();
+   }
+
+   return mHeight;
+}
+
+int TrackView::GetMinimizedHeight() const
+{
+   auto height = TrackInfo::MinimumTrackHeight();
+   const auto pTrack = FindTrack();
+   auto channels = TrackList::Channels(pTrack->SubstituteOriginalTrack().get());
+   auto nChannels = channels.size();
+   auto begin = channels.begin();
+   auto index =
+      std::distance(begin, std::find(begin, channels.end(), pTrack.get()));
+   return (height * (index + 1) / nChannels) - (height * index / nChannels);
+}
+
+void TrackView::SetHeight(int h)
+{
+   DoSetHeight(h);
+   FindTrack()->AdjustPositions();
+}
+
+void TrackView::DoSetHeight(int h)
+{
+   mHeight = h;
 }

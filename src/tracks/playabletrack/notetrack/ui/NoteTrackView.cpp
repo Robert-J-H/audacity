@@ -19,9 +19,16 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "../../../../HitTestResult.h"
 #include "../../../../Project.h"
+#include "../../../../TrackPanel.h" // for TrackInfo
 #include "../../../../TrackPanelMouseEvent.h"
 #include "../../../ui/SelectHandle.h"
 #include "StretchHandle.h"
+
+NoteTrackView::NoteTrackView( const std::shared_ptr<Track> &pTrack )
+   : TrackView{ pTrack }
+{
+   DoSetHeight( TrackInfo::DefaultNoteTrackHeight() );
+}
 
 NoteTrackView::~NoteTrackView()
 {
@@ -51,4 +58,21 @@ std::shared_ptr<TrackVRulerControls> NoteTrackView::DoGetVRulerControls()
    return
       std::make_shared<NoteTrackVRulerControls>( shared_from_this() );
 }
+
+void NoteTrackView::DoSetHeight(int h)
+{
+   const auto pTrack = std::static_pointer_cast< NoteTrack >( FindTrack() );
+   auto oldHeight = GetHeight();
+   auto oldMargin = pTrack->GetNoteMargin(oldHeight);
+   TrackView::DoSetHeight(h);
+   auto margin = pTrack->GetNoteMargin(h);
+   pTrack->Zoom(
+      wxRect{ 0, 0, 1, h }, // only height matters
+      h - margin - 1, // preserve bottom note
+      (float)(h - 2 * margin) /
+           std::max(1, oldHeight - 2 * oldMargin),
+      false
+   );
+}
+
 #endif
