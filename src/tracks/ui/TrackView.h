@@ -61,6 +61,10 @@ protected:
    // memory management thereafter
    virtual std::shared_ptr<TrackVRulerControls> DoGetVRulerControls() = 0;
 
+public:
+   void Reparent( Track &parent );
+
+protected:
    std::shared_ptr<Track> DoFindTrack() override;
 
    Track *GetTrack() const;

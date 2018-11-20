@@ -45,6 +45,8 @@ public:
       unsigned result;
    };
 
+   void Reparent( Track &parent );
+
 protected:
    std::shared_ptr<Track> DoFindTrack() override;
 

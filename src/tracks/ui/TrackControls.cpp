@@ -51,6 +51,11 @@ std::shared_ptr<Track> TrackControls::DoFindTrack()
    return mwTrack.lock();
 }
 
+void TrackControls::Reparent( Track &parent )
+{
+   mwTrack = parent.shared_from_this();
+}
+
 std::vector<UIHandlePtr> TrackControls::HitTest
 (const TrackPanelMouseState &st,
  const AudacityProject *WXUNUSED(project))

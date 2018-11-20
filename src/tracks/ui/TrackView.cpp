@@ -50,6 +50,11 @@ const TrackView &TrackView::Get( const Track &track )
    return *track.GetTrackView();
 }
 
+void TrackView::Reparent( Track &parent )
+{
+   mwTrack = parent.shared_from_this();
+}
+
 std::vector<UIHandlePtr> TrackView::HitTest
 (const TrackPanelMouseState &st,
  const AudacityProject *pProject)

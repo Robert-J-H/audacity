@@ -27,6 +27,8 @@ public:
    std::vector<UIHandlePtr> HitTest
       (const TrackPanelMouseState &, const AudacityProject *) override;
 
+   void Reparent( Track &parent );
+
 protected:
    std::shared_ptr<Track> DoFindTrack() override
    { return mpTrack.lock(); };

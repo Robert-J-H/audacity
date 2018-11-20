@@ -11,6 +11,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "Audacity.h"
 #include "TrackPanelResizerCell.h"
 
+#include "Track.h"
 #include "TrackPanelResizeHandle.h"
 #include "TrackPanelMouseEvent.h"
 #include "HitTestResult.h"
@@ -34,4 +35,9 @@ std::vector<UIHandlePtr> TrackPanelResizerCell::HitTest
       results.push_back(result);
    }
    return results;
+}
+
+void TrackPanelResizerCell::Reparent( Track &parent )
+{
+   mpTrack = parent.shared_from_this();
 }

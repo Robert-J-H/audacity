@@ -47,7 +47,9 @@ and TimeTrack.
 #include "TrackPanel.h" // for TrackInfo
 #include "TrackPanelResizerCell.h"
 
+#include "tracks/ui/TrackControls.h"
 #include "tracks/ui/TrackView.h"
+#include "tracks/ui/TrackVRulerControls.h"
 
 #ifdef _MSC_VER
 //Disable truncation warnings
@@ -1105,8 +1107,14 @@ std::shared_ptr<Track>
 TrackList::RegisterPendingChangedTrack( Updater updater, Track *src )
 {
    std::shared_ptr<Track> pTrack;
-   if (src)
-      pTrack = src->Duplicate();
+   if (src) {
+      pTrack = src->Clone(); // not duplicate
+      // Share the satellites with the original, though they do not point back
+      // to the pending track
+      pTrack->mpView = src->mpView;
+      pTrack->mpControls = src->mpControls;
+      pTrack->mpResizer = src->mpResizer;
+   }
 
    if (pTrack) {
       mUpdaters.push_back( updater );
@@ -1196,6 +1204,12 @@ bool TrackList::ApplyPendingTracks()
 
    for (auto &pendingTrack : updates) {
       if (pendingTrack) {
+         if (pendingTrack->mpView)
+            pendingTrack->mpView->Reparent( *pendingTrack );
+         if (pendingTrack->mpControls)
+            pendingTrack->mpControls->Reparent( *pendingTrack );
+         if (pendingTrack->mpResizer)
+            pendingTrack->mpResizer->Reparent( *pendingTrack );
          auto src = FindById( pendingTrack->GetId() );
          if (src)
             this->Replace(src, pendingTrack), result = true;
