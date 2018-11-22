@@ -14,6 +14,8 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "../../../../Experimental.h"
 
+#include "NoteTrackView.h"
+
 #include "NoteTrackVRulerControls.h"
 
 #include "../../../../HitTestResult.h"
@@ -211,16 +213,17 @@ void NoteTrackVRulerMenuTable::InitMenu(Menu *WXUNUSED(pMenu), void *pUserData)
 }
 
 void NoteTrackVRulerMenuTable::OnZoom( int iZoomCode ){
+   auto &view = NoteTrackView::Get( *mpData->pTrack );
    switch( iZoomCode ){
    case kZoomReset:
-      mpData->pTrack->SetBottomNote(0);
-      mpData->pTrack->SetPitchHeight(mpData->rect.height, 1);
+      view.SetBottomNote(0);
+      view.SetPitchHeight(mpData->rect.height, 1);
       break;
    case kZoomIn:
-      mpData->pTrack->ZoomIn(mpData->rect, mpData->yy);
+      view.ZoomIn(mpData->rect, mpData->yy);
       break;
    case kZoomOut:
-      mpData->pTrack->ZoomOut(mpData->rect, mpData->yy);
+      view.ZoomOut(mpData->rect, mpData->yy);
       break;
 
    }
@@ -247,6 +250,7 @@ UIHandle::Result NoteTrackVZoomHandle::Release
    auto pTrack = TrackList::Get( *pProject ).Lock(mpTrack);
    if (!pTrack)
       return RefreshNone;
+   auto &view = NoteTrackView::Get( *pTrack );
 
    const wxMouseEvent &event = evt.event;
    //const bool shiftDown = event.ShiftDown();
@@ -294,20 +298,20 @@ UIHandle::Result NoteTrackVZoomHandle::Release
       return RefreshAll;
 
    if (IsDragZooming(mZoomStart, mZoomEnd)) {
-      pTrack->ZoomTo(evt.rect, mZoomStart, mZoomEnd);
+      view.ZoomTo(evt.rect, mZoomStart, mZoomEnd);
    }
    else if (event.ShiftDown() || event.RightUp()) {
       if (event.ShiftDown() && event.RightUp()) {
          // Zoom out completely
-         pTrack->SetBottomNote(0);
-         pTrack->SetPitchHeight(evt.rect.height, 1);
+         view.SetBottomNote(0);
+         view.SetPitchHeight(evt.rect.height, 1);
       } else {
          // Zoom out
-         pTrack->ZoomOut(evt.rect, mZoomEnd);
+         view.ZoomOut(evt.rect, mZoomEnd);
       }
    }
    else {
-      pTrack->ZoomIn(evt.rect, mZoomEnd);
+      view.ZoomIn(evt.rect, mZoomEnd);
    }
 
    mZoomEnd = mZoomStart = 0;

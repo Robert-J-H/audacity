@@ -90,6 +90,7 @@ audio tracks.
 #include "TrackPanelDrawingContext.h"
 #include "tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
 #include "tracks/labeltrack/ui/LabelTrackView.h"
+#include "tracks/playabletrack/notetrack/ui/NoteTrackView.h"
 
 
 #undef PROFILE_WAVEFORM
@@ -460,6 +461,7 @@ void TrackArt::DrawVRuler
       ,
       [&](const NoteTrack *track) {
       // The note track draws a vertical keyboard to label pitches
+         const auto &view = NoteTrackView::Get( *track );
          const auto artist = TrackArtist::Get( context );
          artist->UpdateVRuler(t, rect);
 
@@ -474,7 +476,7 @@ void TrackArt::DrawVRuler
          rect.height -= 1;
 
          //int bottom = GetBottom(track, rect);
-         track->PrepareIPitchToY(rect);
+         view.PrepareIPitchToY(rect);
 
          wxPen hilitePen;
          hilitePen.SetColour(120, 120, 120);
@@ -492,13 +494,13 @@ void TrackArt::DrawVRuler
          dc->SetFont(labelFont);
 
          int octave = 0;
-         int obottom = track->GetOctaveBottom(octave);
-         int marg = track->GetNoteMargin(rect.height);
+         int obottom = view.GetOctaveBottom(octave);
+         int marg = view.GetNoteMargin(rect.height);
          //IPITCH_TO_Y(octave * 12) + PITCH_HEIGHT + 1;
          while (obottom >= rect.y) {
             dc->SetPen(*wxBLACK_PEN);
             for (int white = 0; white < 7; white++) {
-               int pos = track->GetWhitePos(white);
+               int pos = view.GetWhitePos(white);
                if (obottom - pos > rect.y + marg + 1 &&
                    // don't draw too close to margin line -- it's annoying
                    obottom - pos < rect.y + rect.height - marg - 3)
@@ -506,11 +508,11 @@ void TrackArt::DrawVRuler
                                rect.x + rect.width, obottom - pos);
             }
             wxRect br = rect;
-            br.height = track->GetPitchHeight(1);
+            br.height = view.GetPitchHeight(1);
             br.x++;
             br.width = 17;
             for (int black = 0; black < 5; black++) {
-               br.y = obottom - track->GetBlackPos(black);
+               br.y = obottom - view.GetBlackPos(black);
                if (br.y > rect.y + marg - 2 && br.y + br.height < rect.y + rect.height - marg) {
                   dc->SetPen(hilitePen);
                   dc->DrawRectangle(br);
@@ -538,7 +540,7 @@ void TrackArt::DrawVRuler
                                obottom - height + 2);
                }
             }
-            obottom = track->GetOctaveBottom(++octave);
+            obottom = view.GetOctaveBottom(++octave);
          }
          // draw lines delineating the out-of-bounds margins
          dc->SetPen(*wxBLACK_PEN);
@@ -2754,6 +2756,7 @@ void TrackArt::DrawNoteBackground(TrackPanelDrawingContext &context,
                                      const wxBrush &bb, const wxPen &bp,
                                      const wxPen &mp)
 {
+   const auto &view = NoteTrackView::Get( *track );
    auto &dc = context.dc;
    const auto artist = TrackArtist::Get( context );
    const auto &zoomInfo = *artist->pZoomInfo;
@@ -2776,13 +2779,13 @@ void TrackArt::DrawNoteBackground(TrackPanelDrawingContext &context,
    dc.SetBrush(bb);
    int octave = 0;
    // obottom is the window coordinate of octave divider line
-   int obottom = track->GetOctaveBottom(octave);
+   int obottom = view.GetOctaveBottom(octave);
    // eOffset is for the line between E and F; there's another line
    // between B and C, hence the offset of 2 for two line thicknesses
-   int eOffset = track->GetPitchHeight(5) + 2;
-   while (obottom > rect.y + track->GetNoteMargin(rect.height) + 3) {
+   int eOffset = view.GetPitchHeight(5) + 2;
+   while (obottom > rect.y + view.GetNoteMargin(rect.height) + 3) {
       // draw a black line separating octaves if this octave botton is visible
-      if (obottom < rect.y + rect.height - track->GetNoteMargin(rect.height)) {
+      if (obottom < rect.y + rect.height - view.GetNoteMargin(rect.height)) {
          dc.SetPen(*wxBLACK_PEN);
          // obottom - 1 because obottom is at the bottom of the line
          AColor::Line(dc, left, obottom - 1, right, obottom - 1);
@@ -2798,14 +2801,14 @@ void TrackArt::DrawNoteBackground(TrackPanelDrawingContext &context,
       wxRect br;
       br.x = left;
       br.width = right - left;
-      br.height = track->GetPitchHeight(1);
+      br.height = view.GetPitchHeight(1);
       for (int black = 0; black < 5; black++) {
-         br.y = obottom - track->GetBlackPos(black);
+         br.y = obottom - view.GetBlackPos(black);
          if (br.y > rect.y && br.y + br.height < rect.y + rect.height) {
             dc.DrawRectangle(br); // draw each black key background stripe
          }
       }
-      obottom = track->GetOctaveBottom(++octave);
+      obottom = view.GetOctaveBottom(++octave);
    }
 
    // draw bar lines
@@ -2852,6 +2855,7 @@ void TrackArt::DrawNoteTrack(TrackPanelDrawingContext &context,
                                 const wxRect & rect,
                                 bool muted)
 {
+   const auto &view = NoteTrackView::Get( *track );
    auto &dc = context.dc;
    const auto artist = TrackArtist::Get( context );
    const auto &selectedRegion = *artist->pSelectedRegion;
@@ -2871,14 +2875,14 @@ void TrackArt::DrawNoteTrack(TrackPanelDrawingContext &context,
 
    // reserve 1/2 note height at top and bottom of track for
    // out-of-bounds notes
-   int numPitches = (rect.height) / track->GetPitchHeight(1);
+   int numPitches = (rect.height) / view.GetPitchHeight(1);
    if (numPitches < 0) numPitches = 0; // cannot be negative
 
    // bottom is the hypothetical location of the bottom of pitch 0 relative to
    // the top of the clipping region rect: rect.height - PITCH_HEIGHT/2 is where the
    // bottomNote is displayed, and to that
    // we add the height of bottomNote from the position of pitch 0
-   track->PrepareIPitchToY(rect);
+   view.PrepareIPitchToY(rect);
 
 #ifdef EXPERIMENTAL_NOTETRACK_OVERLAY
    DrawBackgroundWithSelection(context, rect, track,
@@ -2934,7 +2938,7 @@ void TrackArt::DrawNoteTrack(TrackPanelDrawingContext &context,
                       selectedBarLinePen);
    SonifyEndNoteBackground();
    SonifyBeginNoteForeground();
-   int marg = track->GetNoteMargin(rect.height);
+   int marg = view.GetNoteMargin(rect.height);
 
    // NOTE: it would be better to put this in some global initialization
    // function rather than do lookups every time.
@@ -2980,8 +2984,8 @@ void TrackArt::DrawNoteTrack(TrackPanelDrawingContext &context,
                const char *shape = NULL;
                if (note->loud > 0.0 || 0 == (shape = IsShape(note))) {
                   wxRect nr; // "note rectangle"
-                  nr.y = track->PitchToY(note->pitch);
-                  nr.height = track->GetPitchHeight(1);
+                  nr.y = view.PitchToY(note->pitch);
+                  nr.height = view.GetPitchHeight(1);
 
                   nr.x = TIME_TO_X(xx);
                   nr.width = TIME_TO_X(x1) - nr.x;
@@ -3022,7 +3026,7 @@ void TrackArt::DrawNoteTrack(TrackPanelDrawingContext &context,
                         else
                            AColor::MIDIChannel(&dc, note->chan + 1);
                         dc.DrawRectangle(nr);
-                        if (track->GetPitchHeight(1) > 2) {
+                        if (view.GetPitchHeight(1) > 2) {
                            AColor::LightMIDIChannel(&dc, note->chan + 1);
                            AColor::Line(dc, nr.x, nr.y, nr.x + nr.width-2, nr.y);
                            AColor::Line(dc, nr.x, nr.y, nr.x, nr.y + nr.height-2);
@@ -3040,7 +3044,7 @@ void TrackArt::DrawNoteTrack(TrackPanelDrawingContext &context,
                   // add 0.5 to pitch because pitches are plotted with
                   // height = PITCH_HEIGHT; thus, the center is raised
                   // by PITCH_HEIGHT * 0.5
-                  int yy = track->PitchToY(note->pitch);
+                  int yy = view.PitchToY(note->pitch);
                   long linecolor = LookupIntAttribute(note, linecolori, -1);
                   long linethick = LookupIntAttribute(note, linethicki, 1);
                   long fillcolor = -1;
@@ -3066,7 +3070,7 @@ void TrackArt::DrawNoteTrack(TrackPanelDrawingContext &context,
                               wxBRUSHSTYLE_SOLID));
                      if (!fillflag) dc.SetBrush(*wxTRANSPARENT_BRUSH);
                   }
-                  int y1 = track->PitchToY(LookupRealAttribute(note, y1r, note->pitch));
+                  int y1 = view.PitchToY(LookupRealAttribute(note, y1r, note->pitch));
                   if (shape == line) {
                      // extreme zooms caues problems under windows, so we have to do some
                      // clipping before calling display routine
@@ -3097,7 +3101,7 @@ void TrackArt::DrawNoteTrack(TrackPanelDrawingContext &context,
                      points[1].y = y1;
                      points[2].x = TIME_TO_X(LookupRealAttribute(note, x2r, xx));
                      CLIP(points[2].x);
-                     points[2].y = track->PitchToY(LookupRealAttribute(note, y2r, note->pitch));
+                     points[2].y = view.PitchToY(LookupRealAttribute(note, y2r, note->pitch));
                      dc.DrawPolygon(3, points);
                   } else if (shape == polygon) {
                      wxPoint points[20]; // upper bound of 20 sides
@@ -3109,7 +3113,7 @@ void TrackArt::DrawNoteTrack(TrackPanelDrawingContext &context,
                      points[1].y = y1;
                      points[2].x = TIME_TO_X(LookupRealAttribute(note, x2r, xx));
                      CLIP(points[2].x);
-                     points[2].y = track->PitchToY(LookupRealAttribute(note, y2r, note->pitch));
+                     points[2].y = view.PitchToY(LookupRealAttribute(note, y2r, note->pitch));
                      int n = 3;
                      while (n < 20) {
                         char name[8];
@@ -3123,7 +3127,7 @@ void TrackArt::DrawNoteTrack(TrackPanelDrawingContext &context,
                         attr = symbol_table.insert_string(name);
                         double yn = LookupRealAttribute(note, attr, -1000000.0);
                         if (yn == -1000000.0) break;
-                        points[n].y = track->PitchToY(yn);
+                        points[n].y = view.PitchToY(yn);
                         n++;
                      }
                      dc.DrawPolygon(n, points);

@@ -40,7 +40,7 @@
 #include "TrackPanel.h" // For TrackInfo
 #include "AllThemeResources.h"
 
-#include "tracks/ui/TrackView.h"
+#include "tracks/playabletrack/notetrack/ui/NoteTrackView.h"
 
 #ifdef SONIFY
 #include "../lib-src/portmidi/pm_common/portmidi.h"
@@ -119,8 +119,6 @@ NoteTrack::NoteTrack(const std::shared_ptr<DirManager> &projDirManager)
 #ifdef EXPERIMENTAL_MIDI_OUT
    mVelocity = 0;
 #endif
-   mBottomNote = 24;
-   mPitchHeight = 5.0f;
 
    mVisibleChannels = ALL_CHANNELS;
 }
@@ -186,8 +184,6 @@ Track::Holder NoteTrack::Clone() const
       // We are duplicating a default-constructed NoteTrack, and that's okay
    }
    // copy some other fields here
-   duplicate->SetBottomNote(mBottomNote);
-   duplicate->mPitchHeight = mPitchHeight;
    duplicate->mVisibleChannels = mVisibleChannels;
    duplicate->SetOffset(GetOffset());
 #ifdef EXPERIMENTAL_MIDI_OUT
@@ -889,7 +885,7 @@ bool NoteTrack::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
 #endif
          else if (!wxStrcmp(attr, wxT("bottomnote")) &&
                   XMLValueChecker::IsGoodInt(strValue) && strValue.ToLong(&nValue))
-            SetBottomNote(nValue);
+            NoteTrackView::Get( *this ).SetBottomNote(nValue);
          else if (!wxStrcmp(attr, wxT("data"))) {
              std::string s(strValue.mb_str(wxConvUTF8));
              std::istringstream data(s);
@@ -928,7 +924,8 @@ void NoteTrack::WriteXML(XMLWriter &xmlFile) const
 #ifdef EXPERIMENTAL_MIDI_OUT
    xmlFile.WriteAttr(wxT("velocity"), (double) saveme->mVelocity);
 #endif
-   xmlFile.WriteAttr(wxT("bottomnote"), saveme->mBottomNote);
+   xmlFile.WriteAttr( wxT("bottomnote"),
+      NoteTrackView::Get( *saveme ).GetBottomNote() );
    xmlFile.WriteAttr(wxT("data"), wxString(data.str().c_str(), wxConvUTF8));
    xmlFile.EndTag(wxT("notetrack"));
 }
@@ -943,61 +940,9 @@ void NoteTrack::VScroll(int start, int end)
 {
     int ph = GetPitchHeight();
     int delta = ((end - start) + ph / 2) / ph;
-    SetBottomNote(mStartBottomNote + delta);
+    NoteTrackView::Get( *this ).SetBottomNote(mStartBottomNote + delta);
 }
 #endif
-
-void NoteTrack::Zoom(const wxRect &rect, int y, float multiplier, bool center)
-{
-   // Construct track rectangle to map pitch to screen coordinates
-   // Only y and height are needed:
-   wxRect trackRect(0, rect.GetY(), 1, rect.GetHeight());
-   PrepareIPitchToY(trackRect);
-   int clickedPitch = YToIPitch(y);
-   // zoom by changing the pitch height
-   SetPitchHeight(rect.height, mPitchHeight * multiplier);
-   PrepareIPitchToY(trackRect); // update because mPitchHeight changed
-   if (center) {
-      int newCenterPitch = YToIPitch(rect.GetY() + rect.GetHeight() / 2);
-      // center the pitch that the user clicked on
-      SetBottomNote(mBottomNote + (clickedPitch - newCenterPitch));
-   } else {
-      int newClickedPitch = YToIPitch(y);
-      // align to keep the pitch that the user clicked on in the same place
-      SetBottomNote(mBottomNote + (clickedPitch - newClickedPitch));
-   }
-}
-
-
-void NoteTrack::ZoomTo(const wxRect &rect, int start, int end)
-{
-   wxRect trackRect(0, rect.GetY(), 1, rect.GetHeight());
-   PrepareIPitchToY(trackRect);
-   int topPitch = YToIPitch(start);
-   int botPitch = YToIPitch(end);
-   if (topPitch < botPitch) { // swap
-      int temp = topPitch; topPitch = botPitch; botPitch = temp;
-   }
-   if (topPitch == botPitch) { // can't divide by zero, do something else
-      Zoom(rect, start, 1, true);
-      return;
-   }
-   auto trialPitchHeight = (float)trackRect.height / (topPitch - botPitch);
-   Zoom(rect, (start + end) / 2, trialPitchHeight / mPitchHeight, true);
-}
-
-int NoteTrack::YToIPitch(int y)
-{
-   y = mBottom - y; // pixels above pitch 0
-   int octave = (y / GetOctaveHeight());
-   y -= octave * GetOctaveHeight();
-   // result is approximate because C and G are one pixel taller than
-   // mPitchHeight.
-   return (y / GetPitchHeight(1)) + octave * 12;
-}
-
-const float NoteTrack::ZoomStep = powf( 2.0f, 0.25f );
-
 
 #include "tracks/playabletrack/notetrack/ui/NoteTrackControls.h"
 #include "tracks/playabletrack/notetrack/ui/NoteTrackView.h"

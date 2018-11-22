@@ -23,6 +23,7 @@
 
 #include "../Internat.h"
 #include "../NoteTrack.h"
+#include "../tracks/playabletrack/notetrack/ui/NoteTrackView.h"
 #include "../widgets/ErrorDialog.h"
 
 bool ImportMIDI(const FilePath &fName, NoteTrack * dest)
@@ -88,7 +89,7 @@ bool ImportMIDI(const FilePath &fName, NoteTrack * dest)
    // initial track is about 27 half-steps high; if bottom note is C,
    // then middle pitch class is D. Round mean_pitch to the nearest D:
    int mid_pitch = ((mean_pitch - 2 + 6) / 12) * 12 + 2;
-   dest->SetBottomNote(mid_pitch - 14);
+   NoteTrackView::Get( *dest ).SetBottomNote( mid_pitch - 14 );
    return true;
 }
 
