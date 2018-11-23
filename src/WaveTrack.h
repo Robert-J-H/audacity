@@ -645,7 +645,7 @@ private:
 
    wxCriticalSection mFlushCriticalSection;
    wxCriticalSection mAppendCriticalSection;
-   double mLegacyProjectFileOffset;
+   double mLegacyProjectFileOffset{ 0 };
    int mAutoSaveIdent;
 
    std::unique_ptr<SpectrogramSettings> mpSpectrumSettings;

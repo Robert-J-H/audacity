@@ -103,8 +103,6 @@ WaveTrack::WaveTrack(const std::shared_ptr<DirManager> &projDirManager, sampleFo
       settings.scaleType = WaveformSettings::stLogarithmic;
    }
 
-   mLegacyProjectFileOffset = 0;
-
    mFormat = format;
    mRate = (int) rate;
    mGain = 1.0;
@@ -137,8 +135,6 @@ WaveTrack::WaveTrack(const WaveTrack &orig):
 {
    mLastScaleType = -1;
    mLastdBRange = -1;
-
-   mLegacyProjectFileOffset = 0;
 
    Init(orig);
 
