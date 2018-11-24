@@ -15,6 +15,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "WaveTrackViewGroupData.h"
 #include "WaveTrackVRulerControls.h"
 
+#include "WaveTrackVRulerControls.h"
 #include "../../../../HitTestResult.h"
 #include "../../../../Project.h"
 #include "../../../../TrackPanelMouseEvent.h"
@@ -119,7 +120,8 @@ std::shared_ptr<TrackControls> WaveTrack::DoGetControls()
    return std::make_shared<WaveTrackControls>( SharedPointer() );
 }
 
-std::shared_ptr<TrackVRulerControls> WaveTrack::DoGetVRulerControls()
+std::shared_ptr<TrackVRulerControls> WaveTrackView::DoGetVRulerControls()
 {
-   return std::make_shared<WaveTrackVRulerControls>( SharedPointer() );
+   return
+      std::make_shared<WaveTrackVRulerControls>( shared_from_this() );
 }

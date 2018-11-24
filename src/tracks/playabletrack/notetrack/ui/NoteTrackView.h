@@ -23,6 +23,8 @@ public:
    NoteTrackView( const std::shared_ptr<Track> &pTrack )
       : TrackView{ pTrack } {}
    ~NoteTrackView() override;
+
+   std::shared_ptr<TrackVRulerControls> DoGetVRulerControls() override;
 };
 
 #endif

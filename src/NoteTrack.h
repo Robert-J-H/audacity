@@ -278,7 +278,6 @@ public:
 protected:
    std::shared_ptr<TrackView> DoGetView() override;
    std::shared_ptr<TrackControls> DoGetControls() override;
-   std::shared_ptr<TrackVRulerControls> DoGetVRulerControls() override;
 };
 
 #endif // USE_MIDI

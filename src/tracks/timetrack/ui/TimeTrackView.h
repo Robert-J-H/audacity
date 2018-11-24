@@ -23,6 +23,9 @@ public:
    TimeTrackView( const std::shared_ptr<Track> &pTrack )
       : TrackView{ pTrack } {}
    ~TimeTrackView() override;
+
+   std::shared_ptr<TrackVRulerControls> DoGetVRulerControls() override;
+
 };
 
 #endif

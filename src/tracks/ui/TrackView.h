@@ -14,8 +14,10 @@ Paul Licameli split from class Track
 #include "CommonTrackPanelCell.h"
 
 class Track;
+class TrackVRulerControls;
 
 class TrackView /* not final */ : public CommonTrackPanelCell
+   , public std::enable_shared_from_this<TrackView>
 {
    TrackView( const TrackView& ) = delete;
    TrackView &operator=( const TrackView& ) = delete;
@@ -31,6 +33,11 @@ public:
    // Copy view state, for undo/redo purposes
    virtual void Copy( const TrackView &other );
 
+   // Return another, associated TrackPanelCell object that implements the
+   // mouse actions for the vertical ruler
+   std::shared_ptr<TrackVRulerControls> GetVRulerControls();
+   std::shared_ptr<const TrackVRulerControls> GetVRulerControls() const;
+   
    std::vector<UIHandlePtr> HitTest
       (const TrackPanelMouseState &, const AudacityProject *pProject)
       final override;
@@ -38,10 +45,16 @@ public:
    // Delegates the handling to the related TCP cell
    std::shared_ptr<TrackPanelCell> ContextMenuDelegate() override;
 
+   // Private factory to make appropriate object; class TrackView handles
+   // memory management thereafter
+   virtual std::shared_ptr<TrackVRulerControls> DoGetVRulerControls() = 0;
+
    std::shared_ptr<Track> DoFindTrack() override;
 
 protected:
    Track *GetTrack() const;
+
+   std::shared_ptr<TrackVRulerControls> mpVRulerControls;
 
    // back-pointer to parent is weak to avoid a cycle
    std::weak_ptr<Track> mwTrack;

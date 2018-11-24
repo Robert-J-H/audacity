@@ -58,8 +58,10 @@ std::shared_ptr<TrackControls> NoteTrack::DoGetControls()
    return std::make_shared<NoteTrackControls>( SharedPointer() );
 }
 
-std::shared_ptr<TrackVRulerControls> NoteTrack::DoGetVRulerControls()
+std::shared_ptr<TrackVRulerControls> NoteTrackView::DoGetVRulerControls()
 {
-   return std::make_shared<NoteTrackVRulerControls>( SharedPointer() );
+   return
+      std::make_shared<NoteTrackVRulerControls>( shared_from_this() );
 }
+
 #endif

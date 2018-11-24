@@ -26,6 +26,9 @@ public:
       : TrackView{ pTrack } {}
    ~LabelTrackView() override;
 
+private:
+   std::shared_ptr<TrackVRulerControls> DoGetVRulerControls() override;
+
    static LabelTrackView &Get( LabelTrack& );
    static const LabelTrackView &Get( const LabelTrack& );
 

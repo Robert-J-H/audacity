@@ -92,6 +92,7 @@ is time to refresh some aspect of the screen.
 #include "toolbars/ToolsToolBar.h"
 
 #include "tracks/ui/TrackControls.h" // for inheritance relation
+#include "tracks/ui/TrackView.h" // for inheritance relation
 #include "tracks/ui/TrackVRulerControls.h" // for inheritance relation
 
 //This loads the appropriate set of cursors, depending on platform.
