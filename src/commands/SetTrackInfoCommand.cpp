@@ -58,14 +58,6 @@ SetTrackBase::SetTrackBase(){
 //#define USE_OWN_TRACK_SELECTION
 
 
-bool SetTrackBase::ApplyInner( const CommandContext &context, Track *t  )
-{
-      static_cast<void>(&context);
-      static_cast<void>(&t);
-      return true;
-};
-
-
 bool SetTrackBase::DefineParams( ShuttleParams & S)
 {
    static_cast<void>(S);
