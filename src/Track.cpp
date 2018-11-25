@@ -461,40 +461,6 @@ void Track::FinishCopy
    }
 }
 
-bool Track::LinkConsistencyCheck()
-{
-   // Sanity checks for linked tracks; unsetting the linked property
-   // doesn't fix the problem, but it likely leaves us with orphaned
-   // blockfiles instead of much worse problems.
-   bool err = false;
-   if (GetLinked())
-   {
-      Track *l = GetLink();
-      if (l)
-      {
-         // A linked track's partner should never itself be linked
-         if (l->GetLinked())
-         {
-            wxLogWarning(
-               wxT("Left track %s had linked right track %s with extra right track link.\n   Removing extra link from right track."),
-               GetName(), l->GetName());
-            err = true;
-            l->SetLinked(false);
-         }
-      }
-      else
-      {
-         wxLogWarning(
-            wxT("Track %s had link to NULL track. Setting it to not be linked."),
-            GetName());
-         err = true;
-         SetLinked(false);
-      }
-   }
-
-   return ! err;
-}
-
 std::pair<Track *, Track *> TrackList::FindSyncLockGroup(Track *pMember) const
 {
    if (!pMember)
@@ -1298,6 +1264,48 @@ std::shared_ptr<const Track> Track::SubstituteOriginalTrack() const
       }
    }
    return SharedPointer();
+}
+
+bool Track::sLoadError;
+unsigned long Track::sLoadingChannelsCount;
+unsigned long Track::sLoadingChannelsCounter;
+std::weak_ptr<TrackList> Track::sLoadingChannelsTrackList;
+
+void Track::PreLoad( const std::shared_ptr<TrackList> &pList )
+{
+   sLoadError = false;
+   sLoadingChannelsCount = sLoadingChannelsCounter = 0;
+   sLoadingChannelsTrackList = pList;
+}
+
+void Track::PostLoad()
+{
+   if ( sLoadingChannelsCounter < sLoadingChannelsCount ) {
+      sLoadError = true;
+      wxLogWarning(
+         wxT("Defective final channel group: expected %d, found %d."),
+         (int)sLoadingChannelsCount,
+         (int)sLoadingChannelsCounter
+      );
+   }
+
+   if (sLoadingChannelsCounter > 1) {
+      auto pList = sLoadingChannelsTrackList.lock();
+      if ( pList ) {
+         auto revIter = pList->Any< WaveTrack >().rbegin();
+         std::advance( revIter, sLoadingChannelsCounter - 1 );
+         if ( *revIter )
+            pList->GroupChannels( **revIter, sLoadingChannelsCounter );
+      }
+   }
+   sLoadingChannelsCount = sLoadingChannelsCounter = 0;
+}
+
+// XMLTagHandler callback methods for loading and saving
+void Track::HandleXMLEndTag( const wxChar * )
+{
+   if ( ++sLoadingChannelsCounter >= sLoadingChannelsCount )
+      PostLoad();
 }
 
 // Serialize, not with tags of its own, but as attributes within a tag.

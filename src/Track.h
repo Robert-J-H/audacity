@@ -326,9 +326,6 @@ protected:
 public:
    static void FinishCopy (const Track *n, Track *dest);
 
-   // For use when loading a file.  Return true if ok, else make repair
-   bool LinkConsistencyCheck();
-
    bool HasOwner() const { return static_cast<bool>(GetOwner());}
 
 private:
@@ -337,7 +334,6 @@ private:
    Track *GetLink() const;
    bool GetLinked  () const { return mLinked; }
 
-   friend WaveTrack; // WaveTrack needs to call SetLinked when reloading project
    void SetLinked  (bool l);
 
 private:
@@ -704,7 +700,14 @@ public:
       }
    }
 
-   // XMLTagHandler callback methods -- NEW virtual for writing
+   static void PreLoad( const std::shared_ptr<TrackList> &pList );
+   static void PostLoad();
+   static bool LoadError() { return sLoadError; }
+
+   // XMLTagHandler callback methods for loading and saving
+   void HandleXMLEndTag(const wxChar *tag) override;
+
+   // NEW virtual for writing
    virtual void WriteXML(XMLWriter &xmlFile) const = 0;
 
    // Returns true if an error was encountered while trying to
@@ -739,6 +742,11 @@ public:
    bool HandleCommonXMLAttribute(const wxChar *attr, const wxChar *value);
 
 protected:
+   static bool sLoadError;
+   static unsigned long sLoadingChannelsCount, sLoadingChannelsCounter;
+   static std::weak_ptr<TrackList> sLoadingChannelsTrackList;
+   static bool IsLoadingLeader() { return sLoadingChannelsCounter == 0; }
+
    std::shared_ptr<Track> DoFindTrack() override;
 
    // These are called to create controls on demand:

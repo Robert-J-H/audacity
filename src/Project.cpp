@@ -2990,8 +2990,8 @@ void AudacityProject::OpenFile(const FilePath &fileNameArg, bool addtohistory)
                t->GetName());
             err = true;
          }
-
-         err = ( !t->LinkConsistencyCheck() ) || err;
+         
+         err = Track::LoadError() || err;
 
          mLastSavedTracks->Add(t->Duplicate());
       }
@@ -3252,6 +3252,7 @@ void AudacityProject::EnqueueODTasks()
 bool AudacityProject::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
 {
    auto &project = *this;
+   auto &tracks = TrackList::Get( project );
    auto &viewInfo = ViewInfo::Get( project );
    auto &dirManager = DirManager::Get( project );
    bool bFileVersionFound = false;
@@ -3469,7 +3470,17 @@ bool AudacityProject::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
       return false;
 
    // All other tests passed, so we succeed
+
+   // Certain global state must start clean
+   Track::PreLoad( tracks.shared_from_this() );
+
    return true;
+}
+
+void AudacityProject::HandleXMLEndTag( const wxChar *tag )
+{
+   // Complete the consistency check on channel groupings
+   Track::PostLoad();
 }
 
 XMLTagHandler *AudacityProject::HandleXMLChild(const wxChar *tag)

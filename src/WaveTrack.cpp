@@ -1739,8 +1739,19 @@ bool WaveTrack::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
             // Ignore the value
          }
          else if (!wxStrcmp(attr, wxT("linked")) &&
-                  XMLValueChecker::IsGoodInt(strValue) && strValue.ToLong(&nValue))
-            SetLinked(nValue != 0);
+                  XMLValueChecker::IsGoodInt(strValue) && strValue.ToLong(&nValue)) {
+            if (nValue > 0 || sLoadingChannelsCount == 0) {
+               if ( sLoadingChannelsCount ) {
+                  sLoadError = true;
+                  wxLogWarning(
+                     wxT("Overlapping channel groups.  Ignoring later one.") );
+               }
+               else {
+                  sLoadingChannelsCount = 1 + std::max(0L, nValue);
+                  sLoadingChannelsCounter = 0;
+               }
+            }
+         }
          else if (!wxStrcmp(attr, wxT("autosaveid")) &&
                   XMLValueChecker::IsGoodInt(strValue) && strValue.ToLong(&nValue))
             mAutoSaveIdent = (int) nValue;
@@ -1756,11 +1767,13 @@ bool WaveTrack::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
    return false;
 }
 
-void WaveTrack::HandleXMLEndTag(const wxChar * WXUNUSED(tag))
+void WaveTrack::HandleXMLEndTag(const wxChar *tag)
 {
    // In case we opened a pre-multiclip project, we need to
    // simulate closing the waveclip tag.
    NewestOrNewClip()->HandleXMLEndTag(wxT("waveclip"));
+
+   Track::HandleXMLEndTag( tag );
 }
 
 XMLTagHandler *WaveTrack::HandleXMLChild(const wxChar *tag)
@@ -1813,7 +1826,18 @@ void WaveTrack::WriteXML(XMLWriter &xmlFile) const
    // from the pan, but keep writing it for forward compatibility.
    xmlFile.WriteAttr(wxT("channel"), GetChannelIgnoringPan());
 
-   xmlFile.WriteAttr(wxT("linked"), mLinked);
+   // Formerly this was a boolean written as an integer, and on read, just
+   // tested against zero.
+   // The boolean was true only if the track was first of a stereo pair.
+   // Now we generalize by writing the number of channels (however many) minus
+   // one for the first channel, and zero for other channels.
+   // Older Audacity versions can still load the file, not losing any track
+   // contents, but will group two channels at most as stereo and leave other
+   // channels un-grouped.
+   int linked = 0;
+   if ( IsLeader() )
+      linked = TrackList::Channels(this).size() - 1;
+   xmlFile.WriteAttr(wxT("linked"), linked);
 
    this->PlayableTrack::WriteXMLAttributes(xmlFile);
    xmlFile.WriteAttr(wxT("rate"), mRate);
