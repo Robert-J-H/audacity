@@ -255,7 +255,7 @@ void UndoManager::ModifyState(const TrackList * l,
       if ( t->GetId() == TrackId{} )
          // Don't copy a pending added track
          continue;
-      tracksCopy->Add(t->Duplicate());
+      tracksCopy->Add(t->Duplicate(), t->IsLeader());
    }
 
    // Replace
@@ -295,7 +295,7 @@ void UndoManager::PushState(const TrackList * l,
       if ( t->GetId() == TrackId{} )
          // Don't copy a pending added track
          continue;
-      tracksCopy->Add(t->Duplicate());
+      tracksCopy->Add(t->Duplicate(), t->IsLeader());
    }
 
    mayConsolidate = true;

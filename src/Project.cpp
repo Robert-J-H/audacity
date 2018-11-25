@@ -2993,7 +2993,7 @@ void AudacityProject::OpenFile(const FilePath &fileNameArg, bool addtohistory)
          
          err = Track::LoadError() || err;
 
-         mLastSavedTracks->Add(t->Duplicate());
+         mLastSavedTracks->Add(t->Duplicate(), t->IsLeader());
       }
 
       InitialState();
@@ -3497,21 +3497,23 @@ XMLTagHandler *AudacityProject::HandleXMLChild(const wxChar *tag)
    // had
 
    if (!wxStrcmp(tag, wxT("wavetrack"))) {
-      return tracks.Add( trackFactory.NewWaveTrack() );
+      // Add always as leader but we fix up the grouping later in
+      // WaveTrack::HandleXMLEndTag
+      return tracks.Add( trackFactory.NewWaveTrack(), true);
    }
 
    #ifdef USE_MIDI
    if (!wxStrcmp(tag, wxT("notetrack"))) {
-      return tracks.Add( trackFactory.NewNoteTrack() );
+      return tracks.Add( trackFactory.NewNoteTrack(), true );
    }
    #endif // USE_MIDI
 
    if (!wxStrcmp(tag, wxT("labeltrack"))) {
-      return tracks.Add( trackFactory.NewLabelTrack() );
+      return tracks.Add( trackFactory.NewLabelTrack(), true);
    }
 
    if (!wxStrcmp(tag, wxT("timetrack"))) {
-      return tracks.Add( trackFactory.NewTimeTrack() );
+      return tracks.Add( trackFactory.NewTimeTrack(), true );
    }
 
    if (!wxStrcmp(tag, wxT("recordingrecovery"))) {
@@ -3925,7 +3927,7 @@ bool AudacityProject::DoSave (const bool fromSaveAs,
 
       auto &tracks = TrackList::Get( proj );
       for ( auto t : tracks.Any() ) {
-         mLastSavedTracks->Add(t->Duplicate());
+         mLastSavedTracks->Add(t->Duplicate(), t->IsLeader());
 
          //only after the xml has been saved we can mark it saved.
          //thus is because the OD blockfiles change on  background thread while this is going on.
@@ -3984,7 +3986,10 @@ bool AudacityProject::SaveCopyWaveTracks(const FilePath & strProjectPathName,
    for (auto pWaveTrack : trackRange)
    {
       numWaveTracks++;
-      pSavedTrackList.Add( trackFactory.DuplicateWaveTrack( *pWaveTrack ) );
+      pSavedTrackList.Add(
+         trackFactory.DuplicateWaveTrack( *pWaveTrack ),
+         pWaveTrack->IsLeader()
+      );
    }
    auto cleanup = finally( [&] {
       // Restore the saved track states and clean up.
@@ -4089,7 +4094,7 @@ AudacityProject::AddImportedTracks(const FilePath &fileName,
       auto first = group.begin()->get();
       auto nChannels = group.size();
       for (auto &uNewTrack : group) {
-         auto newTrack = tracks.Add( uNewTrack );
+         auto newTrack = tracks.Add( uNewTrack, true );
          results.push_back(newTrack->SharedPointer());
       }
       tracks.GroupChannels(*first, nChannels);
@@ -4604,7 +4609,7 @@ void AudacityProject::PopState(const UndoState &state)
 
    for (auto t : tracks->Any())
    {
-      auto copyTrack = dstTracks.Add(t->Duplicate());
+      auto copyTrack = dstTracks.Add(t->Duplicate(), t->IsLeader());
 
       //add the track to OD if the manager exists.  later we might do a more rigorous check...
       copyTrack->TypeSwitch( [&](WaveTrack *wt) {
@@ -5158,7 +5163,7 @@ void AudacityProject::OnAudioIOStopRecording()
          // Make a track with labels for recording errors
          auto uTrack = TrackFactory::Get( project ).NewLabelTrack();
          auto pTrack = uTrack.get();
-         tracks.Add( uTrack );
+         tracks.Add( uTrack, true );
          /* i18n-hint:  A name given to a track, appearing as its menu button.
           The translation should be short or else it will not display well.
           At most, about 11 Latin characters.

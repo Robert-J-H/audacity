@@ -1391,7 +1391,8 @@ bool NyquistEffect::ProcessOne()
       unsigned int l;
       auto ltrack = * mOutputTracks->Any< LabelTrack >().begin();
       if (!ltrack) {
-         ltrack = static_cast<LabelTrack*>(AddToOutputTracks(mFactory->NewLabelTrack()));
+         ltrack = static_cast<LabelTrack*>(
+            AddToOutputTracks(mFactory->NewLabelTrack(), true));
       }
 
       for (l = 0; l < numLabels; l++) {

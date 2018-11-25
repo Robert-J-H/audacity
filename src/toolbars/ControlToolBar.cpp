@@ -1225,7 +1225,7 @@ bool ControlToolBar::DoRecord(AudacityProject &project,
                newTrack->SetMinimized(true);
             }
 
-            TrackList::Get( *p ).RegisterPendingNewTrack( newTrack );
+            TrackList::Get( *p ).RegisterPendingNewTrack( newTrack, c == 0 );
             transportTracks.captureTracks.push_back(newTrack);
             // Bug 1548.  New track needs the focus.
             TrackPanel::Get( *p ).SetFocusedTrack( newTrack.get() );
@@ -1349,7 +1349,7 @@ void ControlToolBar::SetupCutPreviewTracks(double WXUNUSED(playStart), double cu
 
             auto newTrack = track1->Duplicate();
             newTrack->Clear(cutStart, cutEnd);
-            cutPreviewTracks->Add( newTrack );
+            cutPreviewTracks->Add( newTrack, track1->IsLeader());
          }
          // use NOTHROW-GUARANTEE:
          mCutPreviewTracks = cutPreviewTracks;
