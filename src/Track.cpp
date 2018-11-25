@@ -461,7 +461,7 @@ void Track::FinishCopy
    }
 }
 
-std::pair<Track *, Track *> TrackList::FindSyncLockGroup(Track *pMember) const
+std::pair<Track *, Track *> TrackList::FindSyncLockGroup(Track *pMember)
 {
    if (!pMember)
       return { nullptr, nullptr };
@@ -470,17 +470,18 @@ std::pair<Track *, Track *> TrackList::FindSyncLockGroup(Track *pMember) const
    // consisting of any positive number of audio tracks followed by zero or
    // more label tracks.
 
+   // Get an iterator over non-const tracks
+   auto member = Find( pMember );
+
    // Step back through any label tracks.
-   auto member = pMember;
-   while (member && ( nullptr != track_cast<const LabelTrack*>(member) )) {
-      member = GetPrev(member);
-   }
+   while ( nullptr != track_cast< const LabelTrack* >( *member ) )
+      --member;
 
    // Step back through the wave and note tracks before the label tracks.
    Track *first = nullptr;
-   while (member && IsSyncLockableNonLabelTrack(member)) {
-      first = member;
-      member = GetPrev(member);
+   while ( IsSyncLockableNonLabelTrack( *member ) ) {
+      first = *member;
+      --member;
    }
 
    if (!first)
@@ -491,11 +492,12 @@ std::pair<Track *, Track *> TrackList::FindSyncLockGroup(Track *pMember) const
    Track *last = first;
    bool inLabels = false;
 
-   while (const auto next = GetNext(last)) {
-      if ( ! IsGoodNextSyncLockTrack(next, inLabels) )
+   auto next = Find( last );
+   while ( * ++ next ) {
+      if ( ! IsGoodNextSyncLockTrack( * next, inLabels ) )
          break;
-      last = next;
-      inLabels = (nullptr != track_cast<const LabelTrack*>(last) );
+      last = *next;
+      inLabels = ( nullptr != track_cast< const LabelTrack* >( last ) );
    }
 
    return { first, last };
@@ -657,7 +659,7 @@ auto TrackList::SyncLockGroup( Track *pTrack )
 {
    auto pList = pTrack->GetOwner();
    auto tracks =
-      pList->FindSyncLockGroup( const_cast<Track*>( pTrack ) );
+      pList->FindSyncLockGroup( pTrack );
    return pList->Any().StartingWith(tracks.first).EndingAfter(tracks.second);
 }
 
@@ -824,62 +826,6 @@ void TrackList::Clear(bool sendEvent)
       DeletionEvent();
 }
 
-/// Return a track in the list that comes after Track t
-Track *TrackList::GetNext(Track * t, bool linked) const
-{
-   if (t) {
-      auto node = t->GetNode();
-      if ( !isNull( node ) ) {
-         if ( linked && t->GetLinked() )
-            node = getNext( node );
-
-         if ( !isNull( node ) )
-            node = getNext( node );
-
-         if ( !isNull( node ) )
-            return node.first->get();
-      }
-   }
-
-   return nullptr;
-}
-
-Track *TrackList::GetPrev(Track * t, bool linked) const
-{
-   if (t) {
-      TrackNodePointer prev;
-      auto node = t->GetNode();
-      if ( !isNull( node ) ) {
-         // linked is true and input track second in team?
-         if (linked) {
-            prev = getPrev( node );
-            if( !isNull( prev ) &&
-                !t->GetLinked() && t->GetLink() )
-               // Make it the first
-               node = prev;
-         }
-
-         prev = getPrev( node );
-         if ( !isNull( prev ) ) {
-            // Back up once
-            node = prev;
-
-            // Back up twice sometimes when linked is true
-            if (linked) {
-               prev = getPrev( node );
-               if( !isNull( prev ) &&
-                   !(*node.first)->GetLinked() && (*node.first)->GetLink() )
-                  node = prev;
-            }
-
-            return node.first->get();
-         }
-      }
-   }
-
-   return nullptr;
-}
-
 /// For mono track height of track
 /// For stereo track combined height of both channels.
 int TrackList::GetGroupHeight(const Track * t) const
@@ -889,12 +835,12 @@ int TrackList::GetGroupHeight(const Track * t) const
 
 bool TrackList::CanMoveUp(Track * t) const
 {
-   return GetPrev(t, true) != NULL;
+   return nullptr != ( * -- FindLeader( t ) );
 }
 
 bool TrackList::CanMoveDown(Track * t) const
 {
-   return GetNext(t, true) != NULL;
+   return nullptr != ( * ++ FindLeader( t ) );
 }
 
 // This is used when you want to swap the channel group starting
@@ -963,7 +909,7 @@ void TrackList::SwapNodes(TrackNodePointer s1, TrackNodePointer s2)
 bool TrackList::MoveUp(Track * t)
 {
    if (t) {
-      Track *p = GetPrev(t, true);
+      Track *p = ( * -- FindLeader( t ) );
       if (p) {
          SwapNodes(p->GetNode(), t->GetNode());
          return true;
@@ -976,7 +922,7 @@ bool TrackList::MoveUp(Track * t)
 bool TrackList::MoveDown(Track * t)
 {
    if (t) {
-      Track *n = GetNext(t, true);
+      Track *n = ( * ++ FindLeader( t ) );
       if (n) {
          SwapNodes(t->GetNode(), n->GetNode());
          return true;

@@ -1494,10 +1494,7 @@ private:
       return { { b, b, e, pred }, { b, e, e, pred } };
    }
 
-   Track *GetPrev(Track * t, bool linked = false) const;
-   Track *GetNext(Track * t, bool linked = false) const;
-   
-   std::pair<Track *, Track *> FindSyncLockGroup(Track *pMember) const;
+   std::pair<Track *, Track *> FindSyncLockGroup(Track *pMember);
 
    template < typename TrackType >
       TrackIter< TrackType >
