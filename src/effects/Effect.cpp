@@ -2570,7 +2570,6 @@ void Effect::Preview(bool dryOnly)
          mixRight->SetSelected(true);
          pRight = mTracks->Add( mixRight, false );
       }
-      mTracks->GroupChannels(*pLeft, pRight ? 2 : 1);
    }
    else {
       for (auto src : saveTracks->Any< const WaveTrack >()) {

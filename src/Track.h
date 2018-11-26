@@ -188,6 +188,13 @@ private:
    long mValue;
 };
 
+struct TrackGroupData
+   : std::enable_shared_from_this< TrackGroupData >
+{
+   virtual ~TrackGroupData();
+   virtual std::shared_ptr< TrackGroupData > Clone() const;
+};
+
 class AUDACITY_DLL_API Track /* not final */
    : public CommonTrackPanelCell, public XMLTagHandler
    , public std::enable_shared_from_this<Track> // see SharedPointer()
@@ -197,6 +204,34 @@ class AUDACITY_DLL_API Track /* not final */
  // To be TrackDisplay
  private:
    TrackId mId;
+
+ public:
+
+   using GroupData = TrackGroupData;
+
+ protected:
+   // Create data appropriate for the subclass of track -- this assumes
+   // that only tracks of like type are grouped together, so the object
+   // is also appropriate for the partners.
+   virtual std::shared_ptr< TrackGroupData > CreateGroupData() const;
+
+ public:
+   template< typename Subclass = GroupData >
+   Subclass &GetGroupData()
+   {
+      EnsureGroupData();
+      return dynamic_cast< Subclass & >( *mpGroupData );
+   }
+
+   // const version of previous
+   template< typename Subclass = const GroupData >
+   auto GetGroupData() const
+      -> typename std::enable_if< std::is_const<Subclass>::value,
+         Subclass &
+      >::type
+   {
+      return const_cast<Track*>(this)->GetGroupData<Subclass>();
+   }
 
  protected:
    std::weak_ptr<TrackList> mList;
@@ -210,8 +245,10 @@ class AUDACITY_DLL_API Track /* not final */
  private:
    bool           mSelected;
 
- protected:
-   bool           mLinked;
+   void EnsureGroupData();
+   std::shared_ptr< TrackGroupData > mpGroupData;
+
+protected:
    bool           mMinimized;
 
  public:
@@ -330,15 +367,6 @@ public:
 
 private:
    std::shared_ptr<TrackList> GetOwner() const { return mList.lock(); }
-
-   Track *GetLink() const;
-   bool GetLinked  () const { return mLinked; }
-
-   void SetLinked  (bool l);
-
-private:
-   // No need yet to make this virtual
-   void DoSetLinked(bool l);
 
    TrackNodePointer GetNode() const;
    void SetOwner
@@ -1410,6 +1438,8 @@ public:
 
    /// Replace first track with second track, give back a holder
    /// Give the replacement the same id as the replaced
+   /// Grouping of tracks in this list will not change, but contents of track
+   /// group data will be replaced, if defined in @param with
    ListOfTracks::value_type Replace(
       Track * t, const ListOfTracks::value_type &with);
 
@@ -1618,7 +1648,6 @@ public:
    bool HasPendingTracks() const;
 
 private:
-   // Need to put pending tracks into a list so that GetLink() works
    ListOfTracks mPendingUpdates;
    // This is in correspondence with mPendingUpdates
    std::vector< Updater > mUpdaters;

@@ -1230,7 +1230,6 @@ bool ControlToolBar::DoRecord(AudacityProject &project,
             // Bug 1548.  New track needs the focus.
             TrackPanel::Get( *p ).SetFocusedTrack( newTrack.get() );
          }
-         TrackList::Get( *p ).GroupChannels(*first, recordingChannels);
       }
       
       //Automated Input Level Adjustment Initialization

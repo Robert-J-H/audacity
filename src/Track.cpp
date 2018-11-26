@@ -51,12 +51,33 @@ and TimeTrack.
 #pragma warning( disable : 4786 )
 #endif
 
+TrackGroupData::~TrackGroupData()
+{
+}
+
+auto TrackGroupData::Clone() const -> std::shared_ptr<TrackGroupData>
+{
+   return std::make_shared<TrackGroupData>( *this );
+}
+
+auto Track::CreateGroupData() const -> std::shared_ptr<TrackGroupData>
+{
+   return std::make_shared<GroupData>();
+}
+
+void Track::EnsureGroupData()
+{
+   if (!mpGroupData) {
+      // Create on demand
+      mpGroupData = CreateGroupData();
+   }
+}
+
 Track::Track(const std::shared_ptr<DirManager> &projDirManager)
 :  vrulerSize(36,0),
    mDirManager(projDirManager)
 {
    mSelected  = false;
-   mLinked    = false;
 
    mY = 0;
    mHeight = DefaultHeight;
@@ -87,7 +108,6 @@ void Track::Init(const Track &orig)
    mDirManager = orig.mDirManager;
 
    mSelected = orig.mSelected;
-   mLinked = orig.mLinked;
    mHeight = orig.mHeight;
    mMinimized = orig.mMinimized;
 }
@@ -124,6 +144,7 @@ Track::Holder Track::Duplicate() const
    // (the delayed cloning of them may happen later when the duplicate track
    // is added to a TrackList, or else avoided when the track replaces its
    // original in the same TrackList)
+   result->mpGroupData = this->mpGroupData;
 
    return result;
 }
@@ -256,57 +277,6 @@ void Track::SetMinimized(bool isMinimized)
 void Track::DoSetMinimized(bool isMinimized)
 {
    mMinimized = isMinimized;
-}
-
-void Track::SetLinked(bool l)
-{
-   auto pList = mList.lock();
-   if (pList && !pList->mPendingUpdates.empty()) {
-      auto orig = pList->FindById( GetId() );
-      if (orig && orig != this) {
-         // delegate, and rely on RecalcPositions to copy back
-         orig->SetLinked(l);
-         return;
-      }
-   }
-
-   DoSetLinked(l);
-
-   if (pList) {
-      pList->RecalcPositions(mNode);
-      pList->ResizingEvent(mNode);
-   }
-}
-
-void Track::DoSetLinked(bool l)
-{
-   mLinked = l;
-}
-
-Track *Track::GetLink() const
-{
-   auto pList = mList.lock();
-   if (!pList)
-      return nullptr;
-
-   if (!pList->isNull(mNode)) {
-      if (mLinked) {
-         auto next = pList->getNext( mNode );
-         if ( !pList->isNull( next ) )
-            return next.first->get();
-      }
-
-      if (mNode.first != mNode.second->begin()) {
-         auto prev = pList->getPrev( mNode );
-         if ( !pList->isNull( prev ) ) {
-            auto track = prev.first->get();
-            if (track && track->GetLinked())
-               return track;
-         }
-      }
-   }
-
-   return nullptr;
 }
 
 namespace {
@@ -460,7 +430,18 @@ bool Track::IsSelectedOrSyncLockSelected() const
    { return GetSelected() || IsSyncLockSelected(); }
 
 bool Track::IsLeader() const
-   { return !GetLink() || GetLinked(); }
+{
+   if ( !mpGroupData )
+      return true;
+   auto pList = mList.lock();
+   if ( pList ) {
+      auto iter = pList->Find( this );
+      auto prev = * -- iter;
+      if ( prev && prev->mpGroupData == this->mpGroupData)
+         return false;
+   }
+   return true;
+}
 
 bool Track::IsSelectedLeader() const
    { return IsSelected() && IsLeader(); }
@@ -468,10 +449,8 @@ bool Track::IsSelectedLeader() const
 void Track::FinishCopy
 (const Track *n, Track *dest)
 {
-   if (dest) {
-      dest->SetLinked(n->GetLinked());
+   if (dest)
       dest->SetName(n->GetName());
-   }
 }
 
 std::pair<Track *, Track *> TrackList::FindSyncLockGroup(Track *pMember)
@@ -710,10 +689,27 @@ Track *TrackList::FindById( TrackId id )
    return it->get();
 }
 
+namespace
+{
+   bool MakeUngrouped( std::shared_ptr<TrackGroupData> &pData )
+   {
+      // note: if group data is null (which means the track is ungrouped) then
+      // use count will be zero and nothing happens
+      if (pData.use_count() > 1) {
+         pData = pData->Clone();
+         return true;
+      }
+      return false;
+   }
+}
+
 Track *TrackList::DoAddToHead(const std::shared_ptr<Track> &t)
 {
    Track *pTrack = t.get();
    push_front(ListOfTracks::value_type(t));
+
+   MakeUngrouped( pTrack->mpGroupData );
+
    auto n = getBegin();
    pTrack->SetOwner(shared_from_this(), n);
    pTrack->SetId( TrackId{ ++sCounter } );
@@ -722,11 +718,23 @@ Track *TrackList::DoAddToHead(const std::shared_ptr<Track> &t)
    return front().get();
 }
 
-Track *TrackList::DoAdd(const std::shared_ptr<Track> &t, bool)
+Track *TrackList::DoAdd(const std::shared_ptr<Track> &t, bool leader)
 {
    push_back(t);
 
    auto n = getPrev( getEnd() );
+
+   if (leader)
+      MakeUngrouped( t->mpGroupData );
+   else {
+      auto prev = getPrev( n );
+      if (prev != getEnd()) {
+         // force creation:
+         (void) (*prev.first)->GetGroupData();
+         // then share:
+         t->mpGroupData = (*prev.first)->mpGroupData;
+      }
+   }
 
    t->SetOwner(shared_from_this(), n);
    t->SetId( TrackId{ ++sCounter } );
@@ -739,6 +747,10 @@ void TrackList::GroupChannels( Track &track, size_t groupSize )
 {
    // If group size is more than two, for now only the first two channels
    // are grouped as stereo, and any others remain mono
+   // We have the means to indicate groups of more than two, but we don't use
+   // it yet.  The next line is all that disables it:
+   groupSize = std::min<size_t>( 2, groupSize );
+
    auto list = track.mList.lock();
    if ( groupSize > 0 && list.get() == this  ) {
       auto iter = track.mNode.first;
@@ -748,24 +760,24 @@ void TrackList::GroupChannels( Track &track, size_t groupSize )
       for ( ; after != end && count; ++after, --count )
          ;
       if ( count == 0 ) {
-         auto unlink = [&] ( Track &tr ) {
-            if ( tr.GetLinked() ) {
-               tr.SetLinked( false );
+         // Disassociate first from previous tracks
+         bool changed = MakeUngrouped( track.mpGroupData );
+
+         // Reassociate later tracks
+         if (groupSize > 1) {
+            // Ensure group data exist
+            (void) track.GetGroupData();
+            auto iter2 = iter;
+            for ( ++iter2; iter2 != after; ++iter2 ) {
+                auto &pGroupData = (*iter2)->mpGroupData;
+                if ( pGroupData != track.mpGroupData )
+                   pGroupData = track.mpGroupData, changed = true;
             }
-         };
+         }
 
-         // Disassociate previous tracks -- at most one
-         auto pLeader = this->FindLeader( &track );
-         if ( *pLeader && *pLeader != &track )
-            unlink( **pLeader );
-         
-         // First disassociate given and later tracks, then reassociate them
-         for ( auto iter2 = iter; iter2 != after; ++iter2 )
-             unlink( **iter2 );
-
-         if ( groupSize > 1 ) {
-            const auto channel = *iter++;
-            channel->SetLinked( true );
+         if (changed) {
+            RecalcPositions(track.mNode);
+            ResizingEvent(track.mNode);
          }
          return;
       }
@@ -780,12 +792,36 @@ auto TrackList::Replace(Track * t, const ListOfTracks::value_type &with) ->
 {
    ListOfTracks::value_type holder;
    if (t && with) {
+      Track *pTrack = with.get();
+
+      // Fix up group data if not the same
+      // (but they may already share in case of tracks prepared with
+      // Duplicate())
+      auto pData = t->mpGroupData;
+      auto &pNewData = pTrack->mpGroupData;
+      if ( pData == pNewData )
+         ;
+      else if (!pData)
+         // Old track had undefined data, so was ungrouped; use replacement's
+         // data, if any
+         MakeUngrouped( pNewData );
+      else if (!pNewData)
+         // Replacement had undefined group data
+         // Use the data already present; so pTrack becomes a member of the
+         // same group
+         pNewData = pData;
+      else {
+         // make pTrack's data the replacement for all of the group, so group
+         // membership does not change
+         for (auto channel : Channels( t ))
+            channel->mpGroupData = pNewData;
+      }
+
       auto node = t->GetNode();
       t->SetOwner({}, {});
 
       holder = *node.first;
 
-      Track *pTrack = with.get();
       *node.first = with;
       pTrack->SetOwner(shared_from_this(), node);
       pTrack->SetId( t->GetId() );
@@ -1066,7 +1102,12 @@ TrackList::RegisterPendingChangedTrack( Updater updater, Track *src )
 
    if (pTrack) {
       mUpdaters.push_back( updater );
+
+      // Following is not like TrackList::Add!  We rely on the shallow-copied
+      // shared data to remain shared and un-cloned when we call
+      // ApplyPendingTracks() which calls Replace().
       mPendingUpdates.push_back( pTrack );
+
       auto n = mPendingUpdates.end();
       --n;
       pTrack->SetOwner(shared_from_this(), {n, &mPendingUpdates});
@@ -1096,7 +1137,6 @@ void TrackList::UpdatePendingTracks()
          pendingTrack->DoSetY(src->GetY());
          pendingTrack->DoSetHeight(src->GetActualHeight());
          pendingTrack->DoSetMinimized(src->GetMinimized());
-         pendingTrack->DoSetLinked(src->GetLinked());
       }
       ++pUpdater;
    }

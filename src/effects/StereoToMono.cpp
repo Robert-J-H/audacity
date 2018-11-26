@@ -163,7 +163,6 @@ bool EffectStereoToMono::ProcessOne(int count)
    mLeftTrack->Clear(mLeftTrack->GetStartTime(), mLeftTrack->GetEndTime());
    outTrack->Flush();
    mLeftTrack->Paste(minStart, outTrack.get());
-   mOutputTracks->GroupChannels( *mLeftTrack,  1 );
    mOutputTracks->Remove(mRightTrack);
 
    return bResult;
