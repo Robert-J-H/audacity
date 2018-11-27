@@ -255,7 +255,7 @@ void OnExportLabels(const CommandContext &context)
       return;
    }
    else
-      fName = (*trackRange.rbegin())->GetName();
+      fName = (*trackRange.rbegin())->GetGroupData().GetName();
 
    fName = FileNames::SelectFile(FileNames::Operation::Export,
                         _("Export Labels As:"),
@@ -469,7 +469,7 @@ void OnImportLabels(const CommandContext &context)
       auto newTrack = trackFactory.NewLabelTrack();
       wxString sTrackName;
       wxFileName::SplitPath(fileName, NULL, NULL, &sTrackName, NULL);
-      newTrack->SetName(sTrackName);
+      newTrack->GetGroupData().SetName(sTrackName);
 
       newTrack->Import(f);
 

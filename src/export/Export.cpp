@@ -1309,7 +1309,7 @@ ExportMixerDialog::ExportMixerDialog( const TrackList *tracks, bool selectedOnly
             - &WaveTrack::GetMute
    ) {
       numTracks++;
-      const wxString sTrackName = (t->GetName()).Left(20);
+      const wxString sTrackName = (t->GetGroupData().GetName()).Left(20);
       if( t->GetChannel() == WaveTrack::LeftChannel )
       /* i18n-hint: track name and L abbreviating Left channel */
          mTrackNames.push_back( wxString::Format( _( "%s - L" ), sTrackName ) );

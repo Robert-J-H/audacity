@@ -2098,7 +2098,7 @@ Effect::AddedAnalysisTrack::AddedAnalysisTrack(Effect *pEffect, const wxString &
    LabelTrack::Holder pTrack{ pEffect->mFactory->NewLabelTrack() };
    mpTrack = pTrack.get();
    if (!name.empty())
-      pTrack->SetName(name);
+      pTrack->GetGroupData().SetName(name);
    pEffect->mTracks->Add( pTrack, true );
 }
 
@@ -2140,7 +2140,7 @@ Effect::ModifiedAnalysisTrack::ModifiedAnalysisTrack
    // Why doesn't LabelTrack::Copy complete the job? :
    mpTrack->SetOffset(pOrigTrack->GetStartTime());
    if (!name.empty())
-      mpTrack->SetName(name);
+      mpTrack->GetGroupData().SetName(name);
 
    // mpOrigTrack came from mTracks which we own but expose as const to subclasses
    // So it's okay that we cast it back to const

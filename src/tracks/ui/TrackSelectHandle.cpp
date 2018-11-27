@@ -184,7 +184,7 @@ UIHandle::Result TrackSelectHandle::Release
          wxString::Format(
             /* i18n-hint: will substitute name of track for %s */
             ( mRearrangeCount < 0 ? _("Moved '%s' up") : _("Moved '%s' down") ),
-            mpTrack->GetName()
+            mpTrack->GetGroupData().GetName()
          ),
          _("Move Track"));
    }

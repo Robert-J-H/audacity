@@ -1324,8 +1324,9 @@ void TrackInfo::CloseTitleDrawFunction
       bool hit = target && target->GetTrack().get() == pTrack;
       bool captured = hit && target->IsClicked();
       bool down = captured && bev.Contains( context.lastState.GetPosition());
+      const auto *pGroupData = pTrack ? &pTrack->GetGroupData() : nullptr;
       wxString titleStr =
-         pTrack ? pTrack->GetName() : _("Name");
+         pGroupData ? pGroupData->GetName() : _("Name");
 
       //bev.Inflate(-1, -1);
       AColor::Bevel2(*dc, !down, bev, selected, hit);

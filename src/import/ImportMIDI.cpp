@@ -67,7 +67,7 @@ bool ImportMIDI(const FilePath &fName, NoteTrack * dest)
    dest->SetSequence(std::move(new_seq));
    dest->SetOffset(offset);
    wxString trackNameBase = fName.AfterLast(wxFILE_SEP_PATH).BeforeLast('.');
-   dest->SetName(trackNameBase);
+   dest->GetGroupData().SetName(trackNameBase);
    mf.Close();
    // the mean pitch should be somewhere in the middle of the display
    Alg_iterator iterator( &dest->GetSeq(), false );

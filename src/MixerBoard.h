@@ -31,6 +31,7 @@ class wxBitmapButton;
 class wxMemoryDC;
 class AButton;
 struct TrackListEvent;
+struct TrackListGroupEvent;
 
 // containment hierarchy:
 //    MixerBoardFrame -> MixerBoard -> MixerBoardScrolledWindow -> MixerTrackCluster(s)
@@ -238,7 +239,10 @@ private:
    void OnSize(wxSizeEvent &evt);
    void OnTimer(wxCommandEvent &event);
    void OnTrackSetChanged(wxEvent &event);
+
    void OnTrackChanged(TrackListEvent &event);
+   void OnTrackGroupChanged(TrackListGroupEvent &event);
+
    void OnStartStop(wxCommandEvent &event);
 
 public:

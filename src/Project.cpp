@@ -2987,7 +2987,7 @@ void AudacityProject::OpenFile(const FilePath &fileNameArg, bool addtohistory)
          {
             wxLogWarning(
                wxT("Track %s had error reading clip values from project file."),
-               t->GetName());
+               t->GetGroupData().GetName());
             err = true;
          }
          
@@ -4042,15 +4042,15 @@ bool AudacityProject::SaveCopyWaveTracks(const FilePath & strProjectPathName,
 
    Exporter theExporter;
    wxFileNameWrapper uniqueTrackFileName;
-   for (auto pTrack : (trackRange + &Track::IsLeader))
+   for (auto group : trackRange.ByGroups())
    {
       SelectionStateChanger changer{ SelectionState::Get( project ), tracks };
-      auto channels = TrackList::Channels(pTrack);
 
+      const auto &channels = group.channels;
       for (auto channel : channels)
          channel->SetSelected(true);
-      uniqueTrackFileName =
-         wxFileNameWrapper{ strDataDirPathName, pTrack->GetName(), extension };
+      uniqueTrackFileName = wxFileNameWrapper{
+         strDataDirPathName, group.data->GetName(), extension };
       FileNames::MakeNameUnique(mStrOtherNamesArray, uniqueTrackFileName);
       const auto startTime = channels.min( &Track::GetStartTime );
       const auto endTime = channels.max( &Track::GetEndTime );
@@ -4102,7 +4102,7 @@ AudacityProject::AddImportedTracks(const FilePath &fileName,
       tracks.GroupChannels(*first, nChannels);
    }
    newTracks.clear();
-      
+
    // Now name them
 
    // Add numbers to track names only if there is more than one (mono or stereo)
@@ -4112,19 +4112,20 @@ AudacityProject::AddImportedTracks(const FilePath &fileName,
          .any_of( []( decltype(*results.begin()) &pTrack )
             { return pTrack->IsLeader(); } );
 
-   for (const auto &newTrack : results) {
-      if ( newTrack->IsLeader() )
-         // Count groups only
-         ++i;
+   if (!results.empty()) for ( auto group :
+      tracks.Any().StartingWith( results[0].get() ).ByGroups()
+   ) {
+      ++i;
+      group.data->SetName(
+         useSuffix
+         ? trackNameBase + wxString::Format(wxT(" %d" ), i + 1)
+         : trackNameBase
+      );
 
-      newTrack->SetSelected(true);
+      for (auto newTrack : group.channels)
+         newTrack->SetSelected(true);
 
-      if ( useSuffix )
-         newTrack->SetName(trackNameBase + wxString::Format(wxT(" %d" ), i + 1));
-      else
-         newTrack->SetName(trackNameBase);
-
-      newTrack->TypeSwitch( [&](WaveTrack *wt) {
+      group.channels.Visit( [&](WaveTrack *wt) {
          if (newRate == 0)
             newRate = wt->GetRate();
 
@@ -5171,7 +5172,7 @@ void AudacityProject::OnAudioIOStopRecording()
           At most, about 11 Latin characters.
           Dropout is a loss of a short sequence of audio sample data from the
           recording */
-         pTrack->SetName(_("Dropouts"));
+         pTrack->GetGroupData().SetName(_("Dropouts"));
          long counter = 1;
          for (auto &interval : intervals)
             pTrack->AddLabel(

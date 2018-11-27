@@ -1188,39 +1188,40 @@ bool ControlToolBar::DoRecord(AudacityProject &project,
             }
 
             newTrack->SetOffset(t0);
-            wxString nameSuffix = wxString(wxT(""));
 
-            if (useTrackNumber) {
-               nameSuffix += wxString::Format(wxT("%d"), 1 + numTracks + c);
-            }
+            if (c == 0) {
+               wxString nameSuffix = wxString(wxT(""));
 
-            if (useDateStamp) {
-               if (!nameSuffix.empty()) {
-                  nameSuffix += wxT("_");
+               if (useTrackNumber) {
+                  nameSuffix += wxString::Format(wxT("%d"), 1 + numTracks + c);
                }
-               nameSuffix += wxDateTime::Now().FormatISODate();
-            }
 
-            if (useTimeStamp) {
-               if (!nameSuffix.empty()) {
-                  nameSuffix += wxT("_");
+               if (useDateStamp) {
+                  if (!nameSuffix.empty()) {
+                     nameSuffix += wxT("_");
+                  }
+                  nameSuffix += wxDateTime::Now().FormatISODate();
                }
-               nameSuffix += wxDateTime::Now().FormatISOTime();
-            }
 
-            // ISO standard would be nice, but ":" is unsafe for file name.
-            nameSuffix.Replace(wxT(":"), wxT("-"));
+               if (useTimeStamp) {
+                  if (!nameSuffix.empty()) {
+                     nameSuffix += wxT("_");
+                  }
+                  nameSuffix += wxDateTime::Now().FormatISOTime();
+               }
 
-            if (baseTrackName.empty()) {
-               newTrack->SetName(nameSuffix);
-            }
-            else if (nameSuffix.empty()) {
-               newTrack->SetName(baseTrackName);
-            }
-            else {
-               newTrack->SetName(baseTrackName + wxT("_") + nameSuffix);
-            }
+               // ISO standard would be nice, but ":" is unsafe for file name.
+               nameSuffix.Replace(wxT(":"), wxT("-"));
 
+               newTrack->GetGroupData().SetName(
+                  baseTrackName.empty()
+                  ? nameSuffix
+                  : nameSuffix.empty()
+                     ? baseTrackName
+                     : baseTrackName + wxT("_") + nameSuffix
+               );
+            }
+               
             if ((recordingChannels > 2) && !(p->GetTracksFitVerticallyZoomed())) {
                newTrack->SetMinimized(true);
             }

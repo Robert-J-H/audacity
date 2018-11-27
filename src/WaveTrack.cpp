@@ -111,7 +111,7 @@ WaveTrack::WaveTrack(const std::shared_ptr<DirManager> &projDirManager, sampleFo
    mOldGain[0] = 0.0;
    mOldGain[1] = 0.0;
    mWaveColorIndex = 0;
-   SetName(GetDefaultName());
+
    mDisplayMin = -1.0;
    mDisplayMax = 1.0;
    mSpectrumMin = mSpectrumMax = -1; // so values will default to settings
@@ -154,7 +154,6 @@ void WaveTrack::Init(const WaveTrack &orig)
    mPan = orig.mPan;
    mOldGain[0] = 0.0;
    mOldGain[1] = 0.0;
-   SetName(orig.GetName());
    mDisplay = orig.mDisplay;
    mDisplayMin = orig.mDisplayMin;
    mDisplayMax = orig.mDisplayMax;

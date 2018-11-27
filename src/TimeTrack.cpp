@@ -53,8 +53,6 @@ TimeTrack::TimeTrack(const std::shared_ptr<DirManager> &projDirManager, const Zo
    mEnvelope->SetTrackLen(DBL_MAX);
    mEnvelope->SetOffset(0);
 
-   SetName(GetDefaultName());
-
    mRuler = std::make_unique<Ruler>();
    mRuler->SetUseZoomInfo(0, mZoomInfo);
    mRuler->SetLabelEdges(false);
@@ -88,7 +86,6 @@ TimeTrack::TimeTrack(const TimeTrack &orig, double *pT0, double *pT1)
 void TimeTrack::Init(const TimeTrack &orig)
 {
    Track::Init(orig);
-   SetName(orig.GetName());
    SetRangeLower(orig.GetRangeLower());
    SetRangeUpper(orig.GetRangeUpper());
    SetDisplayLog(orig.GetDisplayLog());

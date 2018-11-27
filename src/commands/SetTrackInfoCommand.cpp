@@ -157,10 +157,8 @@ bool SetTrackStatusCommand::ApplyInner(const CommandContext & context, Track * t
    //auto wt = dynamic_cast<WaveTrack *>(t);
    //auto pt = dynamic_cast<PlayableTrack *>(t);
 
-   // You can get some intriguing effects by setting R and L channels to 
-   // different values.
    if( bHasTrackName )
-      t->SetName(mTrackName);
+      t->GetGroupData().SetName(mTrackName);
 
    // In stereo tracks, both channels need selecting/deselecting.
    if( bHasSelected )

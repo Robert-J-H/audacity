@@ -851,7 +851,7 @@ ProgressResult ExportMultiple::ExportMultipleByTrack(bool byName,
          setting.channels = 2;
 
       // Get name and title
-      title = tr->GetName();
+      title = tr->GetGroupData().GetName();
       if( title.empty() )
          title = _("untitled");
 

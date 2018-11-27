@@ -329,19 +329,21 @@ void TrackArt::DrawTrack(TrackPanelDrawingContext &context,
          const auto bShowTrackNameInWaveform =
             artist->mbShowTrackNameInWaveform;
          if (bShowTrackNameInWaveform &&
-             wt->IsLeader() &&
+             wt->IsLeader()) {
              // Exclude empty name.
-             !wt->GetName().empty()) {
+            const auto &name = wt->GetGroupData().GetName();
+            if ( name.empty() )
+               return;
             wxBrush Brush;
             wxCoord x,y;
             wxFont labelFont(12, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
             dc.SetFont(labelFont);
-            dc.GetTextExtent( wt->GetName(), &x, &y );
+            dc.GetTextExtent( name, &x, &y );
             dc.SetTextForeground(theTheme.Colour( clrTrackPanelText ));
             // A nice improvement would be to draw the shield / background translucently.
             AColor::UseThemeColour( &dc, clrTrackInfoSelected, clrTrackPanelText );
             dc.DrawRoundedRectangle( wxPoint( rect.x+7, rect.y+1 ), wxSize( x+16, y+4), 8.0 );
-            dc.DrawText (wt->GetName(), rect.x+15, rect.y+3);  // move right 15 pixels to avoid overwriting <- symbol
+            dc.DrawText (name, rect.x+15, rect.y+3);  // move right 15 pixels to avoid overwriting <- symbol
          }
       },
    #ifdef USE_MIDI

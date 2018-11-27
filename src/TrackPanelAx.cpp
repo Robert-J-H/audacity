@@ -349,7 +349,8 @@ wxAccStatus TrackPanelAx::GetName( int childId, wxString* name )
          }
          else
          {
-            *name = t->GetName();
+            const auto &data = t->GetGroupData();
+            *name = data.GetName();
             if( *name == t->GetDefaultName() )
             {
                /* i18n-hint: The %d is replaced by the number of the track.*/
@@ -556,7 +557,8 @@ wxAccStatus TrackPanelAx::GetValue( int WXUNUSED(childId), wxString* WXUNUSED(st
       }
       else
       {
-         *strValue = t->GetName();
+         const auto &data = t->GetGroupData();
+         *strValue = data.GetName();
          if( *strValue == t->GetDefaultName() )
          {
             strValue->Printf(_("Track %d"), TrackNum( t ) );

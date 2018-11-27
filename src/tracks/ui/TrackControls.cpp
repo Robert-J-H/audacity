@@ -209,7 +209,8 @@ void TrackMenuTable::OnSetName(wxCommandEvent &)
    if (pTrack)
    {
       AudacityProject *const proj = ::GetActiveProject();
-      const wxString oldName = pTrack->GetName();
+      auto &data = pTrack->GetGroupData();
+      const wxString oldName = data.GetName();
 
       SetTrackNameCommand Command;
       Command.mName = oldName;
@@ -218,8 +219,7 @@ void TrackMenuTable::OnSetName(wxCommandEvent &)
       if (bResult) 
       {
          wxString newName = Command.mName;
-         for (auto channel : TrackList::Channels(pTrack))
-            channel->SetName(newName);
+         data.SetName(newName);
 
          proj->PushState(wxString::Format(_("Renamed '%s' to '%s'"),
             oldName,

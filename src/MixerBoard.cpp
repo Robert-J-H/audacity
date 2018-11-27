@@ -180,7 +180,8 @@ MixerTrackCluster::MixerTrackCluster(wxWindow* parent,
    mProject = project;
    wxASSERT( pTrack );
 
-   SetName(mTrack->GetName());
+   const auto &name = mTrack->GetGroupData().GetName();
+   SetName(name);
 
    //this->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_3DFACE));
    this->SetBackgroundColour( theTheme.Colour( clrMedium ) );
@@ -193,7 +194,7 @@ MixerTrackCluster::MixerTrackCluster(wxWindow* parent,
    wxPoint ctrlPos(kDoubleInset, kDoubleInset);
    wxSize ctrlSize(size.GetWidth() - kQuadrupleInset, TRACK_NAME_HEIGHT);
    mStaticText_TrackName =
-      safenew auStaticText(this, mTrack->GetName());
+      safenew auStaticText(this, name);
    //v Useful when different tracks are different colors, but not now.
    //    mStaticText_TrackName->SetBackgroundColour(this->GetTrackColor());
    mStaticText_TrackName->SetForegroundColour(theTheme.Colour(clrMedium));
@@ -317,7 +318,7 @@ MixerTrackCluster::MixerTrackCluster(wxWindow* parent,
    }
 
    #if wxUSE_TOOLTIPS
-      mStaticText_TrackName->SetToolTip(mTrack->GetName());
+      mStaticText_TrackName->SetToolTip(name);
       mToggleButton_Mute->SetToolTip(_("Mute"));
       mToggleButton_Solo->SetToolTip(_("Solo"));
       if (GetWave())
@@ -459,7 +460,7 @@ void MixerTrackCluster::ResetMeter(const bool bResetClipping)
 // Update appearance to match the state of the track
 void MixerTrackCluster::UpdateForStateChange()
 {
-   const wxString newName = mTrack->GetName();
+   const wxString newName = mTrack->GetGroupData().GetName();
    if (newName != GetName()) {
       SetName(newName);
       mStaticText_TrackName->SetLabel(newName);
@@ -936,6 +937,10 @@ MixerBoard::MixerBoard(AudacityProject* pProject,
       &MixerBoard::OnTrackChanged,
       this);
 
+   mTracks->Bind(EVT_TRACKLIST_GROUP_DATA_CHANGE,
+      &MixerBoard::OnTrackGroupChanged,
+      this);
+
    wxTheApp->Connect(EVT_AUDIOIO_PLAYBACK,
       wxCommandEventHandler(MixerBoard::OnStartStop),
       NULL,
@@ -1076,7 +1081,8 @@ wxBitmap* MixerBoard::GetMusicalInstrumentBitmap(const Track* pTrack)
 
    // random choice:    return mMusicalInstruments[(int)pTrack % mMusicalInstruments.size()].mBitmap;
 
-   const wxString strTrackName(pTrack->GetName().MakeLower());
+   const auto strTrackName =
+      wxString( pTrack->GetGroupData().GetName() ).MakeLower();
    size_t nBestItemIndex = 0;
    unsigned int nBestScore = 0;
    unsigned int nInstrIndex = 0;
@@ -1367,6 +1373,21 @@ void MixerBoard::OnTrackChanged(TrackListEvent &evt)
       FindMixerTrackCluster( pPlayable, &pMixerTrackCluster );
       if ( pMixerTrackCluster )
          pMixerTrackCluster->Refresh();
+   }
+}
+
+void MixerBoard::OnTrackGroupChanged(TrackListGroupEvent &evt)
+{
+   evt.Skip();
+
+   const auto pData = evt.mpData.lock();
+   if ( pData ) {
+      const auto end = mMixerTrackClusters.end(),
+         iter = std::find_if( mMixerTrackClusters.begin(), end,
+            [&]( MixerTrackCluster *pCluster ){
+               return pData.get() == &pCluster->mTrack->GetGroupData(); } );
+      if ( iter != end )
+         (*iter)->Refresh();
    }
 }
 

@@ -18,7 +18,8 @@ struct FoundTrack {
 
    wxString ComposeTrackName() const
    {
-      auto name = waveTrack->GetName();
+      const auto &data = waveTrack->GetGroupData();
+      auto name = data.GetName();
       auto shortName = name == waveTrack->GetDefaultName()
          /* i18n-hint: compose a name identifying an unnamed track by number */
          ? wxString::Format( _("Track %d"), trackNum )

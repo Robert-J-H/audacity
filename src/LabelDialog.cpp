@@ -391,7 +391,7 @@ bool LabelDialog::TransferDataFromWindow()
 
       // Create the NEW track and add to track list
       auto newTrack = mFactory.NewLabelTrack();
-      newTrack->SetName(name);
+      newTrack->GetGroupData().SetName(name);
       mTracks->Add( newTrack, true);
       tndx++;
    }
@@ -465,7 +465,7 @@ void LabelDialog::AddLabels(const LabelTrack *t)
    int i;
 
    // Add a NEW track name
-   TrackName(tndx, t->GetName());
+   TrackName(tndx, t->GetGroupData().GetName());
 
    // If editor was invoked for one label, add that one only, else add all.
    if (!mSelectedTrack || mSelectedTrack == t) {

@@ -112,26 +112,21 @@ void MixAndRender(TrackList *tracks, TrackFactory *trackFactory,
    // only one input track (either 1 mono or one linked stereo pair)
 
    auto mixLeft = trackFactory->NewWaveTrack(format, rate);
-   if (oneinput)
-      mixLeft->SetName(first->GetName()); /* set name of output track to be the same as the sole input track */
-   else
-      mixLeft->SetName(_("Mix"));
+   mixLeft->GetGroupData().SetName(
+      oneinput
+      ? /* set name of output track to be the same as the sole input track */
+        first->GetGroupData().GetName()
+      : _("Mix")
+   );
    mixLeft->SetOffset(mixStartTime);
 
    // TODO: more-than-two-channels
    decltype(mixLeft) mixRight{};
    if ( !mono ) {
       mixRight = trackFactory->NewWaveTrack(format, rate);
-      if (oneinput) {
-         auto channels = TrackList::Channels(first);
-         if (channels.size() > 1)
-            mixRight->SetName((*channels.begin().advance(1))->GetName()); /* set name to match input track's right channel!*/
-         else
-            mixRight->SetName(first->GetName());   /* set name to that of sole input channel */
-      }
-      else
-         mixRight->SetName(_("Mix"));
       mixRight->SetOffset(mixStartTime);
+      // Don't set the name separately for the right channel, but expect that
+      // it will share with the left after adding to TrackList
    }
 
 

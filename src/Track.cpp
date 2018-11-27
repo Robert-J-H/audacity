@@ -51,6 +51,11 @@ and TimeTrack.
 #pragma warning( disable : 4786 )
 #endif
 
+TrackGroupData::TrackGroupData( const Track &track )
+{
+   mName = track.GetDefaultName();
+}
+
 TrackGroupData::~TrackGroupData()
 {
 }
@@ -78,9 +83,17 @@ void TrackGroupData::Notify( int code )
       pList->GroupDataEvent( shared_from_this(), code );
 }
 
+void TrackGroupData::SetName( const wxString &name )
+{
+   if ( mName != name ) {
+      mName = name;
+      Notify();
+   }
+}
+
 auto Track::CreateGroupData() const -> std::shared_ptr<TrackGroupData>
 {
-   return std::make_shared<GroupData>();
+   return std::make_shared<GroupData>( *this );
 }
 
 void Track::EnsureGroupData()
@@ -126,14 +139,6 @@ void Track::Init(const Track &orig)
    mSelected = orig.mSelected;
    mHeight = orig.mHeight;
    mMinimized = orig.mMinimized;
-}
-
-void Track::SetName( const wxString &n )
-{
-   if ( mName != n ) {
-      mName = n;
-      Notify();
-   }
 }
 
 void Track::SetSelected(bool s)
@@ -466,7 +471,7 @@ void Track::FinishCopy
 (const Track *n, Track *dest)
 {
    if (dest)
-      dest->SetName(n->GetName());
+      dest->GetGroupData().SetName( n->GetGroupData().GetName() );
 }
 
 std::pair<Track *, Track *> TrackList::FindSyncLockGroup(Track *pMember)
@@ -1355,8 +1360,12 @@ void Track::HandleXMLEndTag( const wxChar * )
 // Serialize, not with tags of its own, but as attributes within a tag.
 void Track::WriteCommonXMLAttributes(XMLWriter &xmlFile, bool includeName) const
 {
-   if (includeName)
-      xmlFile.WriteAttr(wxT("name"), GetName());
+   if (includeName) {
+      // It would be sufficient to write and read the name only for leader
+      // tracks in 2.3.2 and later, but for forward compatibility we continue
+      // to write it for all channels.
+      xmlFile.WriteAttr(wxT("name"), GetGroupData().GetName());
+   }
    xmlFile.WriteAttr(wxT("height"), this->GetActualHeight());
    xmlFile.WriteAttr(wxT("minimized"), this->GetMinimized());
    xmlFile.WriteAttr(wxT("isSelected"), this->GetSelected());
@@ -1369,7 +1378,8 @@ bool Track::HandleCommonXMLAttribute(const wxChar *attr, const wxChar *value)
    wxString strValue( value );
    if (!wxStrcmp(attr, wxT("name")) &&
       XMLValueChecker::IsGoodString(strValue)) {
-      SetName( strValue );
+      if ( Track::IsLoadingLeader() )
+         GetGroupData().SetName( strValue );
       return true;
    }
    else if (!wxStrcmp(attr, wxT("height")) &&

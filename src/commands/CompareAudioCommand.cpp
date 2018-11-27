@@ -124,8 +124,8 @@ bool CompareAudioCommand::Apply(const CommandContext & context)
    }
 
    wxString msg = wxT("Comparing tracks '");
-   msg += mTrack0->GetName() + wxT("' and '")
-      + mTrack1->GetName() + wxT("'.");
+   msg += mTrack0->GetGroupData().GetName() + wxT("' and '")
+      + mTrack1->GetGroupData().GetName() + wxT("'.");
    context.Status(msg);
 
    long errorCount = 0;

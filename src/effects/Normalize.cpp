@@ -259,7 +259,7 @@ bool EffectNormalize::Process()
 
       // Process only if the right marker is to the right of the left marker
       if (mCurT1 > mCurT0) {
-         wxString trackName = track->GetName();
+         wxString trackName = track->GetGroupData().GetName();
 
          float extent;
 #ifdef EXPERIMENTAL_R128_NORM
