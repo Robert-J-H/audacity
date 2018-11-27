@@ -632,10 +632,10 @@ void WaveTrackMenuTable::InitMenu(Menu *pMenu, void *pUserData)
 
          int itemId;
          switch (pTrack2->GetChannel()) {
-            case Track::LeftChannel:
+            case WaveTrack::LeftChannel:
                itemId = OnChannelLeftID;
                break;
-            case Track::RightChannel:
+            case WaveTrack::RightChannel:
                itemId = OnChannelRightID;
                break;
             default:
@@ -819,15 +819,15 @@ void WaveTrackMenuTable::OnChannelChange(wxCommandEvent & event)
    switch (id) {
    default:
    case OnChannelMonoID:
-      channel = Track::MonoChannel;
+      channel = WaveTrack::MonoChannel;
       channelmsg = _("Mono");
       break;
    case OnChannelLeftID:
-      channel = Track::LeftChannel;
+      channel = WaveTrack::LeftChannel;
       channelmsg = _("Left Channel");
       break;
    case OnChannelRightID:
-      channel = Track::RightChannel;
+      channel = WaveTrack::RightChannel;
       channelmsg = _("Right Channel");
       break;
    }
@@ -905,7 +905,9 @@ void WaveTrackMenuTable::SplitStereo(bool stereo)
       // Keep original stereo track name.
       channel->SetName(pTrack->GetName());
       if (stereo)
-         channel->SetPanFromChannelType();
+         // PRL:  note that the split loses the effects of previous stereo pan
+         // setting, leaving one mono panned hard left and the other right.
+         channel->SetPanFromChannelType( channel->GetChannelIgnoringPan() );
 
       //On Demand - have each channel add its own.
       if (ODManager::IsInstanceCreated())

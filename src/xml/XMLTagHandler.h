@@ -63,7 +63,6 @@ public:
    static bool IsGoodInt64(const wxString & strInt);
    static bool IsGoodIntForRange(const wxString & strInt, const wxString & strMAXABS);
 
-   static bool IsValidChannel(const int nValue);
 #ifdef USE_MIDI
    static bool IsValidVisibleChannels(const int nValue);
 #endif

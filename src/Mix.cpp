@@ -64,7 +64,7 @@ void MixAndRender(TrackList *tracks, TrackFactory *trackFactory,
    for(auto wt : trackRange) {
       numWaves++;
       float pan = wt->GetPan();
-      if (wt->GetChannel() == Track::MonoChannel && pan == 0)
+      if (wt->GetChannel() == WaveTrack::MonoChannel && pan == 0)
          numMono++;
    }
 
@@ -615,15 +615,15 @@ size_t Mixer::Process(size_t maxToProcess)
       }
       else {
          switch(track->GetChannel()) {
-         case Track::MonoChannel:
+         case WaveTrack::MonoChannel:
          default:
             for(size_t j=0; j<mNumChannels; j++)
                channelFlags[j] = 1;
             break;
-         case Track::LeftChannel:
+         case WaveTrack::LeftChannel:
             channelFlags[0] = 1;
             break;
-         case Track::RightChannel:
+         case WaveTrack::RightChannel:
             if (mNumChannels >= 2)
                channelFlags[1] = 1;
             else

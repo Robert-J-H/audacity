@@ -5043,12 +5043,12 @@ bool AudioIoCallback::FillOutputBuffers(
       {
          vt = chans[c];
 
-         if (vt->GetChannelIgnoringPan() == Track::LeftChannel ||
-               vt->GetChannelIgnoringPan() == Track::MonoChannel )
+         if (vt->GetChannelIgnoringPan() == WaveTrack::LeftChannel ||
+               vt->GetChannelIgnoringPan() == WaveTrack::MonoChannel )
             AddToOutputChannel( 0, outputMeterFloats, outputFloats, tempFloats, tempBufs[c], drop, len, vt);
 
-         if (vt->GetChannelIgnoringPan() == Track::RightChannel ||
-               vt->GetChannelIgnoringPan() == Track::MonoChannel  )
+         if (vt->GetChannelIgnoringPan() == WaveTrack::RightChannel ||
+               vt->GetChannelIgnoringPan() == WaveTrack::MonoChannel  )
             AddToOutputChannel( 1, outputMeterFloats, outputFloats, tempFloats, tempBufs[c], drop, len, vt);
       }
 
@@ -5404,10 +5404,10 @@ bool AudioIoCallback::TrackShouldBeSilent( const WaveTrack &wt )
 bool AudioIoCallback::TrackHasBeenFadedOut( const WaveTrack &wt )
 {
    const auto channel = wt.GetChannelIgnoringPan();
-   if ((channel == Track::LeftChannel  || channel == Track::MonoChannel) &&
+   if ((channel == WaveTrack::LeftChannel  || channel == WaveTrack::MonoChannel) &&
       wt.GetOldChannelGain(0) != 0.0)
       return false;
-   if ((channel == Track::RightChannel || channel == Track::MonoChannel) &&
+   if ((channel == WaveTrack::RightChannel || channel == WaveTrack::MonoChannel) &&
       wt.GetOldChannelGain(1) != 0.0)
       return false;
    return true;

@@ -468,13 +468,13 @@ bool Exporter::ExamineTracks()
    ) {
       mNumSelected++;
 
-      if (tr->GetChannel() == Track::LeftChannel) {
+      if (tr->GetChannel() == WaveTrack::LeftChannel) {
          mNumLeft++;
       }
-      else if (tr->GetChannel() == Track::RightChannel) {
+      else if (tr->GetChannel() == WaveTrack::RightChannel) {
          mNumRight++;
       }
-      else if (tr->GetChannel() == Track::MonoChannel) {
+      else if (tr->GetChannel() == WaveTrack::MonoChannel) {
          // It's a mono channel, but it may be panned
          float pan = tr->GetPan();
 
@@ -1310,10 +1310,10 @@ ExportMixerDialog::ExportMixerDialog( const TrackList *tracks, bool selectedOnly
    ) {
       numTracks++;
       const wxString sTrackName = (t->GetName()).Left(20);
-      if( t->GetChannel() == Track::LeftChannel )
+      if( t->GetChannel() == WaveTrack::LeftChannel )
       /* i18n-hint: track name and L abbreviating Left channel */
          mTrackNames.push_back( wxString::Format( _( "%s - L" ), sTrackName ) );
-      else if( t->GetChannel() == Track::RightChannel )
+      else if( t->GetChannel() == WaveTrack::RightChannel )
       /* i18n-hint: track name and R abbreviating Right channel */
          mTrackNames.push_back( wxString::Format( _( "%s - R" ), sTrackName ) );
       else

@@ -172,11 +172,6 @@ bool XMLValueChecker::IsGoodInt64(const wxString & strInt)
    return IsGoodIntForRange( strInt, "9223372036854775808" );
 }
 
-bool XMLValueChecker::IsValidChannel(const int nValue)
-{
-   return (nValue >= Track::LeftChannel) && (nValue <= Track::MonoChannel);
-}
-
 #ifdef USE_MIDI
 bool XMLValueChecker::IsValidVisibleChannels(const int nValue)
 {

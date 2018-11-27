@@ -234,26 +234,36 @@ void WaveTrack::SetOffset(double o)
 }
 
 auto WaveTrack::GetChannelIgnoringPan() const -> ChannelType {
-   return mChannel;
+   auto channels = TrackList::Channels( this );
+   auto size = channels.size();
+   if ( size == 2 ) {
+      if (this == *channels.begin())
+         return LeftChannel;
+      else
+         return RightChannel;
+   }
+   else
+      return MonoChannel;
 }
 
 auto WaveTrack::GetChannel() const -> ChannelType
 {
-   if( mChannel != Track::MonoChannel )
-      return mChannel; 
+   const auto channel = GetChannelIgnoringPan();
+   if( channel != MonoChannel )
+      return channel;
    auto pan = GetPan();
    if( pan < -0.99 )
-      return Track::LeftChannel;
+      return LeftChannel;
    if( pan >  0.99 )
-      return Track::RightChannel;
-   return mChannel;
+      return RightChannel;
+   return channel;
 }
 
-void WaveTrack::SetPanFromChannelType()
+void WaveTrack::SetPanFromChannelType( ChannelType channel )
 { 
-   if( mChannel == Track::LeftChannel )
+   if( channel == LeftChannel )
       SetPan( -1.0f );
-   else if( mChannel == Track::RightChannel )
+   else if( channel == RightChannel )
       SetPan( 1.0f );
 };
 
@@ -1722,10 +1732,11 @@ bool WaveTrack::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
             mPan = dblValue;
          else if (!wxStrcmp(attr, wxT("channel")))
          {
+            // Older files stored this field
             if (!XMLValueChecker::IsGoodInt(strValue) || !strValue.ToLong(&nValue) ||
-                  !XMLValueChecker::IsValidChannel(nValue))
+                  !IsValidChannel(nValue))
                return false;
-            mChannel = static_cast<Track::ChannelType>( nValue );
+            // Ignore the value
          }
          else if (!wxStrcmp(attr, wxT("linked")) &&
                   XMLValueChecker::IsGoodInt(strValue) && strValue.ToLong(&nValue))
@@ -1797,8 +1808,13 @@ void WaveTrack::WriteXML(XMLWriter &xmlFile) const
       xmlFile.WriteAttr(wxT("autosaveid"), mAutoSaveIdent);
    }
    this->Track::WriteCommonXMLAttributes( xmlFile );
-   xmlFile.WriteAttr(wxT("channel"), mChannel);
+
+   // As of 2.3.2, no longer using this redundant value which is deducible
+   // from the pan, but keep writing it for forward compatibility.
+   xmlFile.WriteAttr(wxT("channel"), GetChannelIgnoringPan());
+
    xmlFile.WriteAttr(wxT("linked"), mLinked);
+
    this->PlayableTrack::WriteXMLAttributes(xmlFile);
    xmlFile.WriteAttr(wxT("rate"), mRate);
    xmlFile.WriteAttr(wxT("gain"), (double)mGain);
@@ -2612,6 +2628,11 @@ int WaveTrack::GetAutoSaveIdent()
 void WaveTrack::SetAutoSaveIdent(int ident)
 {
    mAutoSaveIdent = ident;
+}
+
+bool WaveTrack::IsValidChannel(const int nValue)
+{
+   return (nValue >= WaveTrack::LeftChannel) && (nValue <= WaveTrack::MonoChannel);
 }
 
 WaveTrackCache::~WaveTrackCache()

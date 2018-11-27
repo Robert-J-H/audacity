@@ -216,13 +216,6 @@ class AUDACITY_DLL_API Track /* not final */
 
  public:
 
-   enum ChannelType
-   {
-      LeftChannel = 0,
-      RightChannel = 1,
-      MonoChannel = 2
-   };
-   
    TrackId GetId() const { return mId; }
  private:
    void SetId( TrackId id ) { mId = id; }
@@ -347,7 +340,6 @@ private:
    friend WaveTrack; // WaveTrack needs to call SetLinked when reloading project
    void SetLinked  (bool l);
 
-   void SetChannel(ChannelType c) { mChannel = c; }
 private:
    // No need yet to make this virtual
    void DoSetLinked(bool l);
@@ -359,7 +351,6 @@ private:
  // Keep in Track
 
  protected:
-   ChannelType         mChannel;
    double              mOffset;
 
    mutable std::shared_ptr<DirManager> mDirManager;
@@ -393,14 +384,10 @@ private:
 
 public:
 
-   virtual ChannelType GetChannel() const { return mChannel;}
    virtual double GetOffset() const = 0;
 
    void Offset(double t) { SetOffset(GetOffset() + t); }
    virtual void SetOffset (double o) { mOffset = o; }
-
-   virtual void SetPan( float ){ ;}
-   virtual void SetPanFromChannelType(){ ;};
 
    // AS: Note that the dirManager is mutable.  This is
    // mostly to support "Duplicate" of const objects,
@@ -1403,8 +1390,7 @@ public:
    * @param groupSize must be at least 1.
    * @param resetChannels if true, disassociated channels will be marked Mono.
    */
-   void GroupChannels(
-      Track &track, size_t groupSize, bool resetChannels = true );
+   void GroupChannels( Track &track, size_t groupSize );
 
    /// Replace first track with second track, give back a holder
    /// Give the replacement the same id as the replaced
@@ -1429,14 +1415,6 @@ public:
 
    TimeTrack *GetTimeTrack();
    const TimeTrack *GetTimeTrack() const;
-
-   /** \brief Find out how many channels this track list mixes to
-   *
-   * This is used in exports of the tracks to work out whether to export in
-   * Mono, Stereo etc. @param selectionOnly Whether to consider the entire track
-   * list or only the selected members of it
-   */
-   unsigned GetNumExportChannels(bool selectionOnly) const;
 
    WaveTrackArray GetWaveTrackArray(bool selectionOnly, bool includeMuted = true);
    WaveTrackConstArray GetWaveTrackConstArray(bool selectionOnly, bool includeMuted = true) const;

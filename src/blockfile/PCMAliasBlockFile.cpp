@@ -25,6 +25,7 @@
 
 #include "../ondemand/ODManager.h"
 #include "../AudioIO.h"
+#include "../WaveTrack.h"
 
 extern AudioIO *gAudioIO;
 
@@ -171,7 +172,8 @@ BlockFilePtr PCMAliasBlockFile::BuildFromXML(DirManager &dm, const wxChar **attr
       {  // integer parameters
          if (!wxStricmp(attr, wxT("aliaslen")) && (nValue >= 0))
             aliasLen = nValue;
-         else if (!wxStricmp(attr, wxT("aliaschannel")) && XMLValueChecker::IsValidChannel(aliasChannel))
+         else if (!wxStricmp(attr, wxT("aliaschannel")) &&
+            WaveTrack::IsValidChannel(aliasChannel))
             aliasChannel = nValue;
          else if (!wxStricmp(attr, wxT("min")))
             min = nValue;

@@ -1669,11 +1669,11 @@ void TrackInfo::Status1DrawFunction
       // more appropriate strings
       s = _("Stereo, %dHz");
    else {
-      if (wt->GetChannel() == Track::MonoChannel)
+      if (wt->GetChannel() == WaveTrack::MonoChannel)
          s = _("Mono, %dHz");
-      else if (wt->GetChannel() == Track::LeftChannel)
+      else if (wt->GetChannel() == WaveTrack::LeftChannel)
          s = _("Left, %dHz");
-      else if (wt->GetChannel() == Track::RightChannel)
+      else if (wt->GetChannel() == WaveTrack::RightChannel)
          s = _("Right, %dHz");
    }
    s = wxString::Format( s, (int) (rate + 0.5) );
