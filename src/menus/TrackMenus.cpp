@@ -598,12 +598,10 @@ void DoTrackMute(AudacityProject &project, Track *t, bool exclusive)
 
    // "exclusive" mute means mute the chosen track and unmute all others.
    if (exclusive) {
-      for (auto leader : tracks.Leaders<PlayableTrack>()) {
-         const auto group = TrackList::Channels(leader);
-         bool chosen = (t == leader);
-         for (auto channel : group)
-            channel->SetMute( chosen ),
-            channel->SetSolo( false );
+      for (auto group : tracks.Any<PlayableTrack>().ByGroups()) {
+         bool chosen = (t == group.Leader());
+         group.data->SetMute( chosen ),
+         group.data->SetSolo( false );
       }
    }
    else {
@@ -612,9 +610,9 @@ void DoTrackMute(AudacityProject &project, Track *t, bool exclusive)
       if (!pt)
          return;
 
-      bool wasMute = pt->GetMute();
-      for (auto channel : TrackList::Channels(pt))
-         channel->SetMute( !wasMute );
+      auto &groupData = pt->GetGroupData();
+      bool wasMute = groupData.GetMute();
+      groupData.SetMute( !wasMute );
 
       if (project.IsSoloSimple() || project.IsSoloNone())
       {
@@ -626,9 +624,11 @@ void DoTrackMute(AudacityProject &project, Track *t, bool exclusive)
          auto nPlayableTracks = range.size();
          auto nPlaying = (range - &PlayableTrack::GetMute).size();
 
-         for (auto track : tracks.Any<PlayableTrack>())
-            // will set both of a stereo pair
-            track->SetSolo( (nPlaying==1) && (nPlayableTracks > 1 ) && !track->GetMute() );
+         for (auto group : tracks.Any<PlayableTrack>().ByGroups())
+            group.data->SetSolo(
+               (nPlaying==1) && (nPlayableTracks > 1 ) &&
+               !group.data->GetMute()
+            );
       }
    }
    project.ModifyState(true);
@@ -658,28 +658,23 @@ void DoTrackSolo(AudacityProject &project, Track *t, bool exclusive)
    // In addition, Simple solo will mute/unmute tracks
    // when in standard radio button mode.
    if ( bSoloMultiple )
-   {
-      for (auto channel : TrackList::Channels(pt))
-         channel->SetSolo( !bWasSolo );
-   }
+      pt->GetGroupData().SetSolo( !bWasSolo );
    else
    {
       // Normal click solo this track only, mute everything else.
       // OR unmute and unsolo everything.
-      for (auto leader : tracks.Leaders<PlayableTrack>()) {
-         const auto group = TrackList::Channels(leader);
-         bool chosen = (t == leader);
-         for (auto channel : group) {
-            if (chosen) {
-               channel->SetSolo( !bWasSolo );
-               if( project.IsSoloSimple() )
-                  channel->SetMute( false );
-            }
-            else {
-               channel->SetSolo( false );
-               if( project.IsSoloSimple() )
-                  channel->SetMute( !bWasSolo );
-            }
+      for (auto group : tracks.Any<PlayableTrack>().ByGroups()) {
+         bool chosen = (t == group.Leader());
+         auto data = group.data;
+         if (chosen) {
+            data->SetSolo( !bWasSolo );
+            if( project.IsSoloSimple() )
+               data->SetMute( false );
+         }
+         else {
+            data->SetSolo( false );
+            if( project.IsSoloSimple() )
+               data->SetMute( !bWasSolo );
          }
       }
    }
@@ -1020,11 +1015,11 @@ void OnMuteAllTracks(const CommandContext &context)
    auto soloNone = project.IsSoloNone();
    auto &window = ProjectWindow::Get( project );
 
-   for (auto pt : tracks.Any<PlayableTrack>())
+   for (auto group : tracks.Any<PlayableTrack>().ByGroups())
    {
-      pt->SetMute(true);
+      group.data->SetMute(true);
       if (soloSimple || soloNone)
-         pt->SetSolo(false);
+         group.data->SetSolo(false);
    }
 
    project.ModifyState(true);
@@ -1040,11 +1035,11 @@ void OnUnmuteAllTracks(const CommandContext &context)
    auto soloSimple = project.IsSoloSimple();
    auto soloNone = project.IsSoloNone();
 
-   for (auto pt : tracks.Any<PlayableTrack>())
+   for (auto group : tracks.Any<PlayableTrack>().ByGroups())
    {
-      pt->SetMute(false);
+      group.data->SetMute(false);
       if (soloSimple || soloNone)
-         pt->SetSolo(false);
+         group.data->SetSolo(false);
    }
 
    project.ModifyState(true);

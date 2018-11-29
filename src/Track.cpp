@@ -378,23 +378,23 @@ std::shared_ptr<Track> Track::DoFindTrack()
    return SharedPointer();
 }
 
-void PlayableTrack::Init( const PlayableTrack &orig )
+PlayableTrack::GroupData::~GroupData()
 {
-   mMute = orig.mMute;
-   mSolo = orig.mSolo;
-   AudioTrack::Init( orig );
 }
 
-void PlayableTrack::Merge( const Track &orig )
+auto PlayableTrack::GroupData::Clone() const
+   -> std::shared_ptr<TrackGroupData>
 {
-   auto pOrig = dynamic_cast<const PlayableTrack *>(&orig);
-   wxASSERT( pOrig );
-   mMute = pOrig->mMute;
-   mSolo = pOrig->mSolo;
-   AudioTrack::Merge( *pOrig );
+   return std::make_shared<GroupData>( *this );
 }
 
-void PlayableTrack::SetMute( bool m )
+auto PlayableTrack::CreateGroupData() const
+   -> std::shared_ptr<TrackGroupData>
+{
+   return std::make_shared<GroupData>( *this );
+}
+
+void PlayableTrack::GroupData::SetMute( bool m )
 {
    if ( mMute != m ) {
       mMute = m;
@@ -402,7 +402,7 @@ void PlayableTrack::SetMute( bool m )
    }
 }
 
-void PlayableTrack::SetSolo( bool s  )
+void PlayableTrack::GroupData::SetSolo( bool s  )
 {
    if ( mSolo != s ) {
       mSolo = s;
@@ -413,8 +413,11 @@ void PlayableTrack::SetSolo( bool s  )
 // Serialize, not with tags of its own, but as attributes within a tag.
 void PlayableTrack::WriteXMLAttributes(XMLWriter &xmlFile) const
 {
-   xmlFile.WriteAttr(wxT("mute"), mMute);
-   xmlFile.WriteAttr(wxT("solo"), mSolo);
+   // It would be sufficient to write and read mute and solo only for leader
+   // tracks in 2.3.2 and later, but for forward compatibility we continue
+   // to write them for all channels.
+   xmlFile.WriteAttr(wxT("mute"), GetMute());
+   xmlFile.WriteAttr(wxT("solo"), GetSolo());
    AudioTrack::WriteXMLAttributes(xmlFile);
 }
 
@@ -425,12 +428,14 @@ bool PlayableTrack::HandleXMLAttribute(const wxChar *attr, const wxChar *value)
    long nValue;
    if (!wxStrcmp(attr, wxT("mute")) &&
             XMLValueChecker::IsGoodInt(strValue) && strValue.ToLong(&nValue)) {
-      mMute = (nValue != 0);
+      if ( Track::IsLoadingLeader() )
+         GetGroupData().SetMute(nValue != 0);
       return true;
    }
    else if (!wxStrcmp(attr, wxT("solo")) &&
             XMLValueChecker::IsGoodInt(strValue) && strValue.ToLong(&nValue)) {
-      mSolo = (nValue != 0);
+      if ( Track::IsLoadingLeader() )
+         GetGroupData().SetSolo(nValue != 0);
       return true;
    }
 

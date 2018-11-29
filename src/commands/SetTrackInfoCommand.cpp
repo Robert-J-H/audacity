@@ -227,10 +227,11 @@ bool SetTrackAudioCommand::ApplyInner(const CommandContext & context, Track * t 
 
    // These ones don't make sense on the second channel of a stereo track.
    if( !bIsSecondChannel ){
+      auto groupData = pt->GetGroupData();
       if( pt && bHasSolo )
-         pt->SetSolo(bSolo);
+         groupData.SetSolo(bSolo);
       if( pt && bHasMute )
-         pt->SetMute(bMute);
+         groupData.SetMute(bMute);
    }
    return true;
 }

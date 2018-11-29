@@ -845,23 +845,41 @@ public:
       : AudioTrack{ projDirManager } {}
    PlayableTrack(const Track &orig) : AudioTrack{ orig } {}
 
-   bool GetMute    () const { return mMute;     }
-   bool GetSolo    () const { return mSolo;     }
-   void SetMute    (bool m);
-   void SetSolo    (bool s);
-
-   void Init( const PlayableTrack &init );
-   void Merge( const Track &init ) override;
-
    // Serialize, not with tags of its own, but as attributes within a tag.
    void WriteXMLAttributes(XMLWriter &xmlFile) const;
 
    // Return true iff the attribute is recognized.
    bool HandleXMLAttribute(const wxChar *attr, const wxChar *value);
 
+   struct GroupData /* not final */ : AudioTrack::GroupData {
+      GroupData( const Track &representative )
+         : AudioTrack::GroupData( representative )
+      {}
+      ~GroupData();
+      std::shared_ptr< TrackGroupData > Clone() const override;
+
+      bool GetMute    () const { return mMute; }
+      bool GetSolo    () const { return mSolo; }
+      void SetMute    (bool m);
+      void SetSolo    (bool s);
+
+   private:
+      bool                mMute { false };
+      bool                mSolo { false };
+   };
+
+   // overload inherited GetGroupData with more specific return type
+   GroupData &GetGroupData()
+      { return Track::GetGroupData< GroupData >(); }
+   const GroupData &GetGroupData() const
+      { return Track::GetGroupData< const GroupData >(); }
+
+   // Convenience getters (but not setters) call through to the GroupData
+   bool GetMute    () const { return GetGroupData().GetMute(); }
+   bool GetSolo    () const { return GetGroupData().GetSolo(); }
+
 protected:
-   bool                mMute { false };
-   bool                mSolo { false };
+   std::shared_ptr< TrackGroupData > CreateGroupData() const override;
 };
 
 // Functions to encapsulate the checked down-casting of track pointers,
