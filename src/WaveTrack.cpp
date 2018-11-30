@@ -106,8 +106,6 @@ WaveTrack::WaveTrack(const std::shared_ptr<DirManager> &projDirManager, sampleFo
 
    mFormat = format;
    mRate = (int) rate;
-   mGain = 1.0;
-   mPan = 0.0;
    mOldGain[0] = 0.0;
    mOldGain[1] = 0.0;
    mWaveColorIndex = 0;
@@ -150,8 +148,6 @@ void WaveTrack::Init(const WaveTrack &orig)
    mFormat = orig.mFormat;
    mWaveColorIndex = orig.mWaveColorIndex;
    mRate = orig.mRate;
-   mGain = orig.mGain;
-   mPan = orig.mPan;
    mOldGain[0] = 0.0;
    mOldGain[1] = 0.0;
    mDisplay = orig.mDisplay;
@@ -190,8 +186,6 @@ void WaveTrack::Merge(const Track &orig)
    orig.TypeSwitch( [&](const WaveTrack *pwt) {
       const WaveTrack &wt = *pwt;
       mDisplay = wt.mDisplay;
-      mGain    = wt.mGain;
-      mPan     = wt.mPan;
       mDisplayMin = wt.mDisplayMin;
       mDisplayMax = wt.mDisplayMax;
       SetSpectrogramSettings(wt.mpSpectrumSettings
@@ -250,21 +244,13 @@ auto WaveTrack::GetChannel() const -> ChannelType
    const auto channel = GetChannelIgnoringPan();
    if( channel != MonoChannel )
       return channel;
-   auto pan = GetPan();
+   auto pan = GetGroupData().GetPan();
    if( pan < -0.99 )
       return LeftChannel;
    if( pan >  0.99 )
       return RightChannel;
    return channel;
 }
-
-void WaveTrack::SetPanFromChannelType( ChannelType channel )
-{ 
-   if( channel == LeftChannel )
-      SetPan( -1.0f );
-   else if( channel == RightChannel )
-      SetPan( 1.0f );
-};
 
 void WaveTrack::SetLastScaleType() const
 {
@@ -366,12 +352,7 @@ void WaveTrack::SetRate(double newRate)
    }
 }
 
-float WaveTrack::GetGain() const
-{
-   return mGain;
-}
-
-void WaveTrack::SetGain(float newGain)
+void WaveTrack::GroupData::SetGain(float newGain)
 {
    if (mGain != newGain) {
       mGain = newGain;
@@ -379,12 +360,7 @@ void WaveTrack::SetGain(float newGain)
    }
 }
 
-float WaveTrack::GetPan() const
-{
-   return mPan;
-}
-
-void WaveTrack::SetPan(float newPan)
+void WaveTrack::GroupData::SetPan(float newPan)
 {
    if (newPan > 1.0)
       newPan = 1.0;
@@ -402,15 +378,18 @@ float WaveTrack::GetChannelGain(int channel) const
    float left = 1.0;
    float right = 1.0;
 
-   if (mPan < 0)
-      right = (mPan + 1.0);
-   else if (mPan > 0)
-      left = 1.0 - mPan;
+   const auto &data = GetGroupData();
+   const auto pan = data.GetPan();
+   if (pan < 0)
+      right = (pan + 1.0);
+   else if (pan > 0)
+      left = 1.0 - pan;
 
+   const auto gain = data.GetGain();
    if ((channel%2) == 0)
-      return left*mGain;
+      return left * gain;
    else
-      return right*mGain;
+      return right * gain;
 }
 
 float WaveTrack::GetOldChannelGain(int channel) const
@@ -1663,13 +1642,17 @@ bool WaveTrack::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
             ;
          else if (!wxStrcmp(attr, wxT("gain")) &&
                   XMLValueChecker::IsGoodString(strValue) &&
-                  Internat::CompatibleToDouble(strValue, &dblValue))
-            mGain = dblValue;
+                  Internat::CompatibleToDouble(strValue, &dblValue)) {
+            if ( Track::IsLoadingLeader() )
+               GetGroupData().SetGain( dblValue );
+         }
          else if (!wxStrcmp(attr, wxT("pan")) &&
                   XMLValueChecker::IsGoodString(strValue) &&
                   Internat::CompatibleToDouble(strValue, &dblValue) &&
-                  (dblValue >= -1.0) && (dblValue <= 1.0))
-            mPan = dblValue;
+                  (dblValue >= -1.0) && (dblValue <= 1.0)) {
+            if ( Track::IsLoadingLeader() )
+               GetGroupData().SetPan( dblValue );
+         }
          else if (!wxStrcmp(attr, wxT("channel")))
          {
             // Older files stored this field
@@ -1781,8 +1764,14 @@ void WaveTrack::WriteXML(XMLWriter &xmlFile) const
 
    this->PlayableTrack::WriteXMLAttributes(xmlFile);
    xmlFile.WriteAttr(wxT("rate"), mRate);
-   xmlFile.WriteAttr(wxT("gain"), (double)mGain);
-   xmlFile.WriteAttr(wxT("pan"), (double)mPan);
+
+   // It would be sufficient to write and read gain and pan only for leader
+   // tracks in 2.3.2 and later, but for forward compatibility we continue
+   // to write them for all channels.
+   auto &data = GetGroupData();
+   xmlFile.WriteAttr(wxT("gain"), (double)data.GetGain());
+   xmlFile.WriteAttr(wxT("pan"), (double)data.GetPan());
+
    xmlFile.WriteAttr(wxT("colorindex"), mWaveColorIndex );
 
    for (const auto &clip : mClips)
@@ -2597,6 +2586,22 @@ void WaveTrack::SetAutoSaveIdent(int ident)
 bool WaveTrack::IsValidChannel(const int nValue)
 {
    return (nValue >= WaveTrack::LeftChannel) && (nValue <= WaveTrack::MonoChannel);
+}
+
+WaveTrack::GroupData::~GroupData()
+{
+}
+
+auto WaveTrack::GroupData::Clone() const
+   -> std::shared_ptr<TrackGroupData>
+{
+   return std::make_shared<GroupData>( *this );
+}
+
+auto WaveTrack::CreateGroupData() const
+   -> std::shared_ptr<TrackGroupData>
+{
+   return std::make_shared<GroupData>( *this );
 }
 
 WaveTrackCache::~WaveTrackCache()

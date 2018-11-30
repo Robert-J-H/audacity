@@ -411,9 +411,7 @@ void MixerTrackCluster::HandleSliderGain(const bool bWantPushState /*= false*/)
 {
    float fValue = mSlider_Gain->Get();
    if (GetWave())
-      GetWave()->SetGain(fValue);
-   if (GetRight())
-      GetRight()->SetGain(fValue);
+      GetWave()->GetGroupData().SetGain(fValue);
 
    // Update the TrackPanel correspondingly.
    mProject->RefreshTPTrack(mTrack.get());
@@ -439,9 +437,7 @@ void MixerTrackCluster::HandleSliderPan(const bool bWantPushState /*= false*/)
 {
    float fValue = mSlider_Pan->Get();
    if (GetWave()) // test in case track is a NoteTrack
-      GetWave()->SetPan(fValue);
-   if (GetRight())
-      GetRight()->SetPan(fValue);
+      GetWave()->GetGroupData().SetPan(fValue);
 
    // Update the TrackPanel correspondingly.
    mProject->RefreshTPTrack(mTrack.get());
@@ -485,15 +481,16 @@ void MixerTrackCluster::UpdateForStateChange()
       mToggleButton_Solo->PopUp();
    mToggleButton_Mute->SetAlternateIdx(bIsSolo ? 1 : 0);
 
-   if (!GetWave())
+   auto pWave = GetWave();
+   if (!pWave) {
       mSlider_Pan->Hide();
-   else
-      mSlider_Pan->Set(GetWave()->GetPan());
-
-   if (!GetWave())
       mSlider_Gain->Hide();
-   else
-      mSlider_Gain->Set(GetWave()->GetGain());
+   }
+   else {
+      auto &data = pWave->GetGroupData();
+      mSlider_Pan->Set(data.GetPan());
+      mSlider_Gain->Set(data.GetGain());
+   }
 
 #ifdef EXPERIMENTAL_MIDI_OUT
    if (!GetNote())

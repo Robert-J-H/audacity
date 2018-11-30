@@ -3625,8 +3625,9 @@ void AudacityProject::WriteXML(XMLWriter &xmlFile, bool bWantSaveCopy)
 
             // Don't store "rate" tag because the importer can figure that out.
             //    xmlFile.WriteAttr(wxT("rate"), pWaveTrack->GetRate());
-            xmlFile.WriteAttr(wxT("gain"), (double)pWaveTrack->GetGain());
-            xmlFile.WriteAttr(wxT("pan"), (double)pWaveTrack->GetPan());
+            auto &data = pWaveTrack->GetGroupData();
+            xmlFile.WriteAttr( wxT("gain"), (double)data.GetGain() );
+            xmlFile.WriteAttr( wxT("pan"), (double)data.GetPan() );
             xmlFile.EndTag(wxT("import"));
 
             ndx++;
@@ -3993,28 +3994,23 @@ bool AudacityProject::SaveCopyWaveTracks(const FilePath & strProjectPathName,
    }
    auto cleanup = finally( [&] {
       // Restore the saved track states and clean up.
-      auto savedTrackRange = pSavedTrackList.Any<const WaveTrack>();
-      auto ppSavedTrack = savedTrackRange.begin();
-      for (auto ppTrack = trackRange.begin();
+      auto savedGroupRange = pSavedTrackList.Any<const WaveTrack>().ByGroups();
+      auto ppSavedGroup = savedGroupRange.begin();
+      for (auto ppGroup = trackRange.ByGroups().begin();
 
-           *ppTrack && *ppSavedTrack;
+           (*ppGroup).data && (*ppSavedGroup).data;
 
-           ++ppTrack, ++ppSavedTrack)
+           ++ppGroup, ++ppSavedGroup)
       {
-         auto pWaveTrack = *ppTrack;
-         auto pSavedWaveTrack = *ppSavedTrack;
-         
-         if ( pWaveTrack->IsLeader() ) {
-            const auto &savedGroupData = pSavedWaveTrack->GetGroupData();
-            auto &groupData = pWaveTrack->GetGroupData();
+         const auto &savedGroupData = *(*ppSavedGroup).data;
+         auto &groupData = *(*ppGroup).data;
 
-            groupData.SetSelected( savedGroupData.GetSelected() );
-            groupData.SetMute( savedGroupData.GetMute() );
-            groupData.SetSolo( savedGroupData.GetSolo() );
-         }
+         groupData.SetSelected( savedGroupData.GetSelected() );
+         groupData.SetMute( savedGroupData.GetMute() );
+         groupData.SetSolo( savedGroupData.GetSolo() );
 
-         pWaveTrack->SetGain(pSavedWaveTrack->GetGain());
-         pWaveTrack->SetPan(pSavedWaveTrack->GetPan());
+         groupData.SetGain( savedGroupData.GetGain() );
+         groupData.SetPan( savedGroupData.GetPan() );
       }
    } );
 
@@ -4023,18 +4019,16 @@ bool AudacityProject::SaveCopyWaveTracks(const FilePath & strProjectPathName,
       return true;
 
    // Okay, now some bold state-faking to default values.
-   for (auto pWaveTrack : trackRange)
+   for ( auto pGroup : trackRange.ByGroups() )
    {
-      if ( pWaveTrack->IsLeader() ) {
-         auto &groupData = pWaveTrack->GetGroupData();
+      auto &groupData = *pGroup.data;
 
-         groupData.SetSelected(false);
-         groupData.SetMute(false);
-         groupData.SetSolo(false);
-      }
+      groupData.SetSelected(false);
+      groupData.SetMute(false);
+      groupData.SetSolo(false);
 
-      pWaveTrack->SetGain(1.0);
-      pWaveTrack->SetPan(0.0);
+      groupData.SetGain(1.0);
+      groupData.SetPan(0.0);
    }
 
    FilePath strDataDirPathName = strProjectPathName + wxT("_data");

@@ -273,13 +273,14 @@ bool GetInfoCommand::SendTracks(const CommandContext & context)
       //JKC: Possibly add later...
       //context.AddItem( trk->GetHeight(), "height" );
       trk->TypeSwitch( [&] (const WaveTrack* t ) {
+         auto &data = t->GetGroupData();
          float vzmin, vzmax;
          t->GetDisplayBounds(&vzmin, &vzmax);
          context.AddItem( "wave", "kind" );
          context.AddItem( t->GetStartTime(), "start" );
          context.AddItem( t->GetEndTime(), "end" );
-         context.AddItem( t->GetPan() , "pan");
-         context.AddItem( t->GetGain() , "gain");
+         context.AddItem( data.GetPan() , "pan");
+         context.AddItem( data.GetGain() , "gain");
          context.AddItem( TrackList::Channels(t).size(), "channels");
          context.AddBool( t->GetSolo(), "solo" );
          context.AddBool( t->GetMute(), "mute");

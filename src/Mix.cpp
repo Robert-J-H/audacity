@@ -63,7 +63,7 @@ void MixAndRender(TrackList *tracks, TrackFactory *trackFactory,
    int numMono = 0;  /* number of mono, centre-panned wave tracks in selection*/
    for(auto wt : trackRange) {
       numWaves++;
-      float pan = wt->GetPan();
+      float pan = wt->GetGroupData().GetPan();
       if (wt->GetChannel() == WaveTrack::MonoChannel && pan == 0)
          numMono++;
    }

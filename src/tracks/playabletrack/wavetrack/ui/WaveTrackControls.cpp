@@ -861,8 +861,8 @@ void WaveTrackMenuTable::OnMergeStereo(wxCommandEvent &)
    // Set partner's parameters to match target.
    partner->Merge(*pTrack);
 
-   pTrack->SetPan( 0.0f );
-   partner->SetPan( 0.0f );
+   auto &data = pTrack->GetGroupData();
+   data.SetPan( 0.0f );
 
    // Set NEW track heights and minimized state
    bool bBothMinimizedp = ((pTrack->GetMinimized()) && (partner->GetMinimized()));
@@ -887,7 +887,7 @@ void WaveTrackMenuTable::OnMergeStereo(wxCommandEvent &)
 
    /* i18n-hint: The string names a track */
    project->PushState(wxString::Format(_("Made '%s' a stereo track"),
-      pTrack->GetGroupData().GetName()),
+      data.GetName()),
       _("Make Stereo"));
 
    mpData->result = RefreshCode::RefreshAll;
@@ -903,11 +903,10 @@ void WaveTrackMenuTable::SplitStereo(bool stereo)
 
    int totalHeight = 0;
    int nChannels = 0;
+   std::vector<WaveTrack *> pointers;
    for (auto channel : channels) {
       if (stereo)
-         // PRL:  note that the split loses the effects of previous stereo pan
-         // setting, leaving one mono panned hard left and the other right.
-         channel->SetPanFromChannelType( channel->GetChannelIgnoringPan() );
+         pointers.push_back(channel);
 
       //On Demand - have each channel add its own.
       if (ODManager::IsInstanceCreated())
@@ -923,6 +922,15 @@ void WaveTrackMenuTable::SplitStereo(bool stereo)
    // generally in splitting more-than-stereo tracks
    for (auto channel : channels)
       TrackList::Get( *project ).GroupChannels( *channel, 1 );
+
+   // Reset pan values of the channels only after they have been un-grouped
+   // and so have independent pan settings
+   if (stereo && pointers.size() == 2) {
+      // PRL:  note that the split loses the effects of previous stereo pan
+      // setting, leaving one mono panned hard left and the other right.
+      pointers[0]->GetGroupData().SetPan( -1.0f );
+      pointers[1]->GetGroupData().SetPan(  1.0f );
+   }
 
    int averageHeight = totalHeight / nChannels;
 

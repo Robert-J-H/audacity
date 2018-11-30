@@ -2693,7 +2693,7 @@ LWSlider * TrackInfo::GainSlider
 (const wxRect &sliderRect, const WaveTrack *t, bool captured, wxWindow *pParent)
 {
    wxPoint pos = sliderRect.GetPosition();
-   float gain = t ? t->GetGain() : 1.0;
+   float gain = t ? t->GetGroupData().GetGain() : 1.0;
 
    gGain->Move(pos);
    gGain->Set(gain);
@@ -2710,7 +2710,7 @@ LWSlider * TrackInfo::PanSlider
 (const wxRect &sliderRect, const WaveTrack *t, bool captured, wxWindow *pParent)
 {
    wxPoint pos = sliderRect.GetPosition();
-   float pan = t ? t->GetPan() : 0.0;
+   float pan = t ? t->GetGroupData().GetPan() : 0.0;
 
    gPan->Move(pos);
    gPan->Set(pan);

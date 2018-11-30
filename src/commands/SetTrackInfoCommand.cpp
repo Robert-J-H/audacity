@@ -221,9 +221,9 @@ bool SetTrackAudioCommand::ApplyInner(const CommandContext & context, Track * t 
    auto pt = dynamic_cast<PlayableTrack *>(t);
 
    if( wt && bHasGain )
-      wt->SetGain(DB_TO_LINEAR(mGain));
+      wt->GetGroupData().SetGain(DB_TO_LINEAR(mGain));
    if( wt && bHasPan )
-      wt->SetPan(mPan/100.0);
+      wt->GetGroupData().SetPan(mPan/100.0);
 
    // These ones don't make sense on the second channel of a stereo track.
    if( !bIsSecondChannel ){

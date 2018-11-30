@@ -1109,10 +1109,12 @@ bool NyquistEffect::ProcessOne()
                               Internat::ToString(startTime));
       cmd += wxString::Format(wxT("(putprop '*TRACK* (float %s) 'END-TIME)\n"),
                               Internat::ToString(endTime));
+
+      auto &data = mCurTrack[0]->GetGroupData();
       cmd += wxString::Format(wxT("(putprop '*TRACK* (float %s) 'GAIN)\n"),
-                              Internat::ToString(mCurTrack[0]->GetGain()));
+               Internat::ToString(data.GetGain()));
       cmd += wxString::Format(wxT("(putprop '*TRACK* (float %s) 'PAN)\n"),
-                              Internat::ToString(mCurTrack[0]->GetPan()));
+               Internat::ToString(data.GetPan()));
       cmd += wxString::Format(wxT("(putprop '*TRACK* (float %s) 'RATE)\n"),
                               Internat::ToString(mCurTrack[0]->GetRate()));
 

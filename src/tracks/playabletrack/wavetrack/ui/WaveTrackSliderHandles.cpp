@@ -35,7 +35,7 @@ std::shared_ptr<WaveTrack> GainSliderHandle::GetWaveTrack()
 float GainSliderHandle::GetValue()
 {
    if (GetWaveTrack())
-      return GetWaveTrack()->GetGain();
+      return GetWaveTrack()->GetGroupData().GetGain();
    else
       return 0;
 }
@@ -46,11 +46,8 @@ UIHandle::Result GainSliderHandle::SetValue
    (void)pProject;//Compiler food
    auto pTrack = GetWaveTrack();
 
-   if (pTrack) {
-      for (auto channel :
-           TrackList::Channels(pTrack.get()))
-         channel->SetGain(newValue);
-   }
+   if (pTrack)
+      pTrack->GetGroupData().SetGain(newValue);
 
    return RefreshCode::RefreshNone;
 }
@@ -112,7 +109,7 @@ std::shared_ptr<WaveTrack> PanSliderHandle::GetWaveTrack()
 float PanSliderHandle::GetValue()
 {
    if (GetWaveTrack())
-      return GetWaveTrack()->GetPan();
+      return GetWaveTrack()->GetGroupData().GetPan();
    else
       return 0;
 }
@@ -124,11 +121,8 @@ UIHandle::Result PanSliderHandle::SetValue(AudacityProject *pProject, float newV
    Result result = RefreshNone;
    auto pTrack = GetWaveTrack();
 
-   if (pTrack) {
-      for (auto channel :
-           TrackList::Channels(pTrack.get()))
-         channel->SetPan(newValue);
-   }
+   if (pTrack)
+      pTrack->GetGroupData().SetPan(newValue);
 
    return result;
 }

@@ -476,7 +476,7 @@ bool Exporter::ExamineTracks()
       }
       else if (tr->GetChannel() == WaveTrack::MonoChannel) {
          // It's a mono channel, but it may be panned
-         float pan = tr->GetPan();
+         float pan = tr->GetGroupData().GetPan();
 
          if (pan == -1.0)
             mNumLeft++;
