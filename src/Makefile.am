@@ -125,6 +125,8 @@ audacity_SOURCES = \
 	Benchmark.h \
 	CellularPanel.cpp \
 	CellularPanel.h \
+	ClientData.h \
+	ClientDataHelpers.h \
 	Dependencies.cpp \
 	Dependencies.h \
 	DeviceChange.cpp \

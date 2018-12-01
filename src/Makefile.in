@@ -297,12 +297,13 @@ am__audacity_SOURCES_DIST = BlockFile.cpp BlockFile.h DirManager.cpp \
 	AutoRecovery.h BatchCommandDialog.cpp BatchCommandDialog.h \
 	BatchCommands.cpp BatchCommands.h BatchProcessDialog.cpp \
 	BatchProcessDialog.h Benchmark.cpp Benchmark.h \
-	CellularPanel.cpp CellularPanel.h Dependencies.cpp \
-	Dependencies.h DeviceChange.cpp DeviceChange.h \
-	DeviceManager.cpp DeviceManager.h Diags.cpp Diags.h \
-	Envelope.cpp Envelope.h Experimental.h FFmpeg.cpp FFmpeg.h \
-	FFT.cpp FFT.h FileException.cpp FileException.h FileIO.cpp \
-	FileIO.h FileNames.cpp FileNames.h float_cast.h FreqWindow.cpp \
+	CellularPanel.cpp CellularPanel.h ClientData.h \
+	ClientDataHelpers.h Dependencies.cpp Dependencies.h \
+	DeviceChange.cpp DeviceChange.h DeviceManager.cpp \
+	DeviceManager.h Diags.cpp Diags.h Envelope.cpp Envelope.h \
+	Experimental.h FFmpeg.cpp FFmpeg.h FFT.cpp FFT.h \
+	FileException.cpp FileException.h FileIO.cpp FileIO.h \
+	FileNames.cpp FileNames.h float_cast.h FreqWindow.cpp \
 	FreqWindow.h HelpText.cpp HelpText.h HistoryWindow.cpp \
 	HistoryWindow.h HitTestResult.h ImageManipulation.cpp \
 	ImageManipulation.h InconsistencyException.cpp \
@@ -1243,7 +1244,6 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
-runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -1347,12 +1347,13 @@ audacity_SOURCES = $(libaudacity_la_SOURCES) AboutDialog.cpp \
 	AutoRecovery.h BatchCommandDialog.cpp BatchCommandDialog.h \
 	BatchCommands.cpp BatchCommands.h BatchProcessDialog.cpp \
 	BatchProcessDialog.h Benchmark.cpp Benchmark.h \
-	CellularPanel.cpp CellularPanel.h Dependencies.cpp \
-	Dependencies.h DeviceChange.cpp DeviceChange.h \
-	DeviceManager.cpp DeviceManager.h Diags.cpp Diags.h \
-	Envelope.cpp Envelope.h Experimental.h FFmpeg.cpp FFmpeg.h \
-	FFT.cpp FFT.h FileException.cpp FileException.h FileIO.cpp \
-	FileIO.h FileNames.cpp FileNames.h float_cast.h FreqWindow.cpp \
+	CellularPanel.cpp CellularPanel.h ClientData.h \
+	ClientDataHelpers.h Dependencies.cpp Dependencies.h \
+	DeviceChange.cpp DeviceChange.h DeviceManager.cpp \
+	DeviceManager.h Diags.cpp Diags.h Envelope.cpp Envelope.h \
+	Experimental.h FFmpeg.cpp FFmpeg.h FFT.cpp FFT.h \
+	FileException.cpp FileException.h FileIO.cpp FileIO.h \
+	FileNames.cpp FileNames.h float_cast.h FreqWindow.cpp \
 	FreqWindow.h HelpText.cpp HelpText.h HistoryWindow.cpp \
 	HistoryWindow.h HitTestResult.h ImageManipulation.cpp \
 	ImageManipulation.h InconsistencyException.cpp \

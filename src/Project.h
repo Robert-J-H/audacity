@@ -22,6 +22,7 @@
 
 #include "Experimental.h"
 
+#include "ClientData.h"
 #include "Track.h"
 #include "SelectionState.h"
 #include "ViewInfo.h"
@@ -172,35 +173,25 @@ class MenuManager;
 
 class PrefsListener;
 
+class AudacityProject;
+using AttachedObjects = ClientData::Site<
+   AudacityProject, PrefsListener
+>;
+
 class AUDACITY_DLL_API AudacityProject final : public wxFrame,
                                      public TrackPanelListener,
                                      public SelectionBarListener,
                                      public SpectralSelectionBarListener,
                                      public XMLTagHandler,
                                      public AudioIOListener
+   , public AttachedObjects
 {
  public:
+   using AttachedObjects = ::AttachedObjects;
+
    AudacityProject(wxWindow * parent, wxWindowID id,
                    const wxPoint & pos, const wxSize & size);
    virtual ~AudacityProject();
-
-   using AttachedObject = PrefsListener;
-   using AttachedObjectFactory =
-      std::function< std::unique_ptr<AttachedObject>() >;
-
-   // Typically a static object.  Allows various application code to
-   // attach per-project state, without Project.cpp needing to include a header
-   // file or know the details.
-   class RegisteredAttachedObjectFactory {
-   public:
-      RegisteredAttachedObjectFactory( const AttachedObjectFactory &factory );
-
-   private:
-      friend AudacityProject;
-      size_t mIndex {};
-   };
-   AttachedObject &
-      GetAttachedObject( const RegisteredAttachedObjectFactory& factory );
 
    virtual void ApplyUpdatedTheme();
 
@@ -768,7 +759,6 @@ private:
 #endif
 
 private:
-   std::vector< std::unique_ptr<AttachedObject> > mAttachedObjects;
    std::unique_ptr<MenuManager> mMenuManager;
 
 public:

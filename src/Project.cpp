@@ -893,64 +893,6 @@ static wxString CreateUniqueName()
           wxString::Format(wxT(" N-%i"), ++count);
 }
 
-namespace {
-
-#if 0
-std::mutex sObjectFactoriesMutex;
-struct ObjectFactorySetLocker : private std::unique_lock< std::mutex >
-{
-   ObjectFactorySetLocker()
-      : std::unique_lock< std::mutex > { sObjectFactoriesMutex }
-   {}
-};
-#else
-struct ObjectFactorySetLocker {};
-#endif
-
-std::vector<AudacityProject::AttachedObjectFactory> &sObjectFactories()
-{
-   // Put this declaration inside a function to avoid problems of undefined
-   // sequence of initialization of file-scope statics in different
-   // compilation units.
-   // Note that mutex locking is not needed for constructing a static object
-   // in C++11:
-   //https://en.cppreference.com/w/cpp/language/storage_duration#Static_local_variables
-   static std::vector<AudacityProject::AttachedObjectFactory> factories;
-   return factories;
-}
-}
-
-AudacityProject::
-RegisteredAttachedObjectFactory::RegisteredAttachedObjectFactory(
-   const AttachedObjectFactory &factory )
-{
-   ObjectFactorySetLocker locker;
-   mIndex = sObjectFactories().size();
-   sObjectFactories().push_back( factory );
-   
-   // In case registration happens while projects exist:
-   for (const auto &pProject : gAudacityProjects) {
-      if (pProject->mAttachedObjects.size() == mIndex) {
-         auto pObject = factory();
-         wxASSERT( pObject );
-         pProject->mAttachedObjects.push_back( std::move( pObject ) );
-      }
-   }
-}
-
-AudacityProject::
-AttachedObject &AudacityProject::GetAttachedObject(
-   const RegisteredAttachedObjectFactory &factory )
-{
-   ObjectFactorySetLocker locker;
-   if ( factory.mIndex >= mAttachedObjects.size() )
-      THROW_INCONSISTENCY_EXCEPTION;
-   auto &pObject = mAttachedObjects[ factory.mIndex ];
-   if ( !pObject )
-      THROW_INCONSISTENCY_EXCEPTION;
-   return *pObject;
-}
-
 enum {
    FirstID = 1000,
 
@@ -1042,18 +984,11 @@ AudacityProject::AudacityProject(wxWindow * parent, wxWindowID id,
 
    mLastSavedTracks.reset();
 
+   AttachedObjects::BuildAll();
+
    //
    // Initialize view info (shared with TrackPanel)
    //
-
-   {
-      ObjectFactorySetLocker locker;
-      for (const auto &factory : sObjectFactories()) {
-         auto pObject = factory();
-         wxASSERT( pObject );
-         mAttachedObjects.push_back( std::move( pObject ) );
-      }
-   }
 
    mMenuManager = std::make_unique<MenuManager>();
 
@@ -1420,11 +1355,7 @@ void AudacityProject::UpdatePrefs()
 
    SetProjectTitle();
 
-   {
-      ObjectFactorySetLocker locker;
-      for( const auto &pObject : mAttachedObjects )
-         pObject->UpdatePrefs();
-   }
+   AttachedObjects::ForEach( std::mem_fn( &PrefsListener::UpdatePrefs ) );
 
    GetMenuManager(*this).UpdatePrefs();
 
