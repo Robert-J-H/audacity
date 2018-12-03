@@ -1239,6 +1239,7 @@
 		5E36A0B4217FC6540068E082 /* HelpMenus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E36A0B3217FC6540068E082 /* HelpMenus.cpp */; };
 		5E3FFE721EC9032B0020F7C9 /* NoteTrackSliderHandles.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E3FFE701EC9032B0020F7C9 /* NoteTrackSliderHandles.cpp */; };
 		5E61B8E621C885DE00225F61 /* WaveTrackViewConstants.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E61B8E521C885DE00225F61 /* WaveTrackViewConstants.cpp */; };
+		5E61B8E921C8863800225F61 /* WaveTrackViewGroupData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E61B8E721C8863800225F61 /* WaveTrackViewGroupData.cpp */; };
 		5E667A601F0BEE5F00C942A5 /* WaveTrackVZoomHandle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E667A5E1F0BEE5F00C942A5 /* WaveTrackVZoomHandle.cpp */; };
 		5E667A651F0BEE8C00C942A5 /* NoteTrackButtonHandle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E667A611F0BEE8C00C942A5 /* NoteTrackButtonHandle.cpp */; };
 		5E667A661F0BEE8C00C942A5 /* NoteTrackVZoomHandle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E667A631F0BEE8C00C942A5 /* NoteTrackVZoomHandle.cpp */; };
@@ -3132,6 +3133,8 @@
 		5E60AC7D214C31B100A82791 /* Registrar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Registrar.h; sourceTree = "<group>"; };
 		5E61B8E421C884E300225F61 /* WaveTrackViewConstants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WaveTrackViewConstants.h; sourceTree = "<group>"; };
 		5E61B8E521C885DE00225F61 /* WaveTrackViewConstants.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WaveTrackViewConstants.cpp; sourceTree = "<group>"; };
+		5E61B8E721C8863800225F61 /* WaveTrackViewGroupData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WaveTrackViewGroupData.cpp; sourceTree = "<group>"; };
+		5E61B8E821C8863800225F61 /* WaveTrackViewGroupData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WaveTrackViewGroupData.h; sourceTree = "<group>"; };
 		5E61EE0C1CBAA6BB0009FCF1 /* MemoryX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MemoryX.h; sourceTree = "<group>"; };
 		5E667A5E1F0BEE5F00C942A5 /* WaveTrackVZoomHandle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WaveTrackVZoomHandle.cpp; sourceTree = "<group>"; };
 		5E667A5F1F0BEE5F00C942A5 /* WaveTrackVZoomHandle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WaveTrackVZoomHandle.h; sourceTree = "<group>"; };
@@ -6070,6 +6073,7 @@
 				5E7396541DAFDA0000BA0A4D /* WaveTrackSliderHandles.cpp */,
 				5EA018251EC7B226001F2996 /* WaveTrackUI.cpp */,
 				5E61B8E521C885DE00225F61 /* WaveTrackViewConstants.cpp */,
+				5E61B8E721C8863800225F61 /* WaveTrackViewGroupData.cpp */,
 				5EA018261EC7B226001F2996 /* WaveTrackVRulerControls.cpp */,
 				5E667A5E1F0BEE5F00C942A5 /* WaveTrackVZoomHandle.cpp */,
 				5E7396491DAFD91D00BA0A4D /* CutlineHandle.h */,
@@ -6077,6 +6081,7 @@
 				5EA018241EC7B226001F2996 /* WaveTrackControls.h */,
 				5E7396551DAFDA0000BA0A4D /* WaveTrackSliderHandles.h */,
 				5E61B8E421C884E300225F61 /* WaveTrackViewConstants.h */,
+				5E61B8E821C8863800225F61 /* WaveTrackViewGroupData.h */,
 				5EA018271EC7B226001F2996 /* WaveTrackVRulerControls.h */,
 				5E667A5F1F0BEE5F00C942A5 /* WaveTrackVZoomHandle.h */,
 			);
@@ -8229,6 +8234,7 @@
 				28D8425C1AD8D69D00551353 /* SelectedRegion.cpp in Sources */,
 				2888A1631AE25F9A00E06FDC /* Diags.cpp in Sources */,
 				2890498E1B6716B40038A543 /* SpectrogramSettings.cpp in Sources */,
+				5E61B8E921C8863800225F61 /* WaveTrackViewGroupData.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

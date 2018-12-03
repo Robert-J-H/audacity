@@ -23,8 +23,6 @@
 #include "WaveTrackLocation.h"
 #include "tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.h"
 
-class SpectrogramSettings;
-class WaveformSettings;
 class TimeWarper;
 
 class CutlineHandle;
@@ -188,16 +186,6 @@ private:
    sampleFormat GetSampleFormat() const { return mFormat; }
    void ConvertToSampleFormat(sampleFormat format);
 
-   const SpectrogramSettings &GetSpectrogramSettings() const;
-   SpectrogramSettings &GetSpectrogramSettings();
-   SpectrogramSettings &GetIndependentSpectrogramSettings();
-   void SetSpectrogramSettings(std::unique_ptr<SpectrogramSettings> &&pSettings);
-
-   const WaveformSettings &GetWaveformSettings() const;
-   WaveformSettings &GetWaveformSettings();
-   WaveformSettings &GetIndependentWaveformSettings();
-   void SetWaveformSettings(std::unique_ptr<WaveformSettings> &&pSettings);
-   void UseSpectralPrefs( bool bUse=true );
    //
    // High-level editing
    //
@@ -542,27 +530,6 @@ private:
    // Set the unique autosave ID
    void SetAutoSaveIdent(int id);
 
-   using WaveTrackDisplay = WaveTrackViewConstants::Display;
-
-   int GetLastScaleType() const { return mLastScaleType; }
-   void SetLastScaleType() const;
-
-   int GetLastdBRange() const { return mLastdBRange; }
-   void SetLastdBRange() const;
-
-   WaveTrackDisplay GetDisplay() const { return mDisplay; }
-   void SetDisplay(WaveTrackDisplay display) { mDisplay = display; }
-
-   void GetDisplayBounds(float *min, float *max) const;
-   void SetDisplayBounds(float min, float max) const;
-   void GetSpectrumBounds(float *min, float *max) const;
-   void SetSpectrumBounds(float min, float max) const;
-
-   // For display purposes, calculate the y coordinate where the midline of
-   // the wave should be drawn, if display minimum and maximum map to the
-   // bottom and top.  Maybe that is out of bounds.
-   int ZeroLevelYCoordinate(wxRect rect) const;
-
  protected:
    //
    // Protected variables
@@ -576,18 +543,6 @@ private:
    float         mOldGain[2];
 
 
-   //
-   // Data that should be part of GUIWaveTrack
-   // and will be taken out of the WaveTrack class:
-   //
-   mutable float         mDisplayMin;
-   mutable float         mDisplayMax;
-   mutable float         mSpectrumMin;
-   mutable float         mSpectrumMax;
-
-   WaveTrackDisplay mDisplay;
-   mutable int   mLastScaleType; // last scale type choice
-   mutable int           mLastdBRange;
    mutable std::vector <Location> mDisplayLocationsCache;
 
    //
@@ -608,9 +563,6 @@ private:
    wxCriticalSection mAppendCriticalSection;
    double mLegacyProjectFileOffset{ 0 };
    int mAutoSaveIdent;
-
-   std::unique_ptr<SpectrogramSettings> mpSpectrumSettings;
-   std::unique_ptr<WaveformSettings> mpWaveformSettings;
 
    std::weak_ptr<CutlineHandle> mCutlineHandle;
    std::weak_ptr<SampleHandle> mSampleHandle;

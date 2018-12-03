@@ -17,7 +17,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../../../MemoryX.h"
 #include <wx/gdicmn.h>
 
-#include "WaveTrackViewConstants.h"
+#include "WaveTrackViewGroupData.h"
 #include "../../../../Envelope.h"
 #include "../../../../HitTestResult.h"
 #include "../../../../prefs/WaveformSettings.h"
@@ -120,8 +120,9 @@ UIHandlePtr SampleHandle::HitTest
    /// method that tells us if the mouse event landed on an
    /// editable sample
    const auto wavetrack = pTrack.get();
+   auto &data = WaveTrackViewGroupData::Get( *wavetrack );
 
-   const int displayType = wavetrack->GetDisplay();
+   const int displayType = data.GetDisplay();
    if (WaveTrackViewConstants::Waveform != displayType)
       return {};  // Not a wave, so return.
 
@@ -142,7 +143,7 @@ UIHandlePtr SampleHandle::HitTest
    // Get y distance of envelope point from center line (in pixels).
    float zoomMin, zoomMax;
 
-   wavetrack->GetDisplayBounds(&zoomMin, &zoomMax);
+   data.GetDisplayBounds(&zoomMin, &zoomMax);
 
    double envValue = 1.0;
    Envelope* env = wavetrack->GetEnvelopeAtX(state.GetX());
@@ -150,11 +151,11 @@ UIHandlePtr SampleHandle::HitTest
       // Calculate sample as it would be rendered, so quantize time
       envValue = env->GetValue( tt, 1.0 / wavetrack->GetRate() );
 
-   const bool dB = !wavetrack->GetWaveformSettings().isLinear();
+   const bool dB = !data.GetWaveformSettings().isLinear();
    int yValue = GetWaveYPos(oneSample * envValue,
       zoomMin, zoomMax,
       rect.height, dB, true, 
-      wavetrack->GetWaveformSettings().dBRange, false) + rect.y;
+      data.GetWaveformSettings().dBRange, false) + rect.y;
 
    // Get y position of mouse (in pixels)
    int yMouse = state.m_y;
@@ -181,7 +182,8 @@ namespace {
    {
       //Get out of here if we shouldn't be drawing right now:
       //If we aren't displaying the waveform, Display a message dialog
-      const int display = wt->GetDisplay();
+      auto &data = WaveTrackViewGroupData::Get( *wt );
+      const int display = data.GetDisplay();
       if (WaveTrackViewConstants::Waveform != display)
       {
          AudacityMessageBox(_(
@@ -455,14 +457,15 @@ float SampleHandle::FindSampleEditingLevel
 {
    // Calculate where the mouse is located vertically (between +/- 1)
    float zoomMin, zoomMax;
-   mClickedTrack->GetDisplayBounds(&zoomMin, &zoomMax);
+   auto &data = WaveTrackViewGroupData::Get( *mClickedTrack );
+   data.GetDisplayBounds(&zoomMin, &zoomMax);
 
    const int yy = event.m_y - mRect.y;
    const int height = mRect.GetHeight();
-   const bool dB = !mClickedTrack->GetWaveformSettings().isLinear();
+   const bool dB = !data.GetWaveformSettings().isLinear();
    float newLevel =
       ::ValueOfPixel(yy, height, false, dB, 
-         mClickedTrack->GetWaveformSettings().dBRange, zoomMin, zoomMax);
+         data.GetWaveformSettings().dBRange, zoomMin, zoomMax);
 
    //Take the envelope into account
    Envelope *const env = mClickedTrack->GetEnvelopeAtX(event.m_x);

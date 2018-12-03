@@ -26,8 +26,7 @@ Paul Licameli
 
 #include "../TrackPanel.h"
 #include "../ShuttleGui.h"
-#include "../WaveTrack.h"
-#include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.h"
+#include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
 
 WaveformPrefs::WaveformPrefs(wxWindow * parent, wxWindowID winid, WaveTrack *wt)
 /* i18n-hint: A waveform is a visual representation of vibration */
@@ -36,7 +35,8 @@ WaveformPrefs::WaveformPrefs(wxWindow * parent, wxWindowID winid, WaveTrack *wt)
 , mPopulating(false)
 {
    if (mWt) {
-      WaveformSettings &settings = wt->GetWaveformSettings();
+      auto &data = WaveTrackViewGroupData::Get( *wt );
+      WaveformSettings &settings = data.GetWaveformSettings();
       mDefaulted = (&WaveformSettings::defaults() == &settings);
       mTempSettings = settings;
    }
@@ -148,14 +148,13 @@ bool WaveformPrefs::Commit()
    WaveformSettings::Globals::Get().SavePrefs();
 
    if (mWt) {
-      for (auto channel : TrackList::Channels(mWt)) {
-         if (mDefaulted)
-            channel->SetWaveformSettings({});
-         else {
-            WaveformSettings &settings =
-               channel->GetIndependentWaveformSettings();
-            settings = mTempSettings;
-         }
+      auto &data = WaveTrackViewGroupData::Get( *mWt );
+      if (mDefaulted)
+         data.SetWaveformSettings({});
+      else {
+         WaveformSettings &settings =
+            data.GetIndependentWaveformSettings();
+         settings = mTempSettings;
       }
    }
 
@@ -169,8 +168,8 @@ bool WaveformPrefs::Commit()
    mTempSettings.ConvertToEnumeratedDBRange();
 
    if (mWt && isOpenPage) {
-      for (auto channel : TrackList::Channels(mWt))
-         channel->SetDisplay(WaveTrackViewConstants::Waveform);
+      auto &data = WaveTrackViewGroupData::Get( *mWt );
+      data.SetDisplay(WaveTrackViewConstants::Waveform);
    }
 
    if (isOpenPage) {

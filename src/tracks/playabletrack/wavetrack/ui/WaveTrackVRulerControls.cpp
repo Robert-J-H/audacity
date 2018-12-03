@@ -9,7 +9,7 @@ Paul Licameli split from TrackPanel.cpp
 **********************************************************************/
 
 #include "../../../../Audacity.h"
-#include "WaveTrackViewConstants.h"
+#include "WaveTrackViewGroupData.h"
 #include "WaveTrackVRulerControls.h"
 
 #include "WaveTrackVZoomHandle.h"
@@ -59,13 +59,9 @@ void WaveTrackVRulerControls::DoZoomPreset( int i)
 
    const auto wt = static_cast<WaveTrack*>(pTrack.get());
 
-   // Don't do all channels, that causes problems when updating display
-   // during recording and there are special pending tracks.
-   // This function implements WaveTrack::DoSetMinimized which is always
-   // called in a context that loops over linked tracks too and reinvokes.
    using namespace WaveTrackViewConstants;
    WaveTrackVZoomHandle::DoZoom(
-         NULL, wt, false,
+         NULL, wt,
          (i==1)
             ? kZoomHalfWave
             : kZoom1to1,
@@ -90,39 +86,37 @@ unsigned WaveTrackVRulerControls::HandleWheelRotation
    if (!pTrack)
       return RefreshNone;
    const auto wt = static_cast<WaveTrack*>(pTrack.get());
+   auto &data = WaveTrackViewGroupData::Get( *wt );
    auto steps = evt.steps;
 
-   using namespace WaveTrackViewConstants;
    const bool isDB =
-      wt->GetDisplay() == Waveform &&
-      wt->GetWaveformSettings().scaleType == WaveformSettings::stLogarithmic;
+      data.GetDisplay() == WaveTrackViewConstants::Waveform &&
+      data.GetWaveformSettings().scaleType == WaveformSettings::stLogarithmic;
    // Special cases for Waveform dB only.
    // Set the bottom of the dB scale but only if it's visible
    if (isDB && event.ShiftDown() && event.CmdDown()) {
       float min, max;
-      wt->GetDisplayBounds(&min, &max);
+      data.GetDisplayBounds(&min, &max);
       if (!(min < 0.0 && max > 0.0))
          return RefreshNone;
 
       WaveformSettings &settings =
-         wt->GetIndependentWaveformSettings();
+         data.GetIndependentWaveformSettings();
       float olddBRange = settings.dBRange;
-      for (auto channel : TrackList::Channels(wt)) {
-         WaveformSettings &channelSettings =
-            channel->GetIndependentWaveformSettings();
-         if (steps < 0)
-            // Zoom out
-            channelSettings.NextLowerDBRange();
-         else
-            channelSettings.NextHigherDBRange();
-      }
+      WaveformSettings &channelSettings =
+         data.GetIndependentWaveformSettings();
+      if (steps < 0)
+         // Zoom out
+         channelSettings.NextLowerDBRange();
+      else
+         channelSettings.NextHigherDBRange();
 
       float newdBRange = settings.dBRange;
 
       // Is y coordinate within the rectangle half-height centered about
       // the zero level?
       const auto &rect = evt.rect;
-      const auto zeroLevel = wt->ZeroLevelYCoordinate(rect);
+      const auto zeroLevel = data.ZeroLevelYCoordinate(rect);
       const bool fixedMagnification =
       (4 * std::abs(event.GetY() - zeroLevel) < rect.GetHeight());
 
@@ -133,16 +127,15 @@ unsigned WaveTrackVRulerControls::HandleWheelRotation
          const float extreme = (LINEAR_TO_DB(2) + newdBRange) / newdBRange;
          max = std::min(extreme, max * olddBRange / newdBRange);
          min = std::max(-extreme, min * olddBRange / newdBRange);
-         for (auto channel : TrackList::Channels(wt)) {
-            channel->SetLastdBRange();
-            channel->SetDisplayBounds(min, max);
-         }
+         data.SetLastdBRange();
+         data.SetDisplayBounds(min, max);
       }
    }
    else if (event.CmdDown() && !event.ShiftDown()) {
       const int yy = event.m_y;
+      using namespace WaveTrackViewConstants;
       WaveTrackVZoomHandle::DoZoom(
-         pProject, wt, true,
+         pProject, wt,
          (steps < 0)
             ? kZoomOut
             : kZoomIn,
@@ -152,13 +145,14 @@ unsigned WaveTrackVRulerControls::HandleWheelRotation
       // Scroll some fixed number of pixels, independent of zoom level or track height:
       static const float movement = 10.0f;
       const int height = evt.rect.GetHeight();
-      const bool spectral = (wt->GetDisplay() == Spectrum);
+      const bool spectral =
+         (data.GetDisplay() == WaveTrackViewConstants::Spectrum);
       if (spectral) {
          const float delta = steps * movement / height;
-         SpectrogramSettings &settings = wt->GetIndependentSpectrogramSettings();
+         SpectrogramSettings &settings = data.GetIndependentSpectrogramSettings();
          const bool isLinear = settings.scaleType == SpectrogramSettings::stLinear;
          float bottom, top;
-         wt->GetSpectrumBounds(&bottom, &top);
+         data.GetSpectrumBounds(wt->GetRate(), &bottom, &top);
          const double rate = wt->GetRate();
          const float bound = rate / 2;
          const NumberScale numberScale(settings.GetScale(bottom, top));
@@ -171,25 +165,23 @@ unsigned WaveTrackVRulerControls::HandleWheelRotation
             std::min(bound,
                      numberScale.PositionToValue(numberScale.ValueToPosition(newBottom) + 1.0f));
 
-         for (auto channel : TrackList::Channels(wt))
-            channel->SetSpectrumBounds(newBottom, newTop);
+         data.SetSpectrumBounds(newBottom, newTop);
       }
       else {
          float topLimit = 2.0;
          if (isDB) {
-            const float dBRange = wt->GetWaveformSettings().dBRange;
+            const float dBRange = data.GetWaveformSettings().dBRange;
             topLimit = (LINEAR_TO_DB(topLimit) + dBRange) / dBRange;
          }
          const float bottomLimit = -topLimit;
          float top, bottom;
-         wt->GetDisplayBounds(&bottom, &top);
+         data.GetDisplayBounds(&bottom, &top);
          const float range = top - bottom;
          const float delta = range * steps * movement / height;
          float newTop = std::min(topLimit, top + delta);
          const float newBottom = std::max(bottomLimit, newTop - range);
          newTop = std::min(topLimit, newBottom + range);
-         for (auto channel : TrackList::Channels(wt))
-            channel->SetDisplayBounds(newBottom, newTop);
+         data.SetDisplayBounds(newBottom, newTop);
       }
    }
    else

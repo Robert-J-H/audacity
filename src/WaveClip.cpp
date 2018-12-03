@@ -42,6 +42,7 @@
 #include "UserException.h"
 
 #include "prefs/SpectrogramSettings.h"
+#include "tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
 
 #include <wx/listimpl.cpp>
 
@@ -1201,7 +1202,8 @@ bool WaveClip::GetSpectrogram(WaveTrackCache &waveTrackCache,
                               double t0, double pixelsPerSecond) const
 {
    const WaveTrack *const track = waveTrackCache.GetTrack().get();
-   const SpectrogramSettings &settings = track->GetSpectrogramSettings();
+   auto &data = WaveTrackViewGroupData::Get( *track );
+   const SpectrogramSettings &settings = data.GetSpectrogramSettings();
 
    bool match =
       mSpecCache &&

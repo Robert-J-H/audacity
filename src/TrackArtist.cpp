@@ -88,6 +88,7 @@ audio tracks.
 #include "Theme.h"
 #include "AllThemeResources.h"
 #include "TrackPanelDrawingContext.h"
+#include "tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
 
 
 #undef PROFILE_WAVEFORM
@@ -311,7 +312,8 @@ void TrackArt::DrawTrack(TrackPanelDrawingContext &context,
          dc.GetGraphicsContext()->SetAntialiasMode(wxANTIALIAS_NONE);
    #endif
 
-         switch (wt->GetDisplay()) {
+         auto &data = WaveTrackViewGroupData::Get( *wt );
+         switch (data.GetDisplay()) {
          case WaveTrackViewConstants::Waveform:
             DrawWaveform(context, wt, rect, muted);
             break;
@@ -573,28 +575,29 @@ void TrackArtist::UpdateVRuler(const Track *t, const wxRect & rect)
       },
 
       [&](const WaveTrack *wt) {
+         auto &data = WaveTrackViewGroupData::Get( *wt );
          // All waves have a ruler in the info panel
          // The ruler needs a bevelled surround.
          const float dBRange =
-            wt->GetWaveformSettings().dBRange;
+            data.GetWaveformSettings().dBRange;
 
-         const int display = wt->GetDisplay();
+         const int display = data.GetDisplay();
 
          if (display == WaveTrackViewConstants::Waveform) {
             WaveformSettings::ScaleType scaleType =
-               wt->GetWaveformSettings().scaleType;
+               data.GetWaveformSettings().scaleType;
 
             if (scaleType == WaveformSettings::stLinear) {
                // Waveform
 
                float min, max;
-               wt->GetDisplayBounds(&min, &max);
-               if (wt->GetLastScaleType() != scaleType &&
-                   wt->GetLastScaleType() != -1)
+               data.GetDisplayBounds(&min, &max);
+               if (data.GetLastScaleType() != scaleType &&
+                   data.GetLastScaleType() != -1)
                {
                   // do a translation into the linear space
-                  wt->SetLastScaleType();
-                  wt->SetLastdBRange();
+                  data.SetLastScaleType();
+                  data.SetLastdBRange();
                   float sign = (min >= 0 ? 1 : -1);
                   if (min != 0.) {
                      min = DB_TO_LINEAR(fabs(min) * dBRange - dBRange);
@@ -610,7 +613,7 @@ void TrackArtist::UpdateVRuler(const Track *t, const wxRect & rect)
                         max = 0.0;
                      max *= sign;
                   }
-                  wt->SetDisplayBounds(min, max);
+                  data.SetDisplayBounds(min, max);
                }
 
                vruler->SetDbMirrorValue( 0.0 );
@@ -629,15 +632,15 @@ void TrackArtist::UpdateVRuler(const Track *t, const wxRect & rect)
                vruler->SetUnits(wxT(""));
 
                float min, max;
-               wt->GetDisplayBounds(&min, &max);
+               data.GetDisplayBounds(&min, &max);
                float lastdBRange;
 
-               if (wt->GetLastScaleType() != scaleType &&
-                   wt->GetLastScaleType() != -1)
+               if (data.GetLastScaleType() != scaleType &&
+                   data.GetLastScaleType() != -1)
                {
                   // do a translation into the dB space
-                  wt->SetLastScaleType();
-                  wt->SetLastdBRange();
+                  data.SetLastScaleType();
+                  data.SetLastdBRange();
                   float sign = (min >= 0 ? 1 : -1);
                   if (min != 0.) {
                      min = (LINEAR_TO_DB(fabs(min)) + dBRange) / dBRange;
@@ -653,10 +656,10 @@ void TrackArtist::UpdateVRuler(const Track *t, const wxRect & rect)
                         max = 0.0;
                      max *= sign;
                   }
-                  wt->SetDisplayBounds(min, max);
+                  data.SetDisplayBounds(min, max);
                }
-               else if (dBRange != (lastdBRange = wt->GetLastdBRange())) {
-                  wt->SetLastdBRange();
+               else if (dBRange != (lastdBRange = data.GetLastdBRange())) {
+                  data.SetLastdBRange();
                   // Remap the max of the scale
                   float newMax = max;
 
@@ -681,7 +684,7 @@ void TrackArtist::UpdateVRuler(const Track *t, const wxRect & rect)
                         min = std::max(-extreme, newMax * min / max);
                   }
 #endif
-                  wt->SetDisplayBounds(min, newMax);
+                  data.SetDisplayBounds(min, newMax);
                }
 
 // Old code was if ONLY_LABEL_POSITIVE were defined.  
@@ -733,9 +736,9 @@ void TrackArtist::UpdateVRuler(const Track *t, const wxRect & rect)
          }
          else {
             wxASSERT(display == WaveTrackViewConstants::Spectrum);
-            const SpectrogramSettings &settings = wt->GetSpectrogramSettings();
+            const SpectrogramSettings &settings = data.GetSpectrogramSettings();
             float minFreq, maxFreq;
-            wt->GetSpectrumBounds(&minFreq, &maxFreq);
+            data.GetSpectrumBounds(wt->GetRate(), &minFreq, &maxFreq);
             vruler->SetDbMirrorValue( 0.0 );
 
             switch (settings.scaleType) {
@@ -794,7 +797,7 @@ void TrackArtist::UpdateVRuler(const Track *t, const wxRect & rect)
                vruler->SetUnits(wxT(""));
                vruler->SetLog(true);
                NumberScale scale(
-                  wt->GetSpectrogramSettings().GetScale( minFreq, maxFreq )
+                  data.GetSpectrogramSettings().GetScale( minFreq, maxFreq )
                      .Reversal() );
                vruler->SetNumberScale(&scale);
             }
@@ -1430,7 +1433,8 @@ void TrackArt::DrawWaveform(TrackPanelDrawingContext &context,
    highlight = target && target->GetTrack().get() == track;
 #endif
 
-   const bool dB = !track->GetWaveformSettings().isLinear();
+   auto &data = WaveTrackViewGroupData::Get( *track );
+   const bool dB = !data.GetWaveformSettings().isLinear();
 
    const auto &blankSelectedBrush = artist->blankSelectedBrush;
    const auto &blankBrush = artist->blankBrush;
@@ -1743,7 +1747,8 @@ void TrackArt::DrawClipWaveform(TrackPanelDrawingContext &context,
    double leftOffset = params.leftOffset;
    const wxRect &mid = params.mid;
 
-   const float dBRange = track->GetWaveformSettings().dBRange;
+   auto &data = WaveTrackViewGroupData::Get( *track );
+   const float dBRange = data.GetWaveformSettings().dBRange;
 
    dc.SetPen(*wxTRANSPARENT_PEN);
    int iColorIndex = clip->GetColourIndex();
@@ -1756,7 +1761,7 @@ void TrackArt::DrawClipWaveform(TrackPanelDrawingContext &context,
    // The bounds (controlled by vertical zooming; -1.0...1.0
    // by default)
    float zoomMin, zoomMax;
-   track->GetDisplayBounds(&zoomMin, &zoomMax);
+   data.GetDisplayBounds(&zoomMin, &zoomMax);
 
    std::vector<double> vEnv(mid.width);
    double *const env = &vEnv[0];
@@ -1783,7 +1788,7 @@ void TrackArt::DrawClipWaveform(TrackPanelDrawingContext &context,
       DrawWaveformBackground(context, leftOffset, mid,
          env,
          zoomMin, zoomMax,
-         track->ZeroLevelYCoordinate(mid),
+         data.ZeroLevelYCoordinate(mid),
          dB, dBRange,
          tt0, tt1,
          !track->GetSelected(), highlightEnvelope);
@@ -2129,7 +2134,8 @@ void TrackArt::DrawClipSpectrum(TrackPanelDrawingContext &context,
 #endif
 
    const WaveTrack *const track = waveTrackCache.GetTrack().get();
-   const SpectrogramSettings &settings = track->GetSpectrogramSettings();
+   auto &groupData = WaveTrackViewGroupData::Get( *track );
+   const SpectrogramSettings &settings = groupData.GetSpectrogramSettings();
    const bool autocorrelation = (settings.algorithm == SpectrogramSettings::algPitchEAC);
 
    enum { DASH_LENGTH = 10 /* pixels */ };
@@ -2207,7 +2213,7 @@ void TrackArt::DrawClipSpectrum(TrackPanelDrawingContext &context,
    auto nBins = settings.NBins();
 
    float minFreq, maxFreq;
-   track->GetSpectrumBounds(&minFreq, &maxFreq);
+   groupData.GetSpectrumBounds(track->GetRate(), &minFreq, &maxFreq);
 
    const SpectrogramSettings::ScaleType scaleType = settings.scaleType;
 

@@ -73,7 +73,7 @@ effects from this one class.
 #include "../../wxFileNameWrapper.h"
 #include "../../prefs/WaveformSettings.h"
 #include "../../widgets/NumericTextCtrl.h"
-#include "../../tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.h"
+#include "../../tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
 
 #include "../lib-src/FileDialog/FileDialog.h"
 
@@ -540,8 +540,9 @@ bool NyquistEffect::Init()
 
       for ( auto t :
                TrackList::Get( *project ).Selected< const WaveTrack >() ) {
-         if (t->GetDisplay() != WaveTrackViewConstants::Spectrum ||
-             !(t->GetSpectrogramSettings().SpectralSelectionEnabled())) {
+         auto &data = WaveTrackViewGroupData::Get( *t );
+         if (data.GetDisplay() != WaveTrackViewConstants::Spectrum ||
+             !(data.GetSpectrogramSettings().SpectralSelectionEnabled())) {
             bAllowSpectralEditing = false;
             break;
          }
@@ -1058,17 +1059,17 @@ bool NyquistEffect::ProcessOne()
       wxString bitFormat;
       wxString spectralEditp;
 
-      using namespace WaveTrackViewConstants;
       mCurTrack[0]->TypeSwitch(
          [&](const WaveTrack *wt) {
             type = wxT("wave");
-            spectralEditp = mCurTrack[0]->GetSpectrogramSettings().SpectralSelectionEnabled()? wxT("T") : wxT("NIL");
-            switch (wt->GetDisplay())
+            auto &data = WaveTrackViewGroupData::Get( *wt );
+            spectralEditp = data.GetSpectrogramSettings().SpectralSelectionEnabled()? wxT("T") : wxT("NIL");
+            switch (data.GetDisplay())
             {
-            case Waveform:
-               view = (mCurTrack[0]->GetWaveformSettings().scaleType == 0) ? wxT("\"Waveform\"") : wxT("\"Waveform (dB)\"");
+            case WaveTrackViewConstants::Waveform:
+               view = (data.GetWaveformSettings().scaleType == 0) ? wxT("\"Waveform\"") : wxT("\"Waveform (dB)\"");
                break;
-            case Spectrum:
+            case WaveTrackViewConstants::Spectrum:
                view = wxT("\"Spectrogram\"");
                break;
             default: view = wxT("NIL"); break;

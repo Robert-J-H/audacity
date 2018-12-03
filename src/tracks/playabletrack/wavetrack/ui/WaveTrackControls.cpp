@@ -15,7 +15,7 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "../../ui/PlayableTrackButtonHandles.h"
 #include "WaveTrackSliderHandles.h"
-#include "WaveTrackViewConstants.h"
+#include "WaveTrackViewGroupData.h"
 
 #include "../../../../AudioIO.h"
 #include "../../../../HitTestResult.h"
@@ -593,10 +593,11 @@ void WaveTrackMenuTable::InitMenu(Menu *pMenu, void *pUserData)
 
    std::vector<int> checkedIds;
 
-   const int display = pTrack->GetDisplay();
+   auto &data = WaveTrackViewGroupData::Get( *pTrack );
+   const int display = data.GetDisplay();
    checkedIds.push_back(
       display == WaveTrackViewConstants::Waveform
-         ? (pTrack->GetWaveformSettings().isLinear()
+         ? (data.GetWaveformSettings().isLinear()
             ? OnWaveformID : OnWaveformDBID)
          : OnSpectrumID);
 
@@ -695,7 +696,9 @@ BEGIN_POPUP_MENU(WaveTrackMenuTable)
 #endif
 
    WaveTrack *const pTrack = static_cast<WaveTrack*>(mpTrack);
-   if( pTrack && pTrack->GetDisplay() != WaveTrackViewConstants::Spectrum  ){
+   if( pTrack &&
+      WaveTrackViewGroupData::Get( *pTrack ).GetDisplay() !=
+         WaveTrackViewConstants::Spectrum  ){
       POPUP_MENU_SEPARATOR()
       POPUP_MENU_SUB_MENU(OnWaveColorID, _("&Wave Color"), WaveColorMenuTable)
    }
@@ -710,36 +713,34 @@ END_POPUP_MENU()
 ///  Set the Display mode based on the menu choice in the Track Menu.
 void WaveTrackMenuTable::OnSetDisplay(wxCommandEvent & event)
 {
-   using namespace WaveTrackViewConstants;
    int idInt = event.GetId();
    wxASSERT(idInt >= OnWaveformID && idInt <= OnSpectrumID);
    const auto pTrack = static_cast<WaveTrack*>(mpData->pTrack);
 
    bool linear = false;
-   WaveTrack::WaveTrackDisplay id;
+   WaveTrackViewConstants::Display id;
    switch (idInt) {
    default:
    case OnWaveformID:
-      linear = true, id = Waveform; break;
+      linear = true, id = WaveTrackViewConstants::Waveform; break;
    case OnWaveformDBID:
-      id = Waveform; break;
+      id = WaveTrackViewConstants::Waveform; break;
    case OnSpectrumID:
-      id = Spectrum; break;
+      id = WaveTrackViewConstants::Spectrum; break;
    }
 
-   const bool wrongType = pTrack->GetDisplay() != id;
+   auto &data = WaveTrackViewGroupData::Get( *pTrack );
+   const bool wrongType = data.GetDisplay() != id;
    const bool wrongScale =
-      (id == Waveform &&
-      pTrack->GetWaveformSettings().isLinear() != linear);
+      (id == WaveTrackViewConstants::Waveform &&
+      data.GetWaveformSettings().isLinear() != linear);
    if (wrongType || wrongScale) {
-      for (auto channel : TrackList::Channels(pTrack)) {
-         channel->SetLastScaleType();
-         channel->SetDisplay(WaveTrack::WaveTrackDisplay(id));
-         if (wrongScale)
-            channel->GetIndependentWaveformSettings().scaleType = linear
-               ? WaveformSettings::stLinear
-               : WaveformSettings::stLogarithmic;
-      }
+      data.SetLastScaleType();
+      data.SetDisplay(WaveTrackViewConstants::Display(id));
+      if (wrongScale)
+         data.GetIndependentWaveformSettings().scaleType = linear
+            ? WaveformSettings::stLinear
+            : WaveformSettings::stLogarithmic;
 
       AudacityProject *const project = ::GetActiveProject();
       project->ModifyState(true);
@@ -791,7 +792,8 @@ void WaveTrackMenuTable::OnSpectrogramSettings(wxCommandEvent &)
    // factories.push_back(&waveformFactory);
    factories.push_back(&spectrumFactory);
    const int page =
-      // (pTrack->GetDisplay() == WaveTrack::Spectrum) ? 1 :
+      // (WaveTrackViewGroupData::Get(*pTrack).GetDisplay() ==
+      //  WaveTrackViewConstants::Spectrum) ? 1 :
       0;
 
    wxString title(pTrack->GetGroupData().GetName() + wxT(": "));

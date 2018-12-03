@@ -57,9 +57,7 @@ Track classes.
 #include "ondemand/ODManager.h"
 
 #include "effects/TimeWarper.h"
-#include "prefs/SpectrumPrefs.h"
 #include "prefs/TracksPrefs.h"
-#include "prefs/WaveformPrefs.h"
 
 #include "InconsistencyException.h"
 
@@ -95,26 +93,12 @@ WaveTrack::WaveTrack(const std::shared_ptr<DirManager> &projDirManager, sampleFo
       rate = GetActiveProject()->GetRate();
    }
 
-   // Force creation always:
-   WaveformSettings &settings = GetIndependentWaveformSettings();
-
-   mDisplay = TracksPrefs::ViewModeChoice();
-   if (mDisplay == WaveTrackViewConstants::obsoleteWaveformDBDisplay) {
-      mDisplay = WaveTrackViewConstants::Waveform;
-      settings.scaleType = WaveformSettings::stLogarithmic;
-   }
-
    mFormat = format;
    mRate = (int) rate;
    mOldGain[0] = 0.0;
    mOldGain[1] = 0.0;
    mWaveColorIndex = 0;
 
-   mDisplayMin = -1.0;
-   mDisplayMax = 1.0;
-   mSpectrumMin = mSpectrumMax = -1; // so values will default to settings
-   mLastScaleType = -1;
-   mLastdBRange = -1;
    mAutoSaveIdent = 0;
 
    SetHeight( TrackInfo::DefaultWaveTrackHeight() );
@@ -122,18 +106,7 @@ WaveTrack::WaveTrack(const std::shared_ptr<DirManager> &projDirManager, sampleFo
 
 WaveTrack::WaveTrack(const WaveTrack &orig):
    PlayableTrack(orig)
-   , mpSpectrumSettings(orig.mpSpectrumSettings
-      ? std::make_unique<SpectrogramSettings>(*orig.mpSpectrumSettings)
-      : nullptr
-   )
-   , mpWaveformSettings(orig.mpWaveformSettings 
-      ? std::make_unique<WaveformSettings>(*orig.mpWaveformSettings)
-      : nullptr
-   )
 {
-   mLastScaleType = -1;
-   mLastdBRange = -1;
-
    Init(orig);
 
    for (const auto &clip : orig.mClips)
@@ -150,49 +123,17 @@ void WaveTrack::Init(const WaveTrack &orig)
    mRate = orig.mRate;
    mOldGain[0] = 0.0;
    mOldGain[1] = 0.0;
-   mDisplay = orig.mDisplay;
-   mDisplayMin = orig.mDisplayMin;
-   mDisplayMax = orig.mDisplayMax;
-   mSpectrumMin = orig.mSpectrumMin;
-   mSpectrumMax = orig.mSpectrumMax;
    mDisplayLocationsCache.clear();
 }
 
 void WaveTrack::Reinit(const WaveTrack &orig)
 {
    Init(orig);
-
-   {
-      auto &settings = orig.mpSpectrumSettings;
-      if (settings)
-         mpSpectrumSettings = std::make_unique<SpectrogramSettings>(*settings);
-      else
-         mpSpectrumSettings.reset();
-   }
-
-   {
-      auto &settings = orig.mpWaveformSettings;
-      if (settings)
-         mpWaveformSettings = std::make_unique<WaveformSettings>(*settings);
-      else
-         mpWaveformSettings.reset();
-   }
-
    this->SetOffset(orig.GetOffset());
 }
 
 void WaveTrack::Merge(const Track &orig)
 {
-   orig.TypeSwitch( [&](const WaveTrack *pwt) {
-      const WaveTrack &wt = *pwt;
-      mDisplay = wt.mDisplay;
-      mDisplayMin = wt.mDisplayMin;
-      mDisplayMax = wt.mDisplayMax;
-      SetSpectrogramSettings(wt.mpSpectrumSettings
-         ? std::make_unique<SpectrogramSettings>(*wt.mpSpectrumSettings) : nullptr);
-      SetWaveformSettings
-         (wt.mpWaveformSettings ? std::make_unique<WaveformSettings>(*wt.mpWaveformSettings) : nullptr);
-   });
    PlayableTrack::Merge(orig);
 }
 
@@ -250,84 +191,6 @@ auto WaveTrack::GetChannel() const -> ChannelType
    if( pan >  0.99 )
       return RightChannel;
    return channel;
-}
-
-void WaveTrack::SetLastScaleType() const
-{
-   mLastScaleType = GetWaveformSettings().scaleType;
-}
-
-void WaveTrack::SetLastdBRange() const
-{
-   mLastdBRange = GetWaveformSettings().dBRange;
-}
-
-void WaveTrack::GetDisplayBounds(float *min, float *max) const
-{
-   *min = mDisplayMin;
-   *max = mDisplayMax;
-}
-
-void WaveTrack::SetDisplayBounds(float min, float max) const
-{
-   mDisplayMin = min;
-   mDisplayMax = max;
-}
-
-void WaveTrack::GetSpectrumBounds(float *min, float *max) const
-{
-   const double rate = GetRate();
-
-   const SpectrogramSettings &settings = GetSpectrogramSettings();
-   const SpectrogramSettings::ScaleType type = settings.scaleType;
-
-   const float top = (rate / 2.);
-
-   float bottom;
-   if (type == SpectrogramSettings::stLinear)
-      bottom = 0.0f;
-   else if (type == SpectrogramSettings::stPeriod) {
-      // special case
-      const auto half = settings.GetFFTLength() / 2;
-      // EAC returns no data for below this frequency:
-      const float bin2 = rate / half;
-      bottom = bin2;
-   }
-   else
-      // logarithmic, etc.
-      bottom = 1.0f;
-
-   {
-      float spectrumMax = mSpectrumMax;
-      if (spectrumMax < 0)
-         spectrumMax = settings.maxFreq;
-      if (spectrumMax < 0)
-         *max = top;
-      else
-         *max = std::max(bottom, std::min(top, spectrumMax));
-   }
-
-   {
-      float spectrumMin = mSpectrumMin;
-      if (spectrumMin < 0)
-         spectrumMin = settings.minFreq;
-      if (spectrumMin < 0)
-         *min = std::max(bottom, top / 1000.0f);
-      else
-         *min = std::max(bottom, std::min(top, spectrumMin));
-   }
-}
-
-void WaveTrack::SetSpectrumBounds(float min, float max) const
-{
-   mSpectrumMin = min;
-   mSpectrumMax = max;
-}
-
-int WaveTrack::ZeroLevelYCoordinate(wxRect rect) const
-{
-   return rect.GetTop() +
-      (int)((mDisplayMax / (mDisplayMax - mDisplayMin)) * rect.height);
 }
 
 Track::Holder WaveTrack::Clone() const
@@ -551,9 +414,6 @@ void WaveTrack::Trim (double t0, double t1)
       SplitDelete(GetStartTime(), t0);
 }
 
-
-
-
 Track::Holder WaveTrack::Copy(double t0, double t1, bool forClipboard) const
 {
    if (t1 < t0)
@@ -636,84 +496,6 @@ void WaveTrack::ClearAndAddCutLine(double t0, double t1)
 // STRONG-GUARANTEE
 {
    HandleClear(t0, t1, true, false);
-}
-
-const SpectrogramSettings &WaveTrack::GetSpectrogramSettings() const
-{
-   if (mpSpectrumSettings)
-      return *mpSpectrumSettings;
-   else
-      return SpectrogramSettings::defaults();
-}
-
-SpectrogramSettings &WaveTrack::GetSpectrogramSettings()
-{
-   if (mpSpectrumSettings)
-      return *mpSpectrumSettings;
-   else
-      return SpectrogramSettings::defaults();
-}
-
-SpectrogramSettings &WaveTrack::GetIndependentSpectrogramSettings()
-{
-   if (!mpSpectrumSettings)
-      mpSpectrumSettings =
-      std::make_unique<SpectrogramSettings>(SpectrogramSettings::defaults());
-   return *mpSpectrumSettings;
-}
-
-void WaveTrack::SetSpectrogramSettings(std::unique_ptr<SpectrogramSettings> &&pSettings)
-{
-   if (mpSpectrumSettings != pSettings) {
-      mpSpectrumSettings = std::move(pSettings);
-   }
-}
-
-void WaveTrack::UseSpectralPrefs( bool bUse )
-{  
-   if( bUse ){
-      if( !mpSpectrumSettings )
-         return;
-      // reset it, and next we will be getting the defaults.
-      mpSpectrumSettings.reset();
-   }
-   else {
-      if( mpSpectrumSettings )
-         return;
-      GetIndependentSpectrogramSettings();
-   }
-}
-
-
-
-const WaveformSettings &WaveTrack::GetWaveformSettings() const
-{
-   if (mpWaveformSettings)
-      return *mpWaveformSettings;
-   else
-      return WaveformSettings::defaults();
-}
-
-WaveformSettings &WaveTrack::GetWaveformSettings()
-{
-   if (mpWaveformSettings)
-      return *mpWaveformSettings;
-   else
-      return WaveformSettings::defaults();
-}
-
-WaveformSettings &WaveTrack::GetIndependentWaveformSettings()
-{
-   if (!mpWaveformSettings)
-      mpWaveformSettings = std::make_unique<WaveformSettings>(WaveformSettings::defaults());
-   return *mpWaveformSettings;
-}
-
-void WaveTrack::SetWaveformSettings(std::unique_ptr<WaveformSettings> &&pSettings)
-{
-   if (mpWaveformSettings != pSettings) {
-      mpWaveformSettings = std::move(pSettings);
-   }
 }
 
 //

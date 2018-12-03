@@ -45,7 +45,7 @@ SetTrackAudioCommand and SetTrackVisualsCommand.
 #include "../prefs/SpectrogramSettings.h"
 #include "../Shuttle.h"
 #include "../ShuttleGui.h"
-#include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.h"
+#include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
 #include "CommandContext.h"
 
 SetTrackBase::SetTrackBase(){
@@ -354,7 +354,8 @@ void SetTrackVisualsCommand::PopulateOrExchange(ShuttleGui & S)
 bool SetTrackVisualsCommand::ApplyInner(const CommandContext & context, Track * t )
 {
    static_cast<void>(context);
-   auto wt = dynamic_cast<WaveTrack *>(t);
+   const auto wt = dynamic_cast<WaveTrack *>(t);
+   auto &data = WaveTrackViewGroupData::Get( *wt );
    //auto pt = dynamic_cast<PlayableTrack *>(t);
    static const double ZOOMLIMIT = 0.001f;
 
@@ -367,13 +368,13 @@ bool SetTrackVisualsCommand::ApplyInner(const CommandContext & context, Track * 
       t->SetHeight( mHeight );
 
    if( wt && bHasDisplayType  )
-      wt->SetDisplay(
+      data.SetDisplay(
          (mDisplayType == kWaveform) ?
             WaveTrackViewConstants::Waveform
             : WaveTrackViewConstants::Spectrum
          );
    if( wt && bHasScaleType )
-      wt->GetIndependentWaveformSettings().scaleType = 
+      data.GetIndependentWaveformSettings().scaleType =
          (mScaleType==kLinear) ? 
             WaveformSettings::stLinear
             : WaveformSettings::stLogarithmic;
@@ -381,15 +382,15 @@ bool SetTrackVisualsCommand::ApplyInner(const CommandContext & context, Track * 
    if( wt && bHasVZoom ){
       switch( mVZoom ){
          default:
-         case kReset: wt->SetDisplayBounds(-1,1); break;
-         case kTimes2: wt->SetDisplayBounds(-2,2); break;
-         case kHalfWave: wt->SetDisplayBounds(0,1); break;
+         case kReset: data.SetDisplayBounds(-1,1); break;
+         case kTimes2: data.SetDisplayBounds(-2,2); break;
+         case kHalfWave: data.SetDisplayBounds(0,1); break;
       }
    }
 
    if ( wt && (bHasVZoomTop || bHasVZoomBottom) && !bHasVZoom){
       float vzmin, vzmax;
-      wt->GetDisplayBounds(&vzmin, &vzmax);
+      data.GetDisplayBounds(&vzmin, &vzmax);
 
       if ( !bHasVZoomTop ){
          mVZoomTop = vzmax;
@@ -410,19 +411,19 @@ bool SetTrackVisualsCommand::ApplyInner(const CommandContext & context, Track * 
          mVZoomBottom = c - ZOOMLIMIT / 2.0;
          mVZoomTop = c + ZOOMLIMIT / 2.0;
       }
-      wt->SetDisplayBounds(mVZoomBottom, mVZoomTop);
+      data.SetDisplayBounds(mVZoomBottom, mVZoomTop);
       auto &tp = TrackPanel::Get( *::GetActiveProject() );
       tp.UpdateVRulers();
    }
 
    if( wt && bHasUseSpecPrefs   ){
-      wt->UseSpectralPrefs( bUseSpecPrefs );
+      data.UseSpectralPrefs( bUseSpecPrefs );
    }
    if( wt && bHasSpectralSelect ){
-      wt->GetSpectrogramSettings().spectralSelection = bSpectralSelect;
+      data.GetSpectrogramSettings().spectralSelection = bSpectralSelect;
    }
    if( wt && bHasGrayScale ){
-      wt->GetSpectrogramSettings().isGrayscale = bGrayScale;
+      data.GetSpectrogramSettings().isGrayscale = bGrayScale;
    }
 
    return true;

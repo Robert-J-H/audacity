@@ -16,7 +16,7 @@
 #include "../commands/CommandManager.h"
 #include "../toolbars/ControlToolBar.h"
 #include "../tracks/ui/SelectHandle.h"
-#include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.h"
+#include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
 
 // private helper classes and functions
 namespace {
@@ -50,7 +50,8 @@ void DoNextPeakFrequency(AudacityProject &project, bool up)
    // Find the first selected wave track that is in a spectrogram view.
    const WaveTrack *pTrack {};
    for ( auto wt : tracks.Selected< const WaveTrack >() ) {
-      const int display = wt->GetDisplay();
+      auto &data = WaveTrackViewGroupData::Get( *wt );
+      const int display = data.GetDisplay();
       if (display == WaveTrackViewConstants::Spectrum) {
          pTrack = wt;
          break;
@@ -110,7 +111,7 @@ double NearestZeroCrossing
 
          dist[i] += oneDist[j];
          // Apply a small penalty for distance from the original endpoint
-         // We'll always prefer an upward  
+         // We'll always prefer an upward
          dist[i] +=
             0.1 * (abs(int(i) - int(windowSize/2))) / float(windowSize/2);
       }

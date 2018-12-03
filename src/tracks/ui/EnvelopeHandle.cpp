@@ -15,7 +15,7 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "../../MemoryX.h"
 
-#include "../playabletrack/wavetrack/ui/WaveTrackViewConstants.h"
+#include "../playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
 #include "../../Envelope.h"
 #include "../../HitTestResult.h"
 #include "../../prefs/WaveformSettings.h"
@@ -97,19 +97,20 @@ UIHandlePtr EnvelopeHandle::WaveTrackHitTest
    if (!envelope)
       return {};
 
-   const int displayType = wt->GetDisplay();
+   auto &data = WaveTrackViewGroupData::Get( *wt );
+   const int displayType = data.GetDisplay();
    // Not an envelope hit, unless we're using a type of wavetrack display
    // suitable for envelopes operations, ie one of the Wave displays.
    if (displayType != WaveTrackViewConstants::Waveform)
       return {};  // No envelope, not a hit, so return.
 
    // Get envelope point, range 0.0 to 1.0
-   const bool dB = !wt->GetWaveformSettings().isLinear();
+   const bool dB = !data.GetWaveformSettings().isLinear();
 
    float zoomMin, zoomMax;
-   wt->GetDisplayBounds(&zoomMin, &zoomMax);
+   data.GetDisplayBounds(&zoomMin, &zoomMax);
 
-   const float dBRange = wt->GetWaveformSettings().dBRange;
+   const float dBRange = data.GetWaveformSettings().dBRange;
 
    return EnvelopeHandle::HitEnvelope
        (holder, state, rect, pProject, envelope, zoomMin, zoomMax, dB, dBRange, false);
@@ -186,15 +187,16 @@ UIHandle::Result EnvelopeHandle::Click
    if (pTrack)
       result = pTrack->TypeSwitch< decltype(RefreshNone) >(
       [&](WaveTrack *wt) {
-         if (wt->GetDisplay() != WaveTrackViewConstants::Waveform)
+         auto &data = WaveTrackViewGroupData::Get( *wt );
+         if (data.GetDisplay() != WaveTrackViewConstants::Waveform)
             return Cancelled;
 
          if (!mEnvelope)
             return Cancelled;
 
-         mLog = !wt->GetWaveformSettings().isLinear();
-         wt->GetDisplayBounds(&mLower, &mUpper);
-         mdBRange = wt->GetWaveformSettings().dBRange;
+         mLog = !data.GetWaveformSettings().isLinear();
+         data.GetDisplayBounds(&mLower, &mUpper);
+         mdBRange = data.GetWaveformSettings().dBRange;
          auto channels = TrackList::Channels( wt );
          for ( auto channel : channels ) {
             if (channel == wt)
