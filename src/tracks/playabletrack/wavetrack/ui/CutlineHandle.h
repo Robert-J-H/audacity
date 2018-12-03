@@ -13,8 +13,7 @@ Paul Licameli
 
 #include "../../../../MemoryX.h"
 #include "../../../../UIHandle.h"
-#include "../../../../MemoryX.h"
-#include "../../../../WaveTrackLocation.h"
+#include "WaveTrackLocation.h"
 
 class wxMouseEvent;
 class wxMouseState;

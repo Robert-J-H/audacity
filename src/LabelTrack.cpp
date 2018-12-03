@@ -215,7 +215,6 @@ LabelStruct::LabelStruct(const SelectedRegion &region,
 : selectedRegion(region)
 , title(aTitle)
 {
-   updated = false;
 }
 
 LabelStruct::LabelStruct(const SelectedRegion &region,
@@ -226,8 +225,6 @@ LabelStruct::LabelStruct(const SelectedRegion &region,
 {
    // Overwrite the times
    selectedRegion.setTimes(t0, t1);
-
-   updated = false;
 }
 
 double LabelTrack::GetOffset() const
@@ -262,33 +259,6 @@ double LabelTrack::GetEndTime() const
 Track::Holder LabelTrack::Clone() const
 {
    return std::make_shared<LabelTrack>( *this );
-}
-
-// Adjust label's left or right boundary, depending which is requested.
-// Return true iff the label flipped.
-bool LabelStruct::AdjustEdge( int iEdge, double fNewTime)
-{
-   updated = true;
-   if( iEdge < 0 )
-      return selectedRegion.setT0(fNewTime);
-   else
-      return selectedRegion.setT1(fNewTime);
-}
-
-// We're moving the label.  Adjust both left and right edge.
-void LabelStruct::MoveLabel( int iEdge, double fNewTime)
-{
-   double fTimeSpan = getDuration();
-
-   if( iEdge < 0 )
-   {
-      selectedRegion.setTimes(fNewTime, fNewTime+fTimeSpan);
-   }
-   else
-   {
-      selectedRegion.setTimes(fNewTime-fTimeSpan, fNewTime);
-   }
-   updated = true;
 }
 
 LabelStruct LabelStruct::Import(wxTextFile &file, int &index)

@@ -12,6 +12,7 @@ Paul Licameli split from class WaveTrack
 #define __AUDACITY_WAVE_TRACK_VIEW_GROUP_DATA__
 
 #include "../../../ui/TrackViewGroupData.h"
+#include "WaveTrackLocation.h"
 #include "WaveTrackViewConstants.h"
 
 class SpectrogramSettings;
@@ -85,6 +86,22 @@ private:
 
    std::unique_ptr<SpectrogramSettings> mpSpectrumSettings;
    std::unique_ptr<WaveformSettings> mpWaveformSettings;
+};
+
+class WaveTrackLocationsCache final : public ClientData::Base
+{
+   using Location = WaveTrackLocation;
+   std::vector <Location> mDisplayLocationsCache;
+ 
+public:
+   static WaveTrackLocationsCache &Get( const WaveTrack &track );
+
+   // Cache special locations (e.g. cut lines) for later speedy access
+   void Update( const WaveTrack &tack );
+
+   // Get cached locations
+   const std::vector<Location> &Get() const
+   { return mDisplayLocationsCache; }
 };
 
 #endif

@@ -45,9 +45,6 @@ public:
    double getDuration() const { return selectedRegion.duration(); }
    double getT0() const { return selectedRegion.t0(); }
    double getT1() const { return selectedRegion.t1(); }
-   // Returns true iff the label got inverted:
-   bool AdjustEdge( int iEdge, double fNewTime);
-   void MoveLabel( int iEdge, double fNewTime);
 
    struct BadFormatException {};
    static LabelStruct Import(wxTextFile &file, int &index);
@@ -75,8 +72,6 @@ public:
 public:
    SelectedRegion selectedRegion;
    wxString title; /// Text of the label.
-
-   bool updated{};                  /// flag to tell if the label times were updated
 };
 
 using LabelArray = std::vector<LabelStruct>;
@@ -223,6 +218,9 @@ struct LabelStructDisplay final : ClientData::Base
    int x1{};    /// Pixel position of right hand glyph
    int xText{}; /// Pixel position of left hand side of text box
    int y{};     /// Pixel position of label.
+   
+   /// flag to tell if the label times were updated
+   bool updated{};
 
    static LabelStructDisplay &Get( const LabelStruct & );
 };

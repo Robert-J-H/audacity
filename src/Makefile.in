@@ -340,18 +340,17 @@ am__audacity_SOURCES_DIST = BlockFile.cpp BlockFile.h DirManager.cpp \
 	UIHandle.cpp UndoManager.cpp UndoManager.h UserException.cpp \
 	UserException.h ViewInfo.cpp ViewInfo.h VoiceKey.cpp \
 	VoiceKey.h WaveClip.cpp WaveClip.h WaveTrack.cpp WaveTrack.h \
-	WaveTrackLocation.h WrappedType.cpp WrappedType.h \
-	wxFileNameWrapper.h commands/AppCommandEvent.cpp \
-	commands/AppCommandEvent.h commands/AudacityCommand.cpp \
-	commands/AudacityCommand.h commands/BatchEvalCommand.cpp \
-	commands/BatchEvalCommand.h commands/Command.cpp \
-	commands/Command.h commands/CommandBuilder.cpp \
-	commands/CommandBuilder.h commands/CommandContext.cpp \
-	commands/CommandContext.h commands/CommandDirectory.cpp \
-	commands/CommandDirectory.h commands/CommandFlag.h \
-	commands/CommandFunctors.h commands/CommandHandler.cpp \
-	commands/CommandHandler.h commands/CommandManager.cpp \
-	commands/CommandManager.h \
+	WrappedType.cpp WrappedType.h wxFileNameWrapper.h \
+	commands/AppCommandEvent.cpp commands/AppCommandEvent.h \
+	commands/AudacityCommand.cpp commands/AudacityCommand.h \
+	commands/BatchEvalCommand.cpp commands/BatchEvalCommand.h \
+	commands/Command.cpp commands/Command.h \
+	commands/CommandBuilder.cpp commands/CommandBuilder.h \
+	commands/CommandContext.cpp commands/CommandContext.h \
+	commands/CommandDirectory.cpp commands/CommandDirectory.h \
+	commands/CommandFlag.h commands/CommandFunctors.h \
+	commands/CommandHandler.cpp commands/CommandHandler.h \
+	commands/CommandManager.cpp commands/CommandManager.h \
 	commands/CommandManagerWindowClasses.h commands/CommandMisc.h \
 	commands/CommandSignature.cpp commands/CommandSignature.h \
 	commands/CommandTargets.h commands/CommandType.cpp \
@@ -520,6 +519,7 @@ am__audacity_SOURCES_DIST = BlockFile.cpp BlockFile.h DirManager.cpp \
 	tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackControls.cpp \
 	tracks/playabletrack/wavetrack/ui/WaveTrackControls.h \
+	tracks/playabletrack/wavetrack/ui/WaveTrackLocation.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackSliderHandles.cpp \
 	tracks/playabletrack/wavetrack/ui/WaveTrackSliderHandles.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackView.cpp \
@@ -1408,18 +1408,17 @@ audacity_SOURCES = $(libaudacity_la_SOURCES) AboutDialog.cpp \
 	UIHandle.cpp UndoManager.cpp UndoManager.h UserException.cpp \
 	UserException.h ViewInfo.cpp ViewInfo.h VoiceKey.cpp \
 	VoiceKey.h WaveClip.cpp WaveClip.h WaveTrack.cpp WaveTrack.h \
-	WaveTrackLocation.h WrappedType.cpp WrappedType.h \
-	wxFileNameWrapper.h commands/AppCommandEvent.cpp \
-	commands/AppCommandEvent.h commands/AudacityCommand.cpp \
-	commands/AudacityCommand.h commands/BatchEvalCommand.cpp \
-	commands/BatchEvalCommand.h commands/Command.cpp \
-	commands/Command.h commands/CommandBuilder.cpp \
-	commands/CommandBuilder.h commands/CommandContext.cpp \
-	commands/CommandContext.h commands/CommandDirectory.cpp \
-	commands/CommandDirectory.h commands/CommandFlag.h \
-	commands/CommandFunctors.h commands/CommandHandler.cpp \
-	commands/CommandHandler.h commands/CommandManager.cpp \
-	commands/CommandManager.h \
+	WrappedType.cpp WrappedType.h wxFileNameWrapper.h \
+	commands/AppCommandEvent.cpp commands/AppCommandEvent.h \
+	commands/AudacityCommand.cpp commands/AudacityCommand.h \
+	commands/BatchEvalCommand.cpp commands/BatchEvalCommand.h \
+	commands/Command.cpp commands/Command.h \
+	commands/CommandBuilder.cpp commands/CommandBuilder.h \
+	commands/CommandContext.cpp commands/CommandContext.h \
+	commands/CommandDirectory.cpp commands/CommandDirectory.h \
+	commands/CommandFlag.h commands/CommandFunctors.h \
+	commands/CommandHandler.cpp commands/CommandHandler.h \
+	commands/CommandManager.cpp commands/CommandManager.h \
 	commands/CommandManagerWindowClasses.h commands/CommandMisc.h \
 	commands/CommandSignature.cpp commands/CommandSignature.h \
 	commands/CommandTargets.h commands/CommandType.cpp \
@@ -1589,6 +1588,7 @@ audacity_SOURCES = $(libaudacity_la_SOURCES) AboutDialog.cpp \
 	tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackControls.cpp \
 	tracks/playabletrack/wavetrack/ui/WaveTrackControls.h \
+	tracks/playabletrack/wavetrack/ui/WaveTrackLocation.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackSliderHandles.cpp \
 	tracks/playabletrack/wavetrack/ui/WaveTrackSliderHandles.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackView.cpp \

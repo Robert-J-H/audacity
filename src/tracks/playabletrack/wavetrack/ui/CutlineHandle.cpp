@@ -15,6 +15,7 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "../../../../MemoryX.h"
 
+#include "WaveTrackViewGroupData.h"
 #include "../../../../HitTestResult.h"
 #include "../../../../Project.h"
 #include "../../../../RefreshCode.h"
@@ -23,7 +24,6 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../../../UndoManager.h"
 #include "../../../../ViewInfo.h"
 #include "../../../../WaveTrack.h"
-#include "../../../../WaveTrackLocation.h"
 #include "../../../../../images/Cursors.h"
 
 CutlineHandle::CutlineHandle

@@ -13,12 +13,6 @@
 
 *//****************************************************************//**
 
-\class WaveTrack::Location
-\brief Used only by WaveTrack, a special way to hold location that
-can accommodate merged regions.
-
-*//****************************************************************//**
-
 \class TrackFactory
 \brief Used to create a WaveTrack, or a LabelTrack..  Implementation
 of the functions of this class are dispersed through the different
@@ -2097,72 +2091,6 @@ void WaveTrack::SplitAt(double t)
    }
 }
 
-void WaveTrackLocationsCache::Update( const WaveTrack &track )
-{
-   auto clips = track.SortedClipArray();
-
-   mDisplayLocationsCache.clear();
-
-   // Count number of display locations
-   int num = 0;
-   {
-      const WaveClip *prev = nullptr;
-      for (const auto clip : clips)
-      {
-         num += clip->NumCutLines();
-
-         if (prev && fabs(prev->GetEndTime() -
-                          clip->GetStartTime()) < WAVETRACK_MERGE_POINT_TOLERANCE)
-            ++num;
-
-         prev = clip;
-      }
-   }
-
-   if (num == 0)
-      return;
-
-   // Alloc necessary number of display locations
-   mDisplayLocationsCache.reserve(num);
-
-   // Add all display locations to cache
-   int curpos = 0;
-
-   const WaveClip *previousClip = nullptr;
-   for (const auto clip: clips)
-   {
-      for (const auto &cc : clip->GetCutLines())
-      {
-         // Add cut line expander point
-         mDisplayLocationsCache.push_back(WaveTrackLocation{
-            clip->GetOffset() + cc->GetOffset(),
-            WaveTrackLocation::locationCutLine
-         });
-         curpos++;
-      }
-
-      if (previousClip)
-      {
-         if (fabs(previousClip->GetEndTime() - clip->GetStartTime())
-                                          < WAVETRACK_MERGE_POINT_TOLERANCE)
-         {
-            // Add merge point
-            mDisplayLocationsCache.push_back(WaveTrackLocation{
-               previousClip->GetEndTime(),
-               WaveTrackLocation::locationMergePoint,
-               track.GetClipIndex(previousClip),
-               track.GetClipIndex(clip)
-            });
-            curpos++;
-         }
-      }
-
-      previousClip = clip;
-   }
-
-   wxASSERT(curpos == num);
-}
-
 // Expand cut line (that is, re-insert audio, then DELETE audio saved in cut line)
 void WaveTrack::ExpandCutLine(double cutLinePosition, double* cutlineStart,
                               double* cutlineEnd)
@@ -2536,7 +2464,7 @@ void WaveTrack::AllClipsIterator::push( WaveClipHolders &clips )
 
 #include "tracks/playabletrack/wavetrack/ui/WaveTrackControls.h"
 #include "tracks/playabletrack/wavetrack/ui/WaveTrackView.h"
-#include "tracks/playabletrack/wavetrack/ui/WaveTrackVRulerControls.h"
+#include "tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
 
 std::shared_ptr<TrackView> WaveTrack::DoGetView()
 {
@@ -2551,9 +2479,3 @@ std::shared_ptr<TrackControls> WaveTrack::DoGetControls()
 static WaveTrack::Caches::RegisteredFactory sKey{ []( WaveTrack& ){
    return std::make_unique< WaveTrackLocationsCache >();
 } };
-
-WaveTrackLocationsCache &WaveTrackLocationsCache::Get( const WaveTrack &track )
-{
-   return const_cast< WaveTrack& >( track )
-      .Caches::Get< WaveTrackLocationsCache >( sKey );
-}
