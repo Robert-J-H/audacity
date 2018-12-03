@@ -91,16 +91,6 @@ class PROFILE_DLL_API Sequence final : public XMLTagHandler{
    void SetSamples(samplePtr buffer, sampleFormat format,
             sampleCount start, sampleCount len);
 
-   // where is input, assumed to be nondecreasing, and its size is len + 1.
-   // min, max, rms, bl are outputs, and their lengths are len.
-   // Each position in the output arrays corresponds to one column of pixels.
-   // The column for pixel p covers samples from
-   // where[p] up to (but excluding) where[p + 1].
-   // bl is negative wherever data are not yet available.
-   // Return true if successful.
-   bool GetWaveDisplay(float *min, float *max, float *rms, int* bl,
-                       size_t len, const sampleCount *where) const;
-
    // Return non-null, or else throw!
    std::unique_ptr<Sequence> Copy(sampleCount s0, sampleCount s1) const;
    void Paste(sampleCount s0, const Sequence *src);
@@ -191,6 +181,7 @@ class PROFILE_DLL_API Sequence final : public XMLTagHandler{
    //
 
    BlockArray &GetBlockArray() {return mBlock;}
+   const BlockArray &GetBlockArray() const {return mBlock;}
 
    ///
    void LockDeleteUpdateMutex(){mDeleteUpdateMutex.Lock();}
@@ -243,15 +234,9 @@ class PROFILE_DLL_API Sequence final : public XMLTagHandler{
    // Private methods
    //
 
-   int FindBlock(sampleCount pos) const;
-
    static void AppendBlock
       (DirManager &dirManager,
        BlockArray &blocks, sampleCount &numSamples, const SeqBlock &b);
-
-   static bool Read(samplePtr buffer, sampleFormat format,
-             const SeqBlock &b,
-             size_t blockRelativeStart, size_t len, bool mayThrow);
 
    // Accumulate NEW block files onto the end of a block array.
    // Does not change this sequence.  The intent is to use
@@ -268,6 +253,12 @@ public:
    //
    // Public methods
    //
+
+   int FindBlock(sampleCount pos) const;
+
+   static bool Read(samplePtr buffer, sampleFormat format,
+             const SeqBlock &b,
+             size_t blockRelativeStart, size_t len, bool mayThrow);
 
    // This function throws if the track is messed up
    // because of inconsistent block starts & lengths
@@ -296,6 +287,17 @@ private:
        sampleCount numSamples, const wxChar *whereStr);
 
 };
+
+// where is input, assumed to be nondecreasing, and its size is len + 1.
+// min, max, rms, bl are outputs, and their lengths are len.
+// Each position in the output arrays corresponds to one column of pixels.
+// The column for pixel p covers samples from
+// where[p] up to (but excluding) where[p + 1].
+// bl is negative wherever data are not yet available.
+// Return true if successful.
+bool GetWaveDisplay(const Sequence &sequence,
+   float *min, float *max, float *rms, int* bl,
+   size_t len, const sampleCount *where);
 
 #endif // __AUDACITY_SEQUENCE__
 

@@ -234,7 +234,7 @@ public:
       if (updateODCount)
          regionODPixels = CountODPixels(invStart, invEnd);
 
-      sequence->GetWaveDisplay(&min[invStart],
+      ::GetWaveDisplay(*sequence, &min[invStart],
          &max[invStart],
          &rms[invStart],
          &bl[invStart],
@@ -741,7 +741,7 @@ bool WaveClip::GetWaveDisplay(WaveDisplay &display, double t0,
       // Done with append buffer, now fetch the rest of the cache miss
       // from the sequence
       if (p1 > p0) {
-         if (!mSequence->GetWaveDisplay(&min[p0],
+         if (!::GetWaveDisplay(*mSequence, &min[p0],
                                         &max[p0],
                                         &rms[p0],
                                         &bl[p0],
