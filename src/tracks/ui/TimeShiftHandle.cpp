@@ -30,6 +30,8 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../WaveTrack.h"
 #include "../../../images/Cursors.h"
 
+#include "../playabletrack/wavetrack/ui/WaveTrackView.h"
+
 TimeShiftHandle::TimeShiftHandle
 ( const std::shared_ptr<Track> &pTrack, bool gripHit )
    : mCapturedTrack{ pTrack }
@@ -201,7 +203,7 @@ namespace
    WaveClip *FindClipAtTime(WaveTrack *pTrack, double time)
    {
       if (pTrack) {
-         // WaveClip::GetClipAtX doesn't work unless the clip is on the screen and can return bad info otherwise
+         // GetClipAtX doesn't work unless the clip is on the screen and can return bad info otherwise
          // instead calculate the time manually
          double rate = pTrack->GetRate();
          auto s0 = (sampleCount)(time * rate + 0.5);
@@ -394,7 +396,8 @@ UIHandle::Result TimeShiftHandle::Click
       pTrack->TypeSwitch(
          [&](WaveTrack *wt) {
             if (nullptr ==
-               (mClipMoveState.capturedClip = wt->GetClipAtX(event.m_x)))
+               (mClipMoveState.capturedClip =
+                  WaveTrackView::GetClipAtX(*wt, event.m_x)))
                ok = false;
             else
                captureClips = true;

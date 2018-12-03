@@ -25,7 +25,6 @@
 
 class TimeWarper;
 
-class Sequence;
 class WaveClip;
 
 // Array of pointers that assume ownership
@@ -254,12 +253,6 @@ private:
    ///gets an int with OD flags so that we can determine which ODTasks should be run on this track after save/open, etc.
    unsigned int GetODFlags() const;
 
-   ///Invalidates all clips' wavecaches.  Careful, This may not be threadsafe.
-   void ClearWaveCaches();
-
-   ///Adds an invalid region to the wavecache so it redraws that portion only.
-   void  AddInvalidRegion(sampleCount startSample, sampleCount endSample);
-
    ///
    /// MM: Now that each wave track can contain multiple clips, we don't
    /// have a continous space of samples anymore, but we simulate it,
@@ -286,16 +279,6 @@ private:
       double t0, double t1, bool mayThrow = true) const;
    // May assume precondition: t0 <= t1
    float GetRMS(double t0, double t1, bool mayThrow = true) const;
-
-   //
-   // MM: We now have more than one sequence and envelope per track, so
-   // instead of GetSequence() and GetEnvelope() we have the following
-   // function which give the sequence and envelope which is under the
-   // given X coordinate of the mouse pointer.
-   //
-   WaveClip* GetClipAtX(int xcoord);
-   Sequence* GetSequenceAtX(int xcoord);
-   Envelope* GetEnvelopeAtX(int xcoord);
 
    WaveClip* GetClipAtSample(sampleCount sample);
    WaveClip* GetClipAtTime(double time);

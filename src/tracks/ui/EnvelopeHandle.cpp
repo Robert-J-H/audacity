@@ -17,6 +17,7 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "../../MemoryX.h"
 
+#include "../playabletrack/wavetrack/ui/WaveTrackView.h"
 #include "../playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
 #include "../../Envelope.h"
 #include "../../HitTestResult.h"
@@ -94,7 +95,7 @@ UIHandlePtr EnvelopeHandle::WaveTrackHitTest
 {
    /// method that tells us if the mouse event landed on an
    /// envelope boundary.
-   Envelope *const envelope = wt->GetEnvelopeAtX(state.GetX());
+   Envelope *const envelope = WaveTrackView::GetEnvelopeAtX(*wt, state.GetX());
 
    if (!envelope)
       return {};
@@ -206,7 +207,7 @@ UIHandle::Result EnvelopeHandle::Click
                mEnvelopeEditors.push_back(
                   std::make_unique< EnvelopeEditor >( *mEnvelope, true ) );
             else {
-               auto e2 = channel->GetEnvelopeAtX(event.GetX());
+               auto e2 = WaveTrackView::GetEnvelopeAtX(*channel, event.GetX());
                if (e2)
                   mEnvelopeEditors.push_back(
                      std::make_unique< EnvelopeEditor >( *e2, true ) );

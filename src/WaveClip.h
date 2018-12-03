@@ -14,6 +14,7 @@
 
 #include "Audacity.h"
 
+#include "ClientData.h"
 #include "MemoryX.h"
 #include "SampleFormat.h"
 #include "widgets/ProgressDialog.h"
@@ -169,7 +170,15 @@ public:
    }
 };
 
+struct WaveClipListener
+{
+   virtual ~WaveClipListener() = 0;
+   virtual void MarkChanged() = 0;
+   virtual void Invalidate() = 0;
+};
+
 class AUDACITY_DLL_API WaveClip final : public XMLTagHandler
+   , public ClientData::Site< WaveClip, WaveClipListener >
 {
 private:
    // It is an error to copy a WaveClip without specifying the DirManager.
@@ -178,6 +187,8 @@ private:
    WaveClip& operator= (const WaveClip&) PROHIBITED;
 
 public:
+   using Caches = Site< WaveClip, WaveClipListener >;
+
    // typical constructor
    WaveClip(const std::shared_ptr<DirManager> &projDirManager, sampleFormat format, 
       int rate, int colourIndex);
@@ -244,31 +255,18 @@ public:
    // but use more high-level functions inside WaveClip (or add them if you
    // think they are useful for general use)
    Sequence* GetSequence() { return mSequence.get(); }
+   const Sequence* GetSequence() const { return mSequence.get(); }
 
    /** WaveTrack calls this whenever data in the wave clip changes. It is
     * called automatically when WaveClip has a chance to know that something
     * has changed, like when member functions SetSamples() etc. are called. */
-   void MarkChanged() // NOFAIL-GUARANTEE
-      { mDirty++; }
+   void MarkChanged(); // NOFAIL-GUARANTEE
 
    /** Getting high-level data for screen display and clipping
     * calculations and Contrast */
-   bool GetWaveDisplay(WaveDisplay &display,
-                       double t0, double pixelsPerSecond, bool &isLoadingOD) const;
-   bool GetSpectrogram(WaveTrackCache &cache,
-                       const float *& spectrogram,
-                       const sampleCount *& where,
-                       size_t numPixels,
-                       double t0, double pixelsPerSecond) const;
    std::pair<float, float> GetMinMax(
       double t0, double t1, bool mayThrow = true) const;
    float GetRMS(double t0, double t1, bool mayThrow = true) const;
-
-   // Set/clear/get rectangle that this WaveClip fills on screen. This is
-   // called by TrackArtist while actually drawing the tracks and clips.
-   void ClearDisplayRect() const;
-   void SetDisplayRect(const wxRect& r) const;
-   void GetDisplayRect(wxRect* r);
 
    /** Whenever you do an operation to the sequence that will change the number
     * of samples (that is, the length of the clip), you will want to call this
@@ -338,12 +336,6 @@ public:
    void CloseLock(); //similar to Lock but should be called when the project closes.
    // not balanced by unlocking calls.
 
-   ///Delete the wave cache - force redraw.  Thread-safe
-   void ClearWaveCache();
-
-   ///Adds an invalid region to the wavecache so it redraws that portion only.
-   void AddInvalidRegion(sampleCount startSample, sampleCount endSample);
-
    //
    // XMLTagHandler callback methods for loading and saving
    //
@@ -360,24 +352,17 @@ public:
    // used by commands which interact with clips using the keyboard
    bool SharesBoundaryWithNextClip(const WaveClip* next) const;
 
-public:
-   // Cache of values to colour pixels of Spectrogram - used by TrackArtist
-   mutable std::unique_ptr<SpecPxCache> mSpecPxCache;
+   const SampleBuffer &GetAppendBuffer() const { return mAppendBuffer; }
+   size_t GetAppendBufferLen() const { return mAppendBufferLen; }
 
 protected:
-   mutable wxRect mDisplayRect {};
-
    double mOffset { 0 };
    int mRate;
-   int mDirty { 0 };
    int mColourIndex;
 
    std::unique_ptr<Sequence> mSequence;
    std::unique_ptr<Envelope> mEnvelope;
 
-   mutable std::unique_ptr<WaveCache> mWaveCache;
-   mutable ODLock       mWaveCacheMutex {};
-   mutable std::unique_ptr<SpecCache> mSpecCache;
    SampleBuffer  mAppendBuffer {};
    size_t        mAppendBufferLen { 0 };
 
@@ -387,6 +372,47 @@ protected:
 
    // AWD, Oct. 2009: for whitespace-at-end-of-selection pasting
    bool mIsPlaceholder { false };
+};
+
+struct WaveClipDisplayCache final : WaveClipListener
+{
+   WaveClipDisplayCache();
+   ~WaveClipDisplayCache() override;
+
+   // Cache of values to colour pixels of Spectrogram - used by TrackArtist
+   std::unique_ptr<SpecPxCache> mSpecPxCache;
+   std::unique_ptr<WaveCache> mWaveCache;
+   ODLock       mWaveCacheMutex {};
+   std::unique_ptr<SpecCache> mSpecCache;
+   wxRect mDisplayRect {};
+   int mDirty { 0 };
+
+   static WaveClipDisplayCache &Get( const WaveClip &clip );
+
+   void MarkChanged() override; // NOFAIL-GUARANTEE
+   void Invalidate() override; // NOFAIL-GUARANTEE
+
+   ///Delete the wave cache - force redraw.  Thread-safe
+   void Clear();
+
+   ///Adds an invalid region to the wavecache so it redraws that portion only.
+   void AddInvalidRegion(sampleCount startSample, sampleCount endSample);
+
+   /** Getting high-level data for screen display and clipping
+    * calculations and Contrast */
+   bool GetWaveDisplay(const WaveClip &clip, WaveDisplay &display,
+                       double t0, double pixelsPerSecond, bool &isLoadingOD);
+   bool GetSpectrogram(const WaveClip &clip, WaveTrackCache &cache,
+                       const float *& spectrogram,
+                       const sampleCount *& where,
+                       size_t numPixels,
+                       double t0, double pixelsPerSecond);
+
+   // Set/clear/get rectangle that this WaveClip fills on screen. This is
+   // called by TrackArtist while actually drawing the tracks and clips.
+   void ClearDisplayRect();
+   void SetDisplayRect(const wxRect& r);
+   void GetDisplayRect(wxRect* r);
 };
 
 #endif

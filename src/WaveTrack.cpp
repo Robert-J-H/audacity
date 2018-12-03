@@ -58,7 +58,7 @@ Track classes.
 
 #include "effects/TimeWarper.h"
 #include "prefs/TracksPrefs.h"
-#include "tracks/ui/TrackView.h"
+#include "tracks/playabletrack/wavetrack/ui/WaveTrackView.h"
 
 #include "InconsistencyException.h"
 
@@ -1885,12 +1885,12 @@ void WaveTrack::GetEnvelopeValues(double *buffer, size_t bufferLen,
    }
 }
 
-WaveClip* WaveTrack::GetClipAtX(int xcoord)
+WaveClip* WaveTrackView::GetClipAtX(WaveTrack &track, int xcoord)
 {
-   for (const auto &clip: mClips)
+   for (const auto &clip: track.GetClips())
    {
       wxRect r;
-      clip->GetDisplayRect(&r);
+      WaveClipDisplayCache::Get(*clip).GetDisplayRect(&r);
       if (xcoord >= r.x && xcoord < r.x+r.width)
          return clip.get();
    }
@@ -1935,18 +1935,18 @@ WaveClip* WaveTrack::GetClipAtTime(double time)
    return p != clips.rend() ? *p : nullptr;
 }
 
-Envelope* WaveTrack::GetEnvelopeAtX(int xcoord)
+Envelope* WaveTrackView::GetEnvelopeAtX(WaveTrack &track, int xcoord)
 {
-   WaveClip* clip = GetClipAtX(xcoord);
+   WaveClip* clip = GetClipAtX(track, xcoord);
    if (clip)
       return clip->GetEnvelope();
    else
       return NULL;
 }
 
-Sequence* WaveTrack::GetSequenceAtX(int xcoord)
+Sequence* WaveTrackView::GetSequenceAtX(WaveTrack &track, int xcoord)
 {
-   WaveClip* clip = GetClipAtX(xcoord);
+   WaveClip* clip = GetClipAtX(track, xcoord);
    if (clip)
       return clip->GetSequence();
    else
@@ -2308,20 +2308,6 @@ WaveClipPointers WaveTrack::SortedClipArray()
 WaveClipConstPointers WaveTrack::SortedClipArray() const
 {
    return FillSortedClipArray<WaveClipConstPointers>(mClips);
-}
-
-///Deletes all clips' wavecaches.  Careful, This may not be threadsafe.
-void WaveTrack::ClearWaveCaches()
-{
-   for (const auto &clip : mClips)
-      clip->ClearWaveCache();
-}
-
-///Adds an invalid region to the wavecache so it redraws that portion only.
-void WaveTrack::AddInvalidRegion(sampleCount startSample, sampleCount endSample)
-{
-   for (const auto &clip : mClips)
-      clip->AddInvalidRegion(startSample, endSample);
 }
 
 int WaveTrack::GetAutoSaveIdent()

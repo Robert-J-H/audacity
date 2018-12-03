@@ -29,6 +29,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../../../ViewInfo.h"
 #include "../../../../WaveTrack.h"
 #include "../../../../../images/Cursors.h"
+#include "../../../../tracks/playabletrack/wavetrack/ui/WaveTrackView.h"
 #include "../../../../widgets/ErrorDialog.h"
 
 
@@ -146,7 +147,7 @@ UIHandlePtr SampleHandle::HitTest
    data.GetDisplayBounds(&zoomMin, &zoomMax);
 
    double envValue = 1.0;
-   Envelope* env = wavetrack->GetEnvelopeAtX(state.GetX());
+   Envelope* env = WaveTrackView::GetEnvelopeAtX(*wavetrack, state.GetX());
    if (env)
       // Calculate sample as it would be rendered, so quantize time
       envValue = env->GetValue( tt, 1.0 / wavetrack->GetRate() );
@@ -468,7 +469,8 @@ float SampleHandle::FindSampleEditingLevel
          data.GetWaveformSettings().dBRange, zoomMin, zoomMax);
 
    //Take the envelope into account
-   Envelope *const env = mClickedTrack->GetEnvelopeAtX(event.m_x);
+   Envelope *const env =
+      WaveTrackView::GetEnvelopeAtX(*mClickedTrack, event.m_x);
    if (env)
    {
       // Calculate sample as it would be rendered, so quantize time

@@ -16,6 +16,9 @@ Paul Licameli split from class WaveTrack
 class CutlineHandle;
 class SampleHandle;
 class EnvelopeHandle;
+class Envelope;
+class Sequence;
+class WaveClip;
 class WaveTrack;
 
 class WaveTrackView final : public TrackView
@@ -29,6 +32,16 @@ public:
    ~WaveTrackView() override;
 
    std::shared_ptr<TrackVRulerControls> DoGetVRulerControls() override;
+   
+   //
+   // MM: We now have more than one sequence and envelope per track, so
+   // instead of GetSequence() and GetEnvelope() we have the following
+   // function which give the sequence and envelope which is under the
+   // given X coordinate of the mouse pointer.
+   //
+   static WaveClip* GetClipAtX(WaveTrack&, int xcoord);
+   static Sequence* GetSequenceAtX(WaveTrack&, int xcoord);
+   static Envelope* GetEnvelopeAtX(WaveTrack&, int xcoord);
 
 private:
    // TrackPanelDrawable implementation

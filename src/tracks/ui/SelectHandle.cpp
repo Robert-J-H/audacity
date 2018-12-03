@@ -39,6 +39,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../ondemand/ODManager.h"
 #include "../../prefs/SpectrogramSettings.h"
 #include "../../toolbars/ToolsToolBar.h"
+#include "../../tracks/playabletrack/wavetrack/ui/WaveTrackView.h"
 #include "../../../images/Cursors.h"
 
 #include <wx/event.h>
@@ -580,7 +581,8 @@ UIHandle::Result SelectHandle::Click
       // Special case: if we're over a clip in a WaveTrack,
       // select just that clip
       pTrack->TypeSwitch( [&] ( WaveTrack *wt ) {
-         WaveClip *const selectedClip = wt->GetClipAtX(event.m_x);
+         WaveClip *const selectedClip =
+            WaveTrackView::GetClipAtX(*wt, event.m_x);
          if (selectedClip) {
             viewInfo.selectedRegion.setTimes(
                selectedClip->GetOffset(), selectedClip->GetEndTime());

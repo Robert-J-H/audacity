@@ -119,7 +119,7 @@ std::vector<UIHandlePtr> WaveTrackView::DetailedHitTest
                // Unconditional hits appropriate to the tool
                // If tools toolbar were eliminated, we would eliminate these
             case envelopeTool: {
-               auto envelope = pTrack->GetEnvelopeAtX( st.state.m_x );
+               auto envelope = GetEnvelopeAtX( *pTrack, st.state.m_x );
                result = EnvelopeHandle::HitAnywhere(
                   mEnvelopeHandle, envelope, false);
                break;
@@ -935,7 +935,7 @@ void DrawClipWaveform(TrackPanelDrawingContext &context,
 
    // If we get to this point, the clip is actually visible on the
    // screen, so remember the display rectangle.
-   clip->SetDisplayRect(hiddenMid);
+   WaveClipDisplayCache::Get(*clip).SetDisplayRect(hiddenMid);
 
    // The bounds (controlled by vertical zooming; -1.0...1.0
    // by default)
@@ -1009,7 +1009,7 @@ void DrawClipWaveform(TrackPanelDrawingContext &context,
          // fisheye moves over the background, there is then less to do when
          // redrawing.
 
-         if (!clip->GetWaveDisplay(display,
+         if (!WaveClipDisplayCache::Get(*clip).GetWaveDisplay(*clip, display,
             t0, pps, isLoadingOD))
             return;
       }
@@ -1060,7 +1060,7 @@ void DrawClipWaveform(TrackPanelDrawingContext &context,
             fisheyeDisplay.width -= skipped;
             // Get a wave display for the fisheye, uncached.
             if (rectPortion.width > 0)
-               if (!clip->GetWaveDisplay(
+               if (!WaveClipDisplayCache::Get(*clip).GetWaveDisplay(*clip,
                      fisheyeDisplay, t0, -1.0, // ignored
                      isLoadingOD))
                   continue; // serious error.  just don't draw??
@@ -1353,7 +1353,7 @@ ChooseColorSet( float bin0, float bin1, float selBinLo,
 
 void DrawClipSpectrum(TrackPanelDrawingContext &context,
                                    WaveTrackCache &waveTrackCache,
-                                   const WaveClip *clip,
+                                   const WaveClip *const clip,
                                    const wxRect & rect)
 {
    auto &dc = context.dc;
@@ -1393,7 +1393,7 @@ void DrawClipSpectrum(TrackPanelDrawingContext &context,
 
    // If we get to this point, the clip is actually visible on the
    // screen, so remember the display rectangle.
-   clip->SetDisplayRect(hiddenMid);
+   WaveClipDisplayCache::Get(*clip).SetDisplayRect(hiddenMid);
 
    double freqLo = SelectedRegion::UndefinedFrequency;
    double freqHi = SelectedRegion::UndefinedFrequency;
@@ -1438,8 +1438,9 @@ void DrawClipSpectrum(TrackPanelDrawingContext &context,
    bool updated;
    {
       const double pps = averagePixelsPerSample * rate;
-      updated = clip->GetSpectrogram(waveTrackCache, freq, where,
-                                     (size_t)hiddenMid.width,
+      updated = WaveClipDisplayCache::Get(*clip).GetSpectrogram(*clip,
+         waveTrackCache, freq, where,
+         (size_t)hiddenMid.width,
          t0, pps);
    }
    auto nBins = settings.NBins();
@@ -1489,13 +1490,14 @@ void DrawClipSpectrum(TrackPanelDrawingContext &context,
    }
 #endif //EXPERIMENTAL_FFT_Y_GRID
 
-   if (!updated && clip->mSpecPxCache->valid &&
-      ((int)clip->mSpecPxCache->len == hiddenMid.height * hiddenMid.width)
-      && scaleType == clip->mSpecPxCache->scaleType
-      && gain == clip->mSpecPxCache->gain
-      && range == clip->mSpecPxCache->range
-      && minFreq == clip->mSpecPxCache->minFreq
-      && maxFreq == clip->mSpecPxCache->maxFreq
+   auto &clipCache = WaveClipDisplayCache::Get( *clip );
+   if (!updated && clipCache.mSpecPxCache->valid &&
+      ((int)clipCache.mSpecPxCache->len == hiddenMid.height * hiddenMid.width)
+      && scaleType == clipCache.mSpecPxCache->scaleType
+      && gain == clipCache.mSpecPxCache->gain
+      && range == clipCache.mSpecPxCache->range
+      && minFreq == clipCache.mSpecPxCache->minFreq
+      && maxFreq == clipCache.mSpecPxCache->maxFreq
 #ifdef EXPERIMENTAL_FFT_Y_GRID
    && fftYGrid==fftYGridOld
 #endif //EXPERIMENTAL_FFT_Y_GRID
@@ -1511,13 +1513,13 @@ void DrawClipSpectrum(TrackPanelDrawingContext &context,
    }
    else {
       // Update the spectrum pixel cache
-      clip->mSpecPxCache = std::make_unique<SpecPxCache>(hiddenMid.width * hiddenMid.height);
-      clip->mSpecPxCache->valid = true;
-      clip->mSpecPxCache->scaleType = scaleType;
-      clip->mSpecPxCache->gain = gain;
-      clip->mSpecPxCache->range = range;
-      clip->mSpecPxCache->minFreq = minFreq;
-      clip->mSpecPxCache->maxFreq = maxFreq;
+      clipCache.mSpecPxCache = std::make_unique<SpecPxCache>(hiddenMid.width * hiddenMid.height);
+      clipCache.mSpecPxCache->valid = true;
+      clipCache.mSpecPxCache->scaleType = scaleType;
+      clipCache.mSpecPxCache->gain = gain;
+      clipCache.mSpecPxCache->range = range;
+      clipCache.mSpecPxCache->minFreq = minFreq;
+      clipCache.mSpecPxCache->maxFreq = maxFreq;
 #ifdef EXPERIMENTAL_FIND_NOTES
       fftFindNotesOld = fftFindNotes;
       findNotesMinAOld = findNotesMinA;
@@ -1623,7 +1625,7 @@ void DrawClipSpectrum(TrackPanelDrawingContext &context,
             if (settings.scaleType != SpectrogramSettings::stLogarithmic) {
                const float value = findValue
                   (freq + nBins * xx, bin, nextBin, nBins, autocorrelation, gain, range);
-               clip->mSpecPxCache->values[xx * hiddenMid.height + yy] = value;
+               clipCache.mSpecPxCache->values[xx * hiddenMid.height + yy] = value;
             }
             else {
                float value;
@@ -1661,7 +1663,7 @@ void DrawClipSpectrum(TrackPanelDrawingContext &context,
                   value = findValue
                      (freq + nBins * xx, bin, nextBin, nBins, autocorrelation, gain, range);
                }
-               clip->mSpecPxCache->values[xx * hiddenMid.height + yy] = value;
+               clipCache.mSpecPxCache->values[xx * hiddenMid.height + yy] = value;
             } // logF
          } // each yy
       } // each xx
@@ -1756,7 +1758,7 @@ void DrawClipSpectrum(TrackPanelDrawingContext &context,
 
          const float value = uncached
             ? findValue(uncached, bin, nextBin, nBins, autocorrelation, gain, range)
-            : clip->mSpecPxCache->values[correctedX * hiddenMid.height + yy];
+            : clipCache.mSpecPxCache->values[correctedX * hiddenMid.height + yy];
 
          unsigned char rv, gv, bv;
          GetColorGradient(value, selected, isGrayscale, &rv, &gv, &bv);
@@ -1817,7 +1819,7 @@ void WaveTrackView::Draw(
       auto &data = WaveTrackViewGroupData::Get( *wt );
 
       for (const auto &clip : wt->GetClips()) {
-         clip->ClearDisplayRect();
+         WaveClipDisplayCache::Get(*clip).ClearDisplayRect();
       }
       
       const auto artist = TrackArtist::Get( context );

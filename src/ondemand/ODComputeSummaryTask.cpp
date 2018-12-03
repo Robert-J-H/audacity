@@ -118,7 +118,8 @@ void ODComputeSummaryTask::DoSomeInternal()
          for(size_t i=0;i<mWaveTracks.size();i++)
          {
             if(success && mWaveTracks[i])
-               mWaveTracks[i]->AddInvalidRegion(blockStartSample,blockEndSample);
+               AddInvalidRegion(
+                  *mWaveTracks[i], blockStartSample,blockEndSample);
          }
          mWaveTrackMutex.Unlock();
       }
