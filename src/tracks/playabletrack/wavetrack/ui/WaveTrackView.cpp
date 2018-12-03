@@ -1231,14 +1231,15 @@ void DrawWaveform(TrackPanelDrawingContext &context,
                        dB, muted);
 
    // Update cache for locations, e.g. cutlines and merge points
-   track->UpdateLocationsCache();
+   auto &locationsCache = WaveTrackLocationsCache::Get( *track );
+   locationsCache.Update( *track );
 
    const auto &zoomInfo = *artist->pZoomInfo;
 
 #ifdef EXPERIMENTAL_TRACK_PANEL_HIGHLIGHTING
    auto target2 = dynamic_cast<CutlineHandle*>(context.target.get());
 #endif
-   for (const auto loc : track->GetCachedLocations()) {
+   for (const auto loc : locationsCache.Get()) {
       bool highlightLoc = false;
 #ifdef EXPERIMENTAL_TRACK_PANEL_HIGHLIGHTING
       highlightLoc =

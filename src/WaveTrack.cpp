@@ -116,7 +116,6 @@ void WaveTrack::Init(const WaveTrack &orig)
    mRate = orig.mRate;
    mOldGain[0] = 0.0;
    mOldGain[1] = 0.0;
-   mDisplayLocationsCache.clear();
 }
 
 void WaveTrack::Reinit(const WaveTrack &orig)
@@ -2098,9 +2097,9 @@ void WaveTrack::SplitAt(double t)
    }
 }
 
-void WaveTrack::UpdateLocationsCache() const
+void WaveTrackLocationsCache::Update( const WaveTrack &track )
 {
-   auto clips = SortedClipArray();
+   auto clips = track.SortedClipArray();
 
    mDisplayLocationsCache.clear();
 
@@ -2151,8 +2150,8 @@ void WaveTrack::UpdateLocationsCache() const
             mDisplayLocationsCache.push_back(WaveTrackLocation{
                previousClip->GetEndTime(),
                WaveTrackLocation::locationMergePoint,
-               GetClipIndex(previousClip),
-               GetClipIndex(clip)
+               track.GetClipIndex(previousClip),
+               track.GetClipIndex(clip)
             });
             curpos++;
          }
@@ -2547,4 +2546,14 @@ std::shared_ptr<TrackView> WaveTrack::DoGetView()
 std::shared_ptr<TrackControls> WaveTrack::DoGetControls()
 {
    return std::make_shared<WaveTrackControls>( SharedPointer() );
+}
+
+static WaveTrack::Caches::RegisteredFactory sKey{ []( WaveTrack& ){
+   return std::make_unique< WaveTrackLocationsCache >();
+} };
+
+WaveTrackLocationsCache &WaveTrackLocationsCache::Get( const WaveTrack &track )
+{
+   return const_cast< WaveTrack& >( track )
+      .Caches::Get< WaveTrackLocationsCache >( sKey );
 }
