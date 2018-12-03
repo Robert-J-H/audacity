@@ -13,6 +13,7 @@
 #ifndef _LABELTRACK_
 #define _LABELTRACK_
 
+#include "ClientData.h"
 #include "SelectedRegion.h"
 #include "Track.h"
 
@@ -29,12 +30,11 @@ class TimeWarper;
 
 class LabelTrackView;
 
-struct LabelTrackHit;
-struct TrackPanelDrawingContext;
-
-class LabelStruct
+class LabelStruct : public ClientData::Site< LabelStruct >
 {
 public:
+   using Caches = Site< LabelStruct >;
+
    LabelStruct() = default;
    // Copies region
    LabelStruct(const SelectedRegion& region, const wxString &aTitle);
@@ -75,13 +75,6 @@ public:
 public:
    SelectedRegion selectedRegion;
    wxString title; /// Text of the label.
-   mutable int width{}; /// width of the text in pixels.
-
-// Working storage for on-screen layout.
-   mutable int x{};     /// Pixel position of left hand glyph
-   mutable int x1{};    /// Pixel position of right hand glyph
-   mutable int xText{}; /// Pixel position of left hand side of text box
-   mutable int y{};     /// Pixel position of label.
 
    bool updated{};                  /// flag to tell if the label times were updated
 };
@@ -221,4 +214,17 @@ wxDECLARE_EXPORTED_EVENT(AUDACITY_DLL_API,
 // Posted when a label is repositioned in the sequence of labels.
 wxDECLARE_EXPORTED_EVENT(AUDACITY_DLL_API,
                          EVT_LABELTRACK_PERMUTED, LabelTrackEvent);
+
+struct LabelStructDisplay final : ClientData::Base
+{
+// Working storage for on-screen
+   int width{}; /// width of the text in pixels.
+   int x{};     /// Pixel position of left hand glyph
+   int x1{};    /// Pixel position of right hand glyph
+   int xText{}; /// Pixel position of left hand side of text box
+   int y{};     /// Pixel position of label.
+
+   static LabelStructDisplay &Get( const LabelStruct & );
+};
+
 #endif

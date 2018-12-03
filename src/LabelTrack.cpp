@@ -216,11 +216,6 @@ LabelStruct::LabelStruct(const SelectedRegion &region,
 , title(aTitle)
 {
    updated = false;
-   width = 0;
-   x = 0;
-   x1 = 0;
-   xText = 0;
-   y = 0;
 }
 
 LabelStruct::LabelStruct(const SelectedRegion &region,
@@ -233,11 +228,6 @@ LabelStruct::LabelStruct(const SelectedRegion &region,
    selectedRegion.setTimes(t0, t1);
 
    updated = false;
-   width = 0;
-   x = 0;
-   x1 = 0;
-   xText = 0;
-   y = 0;
 }
 
 double LabelTrack::GetOffset() const
@@ -1043,4 +1033,14 @@ std::shared_ptr<TrackView> LabelTrack::DoGetView()
 std::shared_ptr<TrackControls> LabelTrack::DoGetControls()
 {
    return std::make_shared<LabelTrackControls>( SharedPointer() );
+}
+
+static LabelStruct::Caches::RegisteredFactory sKey{ []( const LabelStruct& ){
+   return std::make_unique<LabelStructDisplay>();
+}};
+
+LabelStructDisplay &LabelStructDisplay::Get( const LabelStruct &labelStruct )
+{
+   return const_cast< LabelStruct& >( labelStruct )
+      .Caches::Get<LabelStructDisplay>( sKey );
 }
