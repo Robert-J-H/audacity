@@ -41,10 +41,10 @@ public:
    void UseSpectralPrefs( bool bUse=true );
 
    int GetLastScaleType() const { return mLastScaleType; }
-   void SetLastScaleType() const;
+   void SetLastScaleType();
 
    int GetLastdBRange() const { return mLastdBRange; }
-   void SetLastdBRange() const;
+   void SetLastdBRange();
 
    using TrackDisplay = WaveTrackViewConstants::Display;
 
@@ -52,7 +52,7 @@ public:
    void SetDisplay(TrackDisplay display) { mDisplay = display; }
 
    void GetDisplayBounds(float *min, float *max) const;
-   void SetDisplayBounds(float min, float max) const;
+   void SetDisplayBounds(float min, float max);
    void GetSpectrumBounds(double rate, float *min, float *max) const;
    void SetSpectrumBounds(float min, float max);
 
@@ -73,8 +73,8 @@ protected:
    void DoSetMinimized( bool minimized ) override;
 
 private:
-   mutable float         mDisplayMin{ -1.0 };
-   mutable float         mDisplayMax{  1.0 };
+   float         mDisplayMin{ -1.0 };
+   float         mDisplayMax{  1.0 };
    float         mSpectrumMin{ -1 };
    float         mSpectrumMax{ -1 };
 
