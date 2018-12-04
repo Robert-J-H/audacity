@@ -58,6 +58,7 @@ Track classes.
 
 #include "effects/TimeWarper.h"
 #include "prefs/TracksPrefs.h"
+#include "tracks/ui/TrackView.h"
 
 #include "InconsistencyException.h"
 
@@ -389,6 +390,8 @@ Track::Holder WaveTrack::Copy(double t0, double t1, bool forClipboard) const
    WaveTrack *newTrack = result.get();
 
    newTrack->Init(*this);
+   if (mpView)
+      TrackView::Get( *newTrack ).Copy( *mpView );
 
    // PRL:  Why shouldn't cutlines be copied and pasted too?  I don't know, but
    // that was the old behavior.  But this function is also used by the

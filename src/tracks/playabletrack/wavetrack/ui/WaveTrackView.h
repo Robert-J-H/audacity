@@ -16,6 +16,7 @@ Paul Licameli split from class WaveTrack
 class CutlineHandle;
 class SampleHandle;
 class EnvelopeHandle;
+class WaveTrack;
 
 class WaveTrackView final : public TrackView
 {
@@ -30,6 +31,11 @@ public:
    std::shared_ptr<TrackVRulerControls> DoGetVRulerControls() override;
 
 private:
+   friend WaveTrack;
+
+   // Preserve some view state too for undo/redo purposes
+   void Copy( const TrackView &other ) override;
+
    std::vector<UIHandlePtr> DetailedHitTest
       (const TrackPanelMouseState &state,
        const AudacityProject *pProject, int currentTool, bool bMultiTool)
