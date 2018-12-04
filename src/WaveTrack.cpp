@@ -132,11 +132,6 @@ void WaveTrack::Reinit(const WaveTrack &orig)
    this->SetOffset(orig.GetOffset());
 }
 
-void WaveTrack::Merge(const Track &orig)
-{
-   PlayableTrack::Merge(orig);
-}
-
 WaveTrack::~WaveTrack()
 {
    //Let the ODManager know this WaveTrack is disappearing.

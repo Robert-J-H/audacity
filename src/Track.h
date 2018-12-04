@@ -427,10 +427,6 @@ private:
    // public nonvirtual duplication function that invokes Clone():
    virtual Holder Duplicate() const;
 
-   // Called when this track is merged to stereo with another, and should
-   // take on some paramaters of its partner.
-   virtual void Merge(const Track &orig);
-
    // Return a localized string containing a default name appropriate to the
    // track subtype
    virtual wxString GetDefaultName() const = 0;

@@ -860,9 +860,6 @@ void WaveTrackMenuTable::OnMergeStereo(wxCommandEvent &)
 
    tracks.GroupChannels( *pTrack, 2 );
 
-   // Set partner's parameters to match target.
-   partner->Merge(*pTrack);
-
    auto &data = pTrack->GetGroupData();
    data.SetPan( 0.0f );
 

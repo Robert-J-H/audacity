@@ -148,10 +148,6 @@ void Track::Init(const Track &orig)
    mMinimized = orig.mMinimized;
 }
 
-void Track::Merge(const Track &orig)
-{
-}
-
 Track::Holder Track::Duplicate() const
 {
    // invoke "virtual constructor" to copy track object proper:
