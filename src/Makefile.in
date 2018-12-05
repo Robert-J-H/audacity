@@ -516,6 +516,8 @@ am__audacity_SOURCES_DIST = BlockFile.cpp BlockFile.h DirManager.cpp \
 	tracks/playabletrack/wavetrack/ui/CutlineHandle.h \
 	tracks/playabletrack/wavetrack/ui/SampleHandle.cpp \
 	tracks/playabletrack/wavetrack/ui/SampleHandle.h \
+	tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp \
+	tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackControls.cpp \
 	tracks/playabletrack/wavetrack/ui/WaveTrackControls.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackSliderHandles.cpp \
@@ -860,6 +862,7 @@ am_audacity_OBJECTS = $(am__objects_1) audacity-AboutDialog.$(OBJEXT) \
 	tracks/playabletrack/ui/audacity-PlayableTrackButtonHandles.$(OBJEXT) \
 	tracks/playabletrack/wavetrack/ui/audacity-CutlineHandle.$(OBJEXT) \
 	tracks/playabletrack/wavetrack/ui/audacity-SampleHandle.$(OBJEXT) \
+	tracks/playabletrack/wavetrack/ui/audacity-WaveClipDisplayCache.$(OBJEXT) \
 	tracks/playabletrack/wavetrack/ui/audacity-WaveTrackControls.$(OBJEXT) \
 	tracks/playabletrack/wavetrack/ui/audacity-WaveTrackSliderHandles.$(OBJEXT) \
 	tracks/playabletrack/wavetrack/ui/audacity-WaveTrackView.$(OBJEXT) \
@@ -1582,6 +1585,8 @@ audacity_SOURCES = $(libaudacity_la_SOURCES) AboutDialog.cpp \
 	tracks/playabletrack/wavetrack/ui/CutlineHandle.h \
 	tracks/playabletrack/wavetrack/ui/SampleHandle.cpp \
 	tracks/playabletrack/wavetrack/ui/SampleHandle.h \
+	tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp \
+	tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackControls.cpp \
 	tracks/playabletrack/wavetrack/ui/WaveTrackControls.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackSliderHandles.cpp \
@@ -2262,6 +2267,9 @@ tracks/playabletrack/wavetrack/ui/audacity-CutlineHandle.$(OBJEXT):  \
 tracks/playabletrack/wavetrack/ui/audacity-SampleHandle.$(OBJEXT):  \
 	tracks/playabletrack/wavetrack/ui/$(am__dirstamp) \
 	tracks/playabletrack/wavetrack/ui/$(DEPDIR)/$(am__dirstamp)
+tracks/playabletrack/wavetrack/ui/audacity-WaveClipDisplayCache.$(OBJEXT):  \
+	tracks/playabletrack/wavetrack/ui/$(am__dirstamp) \
+	tracks/playabletrack/wavetrack/ui/$(DEPDIR)/$(am__dirstamp)
 tracks/playabletrack/wavetrack/ui/audacity-WaveTrackControls.$(OBJEXT):  \
 	tracks/playabletrack/wavetrack/ui/$(am__dirstamp) \
 	tracks/playabletrack/wavetrack/ui/$(DEPDIR)/$(am__dirstamp)
@@ -2817,6 +2825,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@tracks/playabletrack/ui/$(DEPDIR)/audacity-PlayableTrackButtonHandles.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tracks/playabletrack/wavetrack/ui/$(DEPDIR)/audacity-CutlineHandle.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tracks/playabletrack/wavetrack/ui/$(DEPDIR)/audacity-SampleHandle.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@tracks/playabletrack/wavetrack/ui/$(DEPDIR)/audacity-WaveClipDisplayCache.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tracks/playabletrack/wavetrack/ui/$(DEPDIR)/audacity-WaveTrackControls.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tracks/playabletrack/wavetrack/ui/$(DEPDIR)/audacity-WaveTrackSliderHandles.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tracks/playabletrack/wavetrack/ui/$(DEPDIR)/audacity-WaveTrackVRulerControls.Po@am__quote@
@@ -6811,6 +6820,20 @@ tracks/playabletrack/wavetrack/ui/audacity-SampleHandle.obj: tracks/playabletrac
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='tracks/playabletrack/wavetrack/ui/SampleHandle.cpp' object='tracks/playabletrack/wavetrack/ui/audacity-SampleHandle.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -c -o tracks/playabletrack/wavetrack/ui/audacity-SampleHandle.obj `if test -f 'tracks/playabletrack/wavetrack/ui/SampleHandle.cpp'; then $(CYGPATH_W) 'tracks/playabletrack/wavetrack/ui/SampleHandle.cpp'; else $(CYGPATH_W) '$(srcdir)/tracks/playabletrack/wavetrack/ui/SampleHandle.cpp'; fi`
+
+tracks/playabletrack/wavetrack/ui/audacity-WaveClipDisplayCache.o: tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -MT tracks/playabletrack/wavetrack/ui/audacity-WaveClipDisplayCache.o -MD -MP -MF tracks/playabletrack/wavetrack/ui/$(DEPDIR)/audacity-WaveClipDisplayCache.Tpo -c -o tracks/playabletrack/wavetrack/ui/audacity-WaveClipDisplayCache.o `test -f 'tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp' || echo '$(srcdir)/'`tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) tracks/playabletrack/wavetrack/ui/$(DEPDIR)/audacity-WaveClipDisplayCache.Tpo tracks/playabletrack/wavetrack/ui/$(DEPDIR)/audacity-WaveClipDisplayCache.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp' object='tracks/playabletrack/wavetrack/ui/audacity-WaveClipDisplayCache.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -c -o tracks/playabletrack/wavetrack/ui/audacity-WaveClipDisplayCache.o `test -f 'tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp' || echo '$(srcdir)/'`tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp
+
+tracks/playabletrack/wavetrack/ui/audacity-WaveClipDisplayCache.obj: tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -MT tracks/playabletrack/wavetrack/ui/audacity-WaveClipDisplayCache.obj -MD -MP -MF tracks/playabletrack/wavetrack/ui/$(DEPDIR)/audacity-WaveClipDisplayCache.Tpo -c -o tracks/playabletrack/wavetrack/ui/audacity-WaveClipDisplayCache.obj `if test -f 'tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp'; then $(CYGPATH_W) 'tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp'; else $(CYGPATH_W) '$(srcdir)/tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) tracks/playabletrack/wavetrack/ui/$(DEPDIR)/audacity-WaveClipDisplayCache.Tpo tracks/playabletrack/wavetrack/ui/$(DEPDIR)/audacity-WaveClipDisplayCache.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp' object='tracks/playabletrack/wavetrack/ui/audacity-WaveClipDisplayCache.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -c -o tracks/playabletrack/wavetrack/ui/audacity-WaveClipDisplayCache.obj `if test -f 'tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp'; then $(CYGPATH_W) 'tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp'; else $(CYGPATH_W) '$(srcdir)/tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp'; fi`
 
 tracks/playabletrack/wavetrack/ui/audacity-WaveTrackControls.o: tracks/playabletrack/wavetrack/ui/WaveTrackControls.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -MT tracks/playabletrack/wavetrack/ui/audacity-WaveTrackControls.o -MD -MP -MF tracks/playabletrack/wavetrack/ui/$(DEPDIR)/audacity-WaveTrackControls.Tpo -c -o tracks/playabletrack/wavetrack/ui/audacity-WaveTrackControls.o `test -f 'tracks/playabletrack/wavetrack/ui/WaveTrackControls.cpp' || echo '$(srcdir)/'`tracks/playabletrack/wavetrack/ui/WaveTrackControls.cpp
