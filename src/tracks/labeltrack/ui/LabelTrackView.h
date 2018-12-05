@@ -13,6 +13,8 @@ Paul Licameli split from class LabelTrack
 
 #include "../../ui/TrackView.h"
 
+class LabelTrack;
+
 class LabelTrackView final : public TrackView
 {
    LabelTrackView( const LabelTrackView& ) = delete;
@@ -23,6 +25,13 @@ public:
    LabelTrackView( const std::shared_ptr<Track> &pTrack )
       : TrackView{ pTrack } {}
    ~LabelTrackView() override;
+
+   static LabelTrackView &Get( LabelTrack& );
+   static const LabelTrackView &Get( const LabelTrack& );
+
+private:
+   std::shared_ptr<LabelTrack> FindLabelTrack();
+   std::shared_ptr<const LabelTrack> FindLabelTrack() const;
 };
 
 #endif

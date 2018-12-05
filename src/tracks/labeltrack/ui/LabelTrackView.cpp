@@ -27,6 +27,16 @@ LabelTrackView::~LabelTrackView()
 {
 }
 
+  LabelTrackView &LabelTrackView::Get( LabelTrack &track )
+{
+   return static_cast< LabelTrackView& >( TrackView::Get( track ) );
+}
+
+const LabelTrackView &LabelTrackView::Get( const LabelTrack &track )
+{
+   return static_cast< const LabelTrackView& >( TrackView::Get( track ) );
+}
+
 std::vector<UIHandlePtr> LabelTrack::DetailedHitTest
 (const TrackPanelMouseState &st,
  const AudacityProject *WXUNUSED(pProject), int, bool)

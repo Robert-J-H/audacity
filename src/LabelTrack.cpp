@@ -3141,3 +3141,15 @@ int LabelTrack::DialogForLabelName(
 
    return status;
 }
+
+#include "tracks/labeltrack/ui/LabelTrackView.h" // for inheritance relation
+
+std::shared_ptr<LabelTrack> LabelTrackView::FindLabelTrack()
+{
+   return std::static_pointer_cast<LabelTrack>( FindTrack() );
+}
+
+std::shared_ptr<const LabelTrack> LabelTrackView::FindLabelTrack() const
+{
+   return const_cast<LabelTrackView*>(this)->FindLabelTrack();
+}
