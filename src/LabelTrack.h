@@ -35,6 +35,7 @@ class DirManager;
 class TimeWarper;
 class ZoomInfo;
 
+class LabelTrackEvent;
 class LabelTrackView;
 
 struct LabelTrackHit;
@@ -282,7 +283,8 @@ public:
    int FindPrevLabel(const SelectedRegion& currentSelection);
 
  public:
-   void SortLabels(LabelTrackHit *pHit = nullptr);
+   void SortLabels();
+
  private:
    TrackKind GetKind() const override { return TrackKind::Label; }
 
@@ -327,6 +329,10 @@ private:
    void calculateFontHeight(wxDC & dc) const;
    void RemoveSelectedText();
 
+   void OnLabelAdded( LabelTrackEvent& );
+   void OnLabelDeleted( LabelTrackEvent& );
+   void OnLabelPermuted( LabelTrackEvent& );
+
    static wxFont msFont;
 
    std::weak_ptr<LabelGlyphHandle> mGlyphHandle;
@@ -337,4 +343,44 @@ protected:
    std::shared_ptr<TrackControls> DoGetControls() override;
 };
 
+struct LabelTrackEvent : TrackListEvent
+{
+   explicit
+   LabelTrackEvent(
+      wxEventType commandType, const std::shared_ptr<LabelTrack> &pTrack,
+      const wxString &title,
+      int formerPosition,
+      int presentPosition
+   )
+   : TrackListEvent{ commandType, pTrack }
+   , mTitle{ title }
+   , mFormerPosition{ formerPosition }
+   , mPresentPosition{ presentPosition }
+   {}
+
+   LabelTrackEvent( const LabelTrackEvent& ) = default;
+   wxEvent *Clone() const override {
+      // wxWidgets will own the event object
+      return safenew LabelTrackEvent(*this); }
+
+   wxString mTitle;
+
+   // invalid for addition event
+   int mFormerPosition{ -1 };
+
+   // invalid for deletion event
+   int mPresentPosition{ -1 };
+};
+
+// Posted when a label is added.
+wxDECLARE_EXPORTED_EVENT(AUDACITY_DLL_API,
+                         EVT_LABELTRACK_ADDITION, LabelTrackEvent);
+
+// Posted when a label is deleted.
+wxDECLARE_EXPORTED_EVENT(AUDACITY_DLL_API,
+                         EVT_LABELTRACK_DELETION, LabelTrackEvent);
+
+// Posted when a label is repositioned in the sequence of labels.
+wxDECLARE_EXPORTED_EVENT(AUDACITY_DLL_API,
+                         EVT_LABELTRACK_PERMUTED, LabelTrackEvent);
 #endif

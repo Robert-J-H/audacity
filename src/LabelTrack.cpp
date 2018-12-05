@@ -76,6 +76,10 @@ for drawing different aspects of the label and its text box.
 #include "effects/TimeWarper.h"
 #include "widgets/ErrorDialog.h"
 
+wxDEFINE_EVENT(EVT_LABELTRACK_ADDITION, LabelTrackEvent);
+wxDEFINE_EVENT(EVT_LABELTRACK_DELETION, LabelTrackEvent);
+wxDEFINE_EVENT(EVT_LABELTRACK_PERMUTED, LabelTrackEvent);
+
 enum
 {
    OnCutSelectedTextID = 1,      // OSX doesn't like a 0 menu id
@@ -785,7 +789,7 @@ namespace {
       if (target) {
          auto handle = dynamic_cast<LabelGlyphHandle*>( target.get() );
          if (handle)
-            return &handle->mHit;
+            return &*handle->mpHit;
       }
       return nullptr;
    }
@@ -1562,7 +1566,7 @@ bool LabelTrack::HandleGlyphDragRelease
          //the NEW size of the label.
          *newSel = mLabels[mSelIndex].selectedRegion;
       }
-      SortLabels( &hit );
+      SortLabels();
    }
 
    return false;
@@ -2763,8 +2767,17 @@ int LabelTrackView::AddLabel(const SelectedRegion &selectedRegion,
    return pos;
 }
 
-void LabelTrack::OnLabelAdded( const wxString &title, int pos )
+void LabelTrack::OnLabelAdded( LabelTrackEvent &e )
 {
+   e.Skip();
+   if ( e.mpTrack.lock() != FindTrack() )
+      return;
+
+   const auto &title = e.mTitle;
+   const auto pos = e.mPresentPosition;
+
+   mInitialCursorPos = mCurrentCursorPos = title.length();
+
    // restoreFocus is -2 e.g. from Nyquist label creation, when we should not
    // even lose the focus and open the label to edit in the first place.
    // -1 means we don't need to restore it to anywhere.
@@ -2782,8 +2795,6 @@ void LabelTrack::OnLabelAdded( const wxString &title, int pos )
    //      If the label is added during actions like import, then the
    //      mDrawCursor flag will be reset once the action is complete.
    mDrawCursor = true;
-
-   mInitialCursorPos = mCurrentCursorPos = title.length();
 }
 
 
@@ -2800,16 +2811,35 @@ int LabelTrack::AddLabel(const SelectedRegion &selectedRegion,
 
    mLabels.insert(mLabels.begin() + pos, l);
 
-   OnLabelAdded( title, pos );
+   // wxWidgets will own the event object
+   GetOwner()->QueueEvent( safenew LabelTrackEvent{
+      EVT_LABELTRACK_ADDITION, SharedPointer<LabelTrack>(), title, -1, pos
+   } );
 
    return pos;
 }
 
 void LabelTrack::DeleteLabel(int index)
 {
-   wxASSERT((index <
-   (int)mLabels.size()));
-   mLabels.erase(mLabels.begin() + index);
+   wxASSERT((index < (int)mLabels.size()));
+   auto iter = mLabels.begin() + index;
+   const auto title = iter->title;
+   mLabels.erase(iter);
+
+   // wxWidgets will own the event object
+   GetOwner()->QueueEvent( safenew LabelTrackEvent{
+      EVT_LABELTRACK_DELETION, SharedPointer<LabelTrack>(), title, index, -1
+   } );
+}
+
+void LabelTrack::OnLabelDeleted( LabelTrackEvent &e )
+{
+   e.Skip();
+   if ( e.mpTrack.lock() != FindTrack() )
+      return;
+
+   auto index = e.mFormerPosition;
+
    // IF we've deleted the selected label
    // THEN set no label selected.
    if( mSelIndex== index )
@@ -2823,6 +2853,23 @@ void LabelTrack::DeleteLabel(int index)
    {
       mSelIndex--;
    }
+}
+
+void LabelTrack::OnLabelPermuted( LabelTrackEvent &e )
+{
+   e.Skip();
+   if ( e.mpTrack.lock() != FindTrack() )
+      return;
+
+   auto former = e.mFormerPosition;
+   auto present = e.mPresentPosition;
+
+   if ( mSelIndex == former )
+      mSelIndex = present;
+   else if ( former < mSelIndex && mSelIndex <= present )
+      -- mSelIndex;
+   else if ( former > mSelIndex && mSelIndex >= present )
+      ++ mSelIndex;
 }
 
 wxBitmap & LabelTrack::GetGlyph( int i)
@@ -2972,7 +3019,7 @@ bool LabelTrack::IsGoodLabelEditKey(const wxKeyEvent & evt)
 /// This function is called often (whilst dragging a label)
 /// We expect them to be very nearly in order, so insertion
 /// sort (with a linear search) is a reasonable choice.
-void LabelTrack::SortLabels( LabelTrackHit *pHit )
+void LabelTrack::SortLabels()
 {
    const auto begin = mLabels.begin();
    const auto nn = (int)mLabels.size();
@@ -2998,20 +3045,12 @@ void LabelTrack::SortLabels( LabelTrackHit *pHit )
          begin + i + 1
       );
 
-      // Various indices need to be updated with the moved items...
-      auto update = [=](int &index) {
-         if( index <= i ) {
-            if( index == i )
-               index = j;
-            else if( index >= j)
-               ++index;
-         }
-      };
-      if ( pHit ) {
-         update( pHit->mMouseOverLabelLeft );
-         update( pHit->mMouseOverLabelRight );
-      }
-      update(mSelIndex);
+      // Let listeners update their stored indices
+      // wxWidgets will own the event object
+      GetOwner()->QueueEvent( safenew LabelTrackEvent{
+         EVT_LABELTRACK_PERMUTED, SharedPointer<LabelTrack>(),
+         mLabels[j].title, i, j
+      } );
    }
 }
 
