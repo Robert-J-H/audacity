@@ -46,7 +46,6 @@ Track classes.
 
 #include "Envelope.h"
 #include "Sequence.h"
-#include "Spectrum.h"
 
 #include "Project.h"
 #include "Internat.h"
@@ -1885,19 +1884,6 @@ void WaveTrack::GetEnvelopeValues(double *buffer, size_t bufferLen,
    }
 }
 
-WaveClip* WaveTrackView::GetClipAtX(WaveTrack &track, int xcoord)
-{
-   for (const auto &clip: track.GetClips())
-   {
-      wxRect r;
-      WaveClipDisplayCache::Get(*clip).GetDisplayRect(&r);
-      if (xcoord >= r.x && xcoord < r.x+r.width)
-         return clip.get();
-   }
-
-   return NULL;
-}
-
 WaveClip* WaveTrack::GetClipAtSample(sampleCount sample)
 {
    for (const auto &clip: mClips)
@@ -1933,24 +1919,6 @@ WaveClip* WaveTrack::GetClipAtTime(double time)
    }
 
    return p != clips.rend() ? *p : nullptr;
-}
-
-Envelope* WaveTrackView::GetEnvelopeAtX(WaveTrack &track, int xcoord)
-{
-   WaveClip* clip = GetClipAtX(track, xcoord);
-   if (clip)
-      return clip->GetEnvelope();
-   else
-      return NULL;
-}
-
-Sequence* WaveTrackView::GetSequenceAtX(WaveTrack &track, int xcoord)
-{
-   WaveClip* clip = GetClipAtX(track, xcoord);
-   if (clip)
-      return clip->GetSequence();
-   else
-      return NULL;
 }
 
 WaveClip* WaveTrack::CreateClip()

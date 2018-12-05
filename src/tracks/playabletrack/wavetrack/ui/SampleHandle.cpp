@@ -17,6 +17,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../../../MemoryX.h"
 #include <wx/gdicmn.h>
 
+#include "WaveTrackView.h"
 #include "WaveTrackViewGroupData.h"
 #include "../../../../Envelope.h"
 #include "../../../../HitTestResult.h"

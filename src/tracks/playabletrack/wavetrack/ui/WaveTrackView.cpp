@@ -12,8 +12,8 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "../../../../Experimental.h"
 
-#include "../../../../WaveClip.h"
 #include "../../../../WaveTrack.h"
+#include "WaveClipDisplayCache.h"
 #include "WaveTrackViewGroupData.h"
 // We need to activate
 // VZooming (that lives in WaveTrackVRulerHandle) from an action on the
@@ -1868,4 +1868,35 @@ void WaveTrackView::Draw(
          dc.DrawText (name, rect.x+15, rect.y+3);  // move right 15 pixels to avoid overwriting <- symbol
       }
    }
+}
+
+WaveClip* WaveTrackView::GetClipAtX(WaveTrack &track, int xcoord)
+{
+   for (const auto &clip: track.GetClips())
+   {
+      wxRect r;
+      WaveClipDisplayCache::Get(*clip).GetDisplayRect(&r);
+      if (xcoord >= r.x && xcoord < r.x+r.width)
+         return clip.get();
+   }
+
+   return NULL;
+}
+
+Envelope* WaveTrackView::GetEnvelopeAtX(WaveTrack &track, int xcoord)
+{
+   WaveClip* clip = GetClipAtX(track, xcoord);
+   if (clip)
+      return clip->GetEnvelope();
+   else
+      return NULL;
+}
+
+Sequence* WaveTrackView::GetSequenceAtX(WaveTrack &track, int xcoord)
+{
+   WaveClip* clip = GetClipAtX(track, xcoord);
+   if (clip)
+      return clip->GetSequence();
+   else
+      return NULL;
 }
