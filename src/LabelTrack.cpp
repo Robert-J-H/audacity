@@ -1086,13 +1086,15 @@ bool LabelTrack::CopySelectedText()
    return true;
 }
 
+#include "tracks/labeltrack/ui/LabelTrackView.h" // temporary
+
 // PRL:  should this set other fields of the label selection?
 /// Paste the text on the clipboard to text box
 ///  @return true if mouse is clicked in text box, false otherwise
 bool LabelTrack::PasteSelectedText(double sel0, double sel1)
 {
    if ( !HasSelection() )
-      AddLabel(SelectedRegion(sel0, sel1), wxT(""));
+      LabelTrackView::Get( *this ).AddLabel(SelectedRegion(sel0, sel1));
 
    wxString text, left, right;
 
@@ -2124,13 +2126,13 @@ bool LabelTrack::OnChar(SelectedRegion &WXUNUSED(newSel), wxKeyEvent & event)
             return false;
          }
          GetGroupData().SetSelected(true);
-         AddLabel(selectedRegion, title, -2);
+         AddLabel(selectedRegion, title);
          p->PushState(_("Added label"), _("Label"));
          return false;
       }
       else {
          GetGroupData().SetSelected(true);
-         AddLabel(selectedRegion);
+         LabelTrackView::Get( *this ).AddLabel( selectedRegion );
          p->PushState(_("Added label"), _("Label"));
       }
    }
@@ -2752,25 +2754,22 @@ int LabelTrack::GetLabelIndex(double t, double t1)
 // restoreFocus of -1 is the default, and sets the focus to this label.
 // restoreFocus of -2 or other value leaves the focus unchanged.
 // restoreFocus >= 0 will later cause focus to move to that track.
-int LabelTrack::AddLabel(const SelectedRegion &selectedRegion,
+int LabelTrackView::AddLabel(const SelectedRegion &selectedRegion,
                          const wxString &title, int restoreFocus)
 {
-   LabelStruct l { selectedRegion, title };
-   mInitialCursorPos = mCurrentCursorPos = title.length();
+   const auto pTrack = FindLabelTrack();
+   auto pos = pTrack->AddLabel( selectedRegion, title );
+   pTrack->mRestoreFocus = restoreFocus;
+   return pos;
+}
 
-   int len = mLabels.size();
-   int pos = 0;
-
-   while (pos < len && mLabels[pos].getT0() < selectedRegion.t0())
-      pos++;
-
-   mLabels.insert(mLabels.begin() + pos, l);
-
+void LabelTrack::OnLabelAdded( const wxString &title, int pos )
+{
    // restoreFocus is -2 e.g. from Nyquist label creation, when we should not
    // even lose the focus and open the label to edit in the first place.
    // -1 means we don't need to restore it to anywhere.
    // 0 or above is the track to restore to afetr editing the label is complete.
-   if( restoreFocus >= -1 )
+   if( mRestoreFocus >= -1 )
       mSelIndex = pos;
 
    // Make sure the caret is visible
@@ -2784,14 +2783,32 @@ int LabelTrack::AddLabel(const SelectedRegion &selectedRegion,
    //      mDrawCursor flag will be reset once the action is complete.
    mDrawCursor = true;
 
-   mRestoreFocus = restoreFocus;
+   mInitialCursorPos = mCurrentCursorPos = title.length();
+}
+
+
+int LabelTrack::AddLabel(const SelectedRegion &selectedRegion,
+                         const wxString &title)
+{
+   LabelStruct l { selectedRegion, title };
+
+   int len = mLabels.size();
+   int pos = 0;
+
+   while (pos < len && mLabels[pos].getT0() < selectedRegion.t0())
+      pos++;
+
+   mLabels.insert(mLabels.begin() + pos, l);
+
+   OnLabelAdded( title, pos );
 
    return pos;
 }
 
 void LabelTrack::DeleteLabel(int index)
 {
-   wxASSERT((index < (int)mLabels.size()));
+   wxASSERT((index <
+   (int)mLabels.size()));
    mLabels.erase(mLabels.begin() + index);
    // IF we've deleted the selected label
    // THEN set no label selected.

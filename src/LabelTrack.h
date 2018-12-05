@@ -242,9 +242,9 @@ public:
    int GetNumLabels() const;
    const LabelStruct *GetLabel(int index) const;
 
+   void OnLabelAdded( const wxString &title, int pos );
    //This returns the index of the label we just added.
-   int AddLabel(const SelectedRegion &region, const wxString &title = {},
-      int restoreFocus = -1);
+   int AddLabel(const SelectedRegion &region, const wxString &title);
    //And this tells us the index, if there is a label already there.
    int GetLabelIndex(double t, double t1);
 
@@ -288,6 +288,8 @@ public:
 
    void ShowContextMenu();
    void OnContextMenu(wxCommandEvent & evt);
+
+   friend LabelTrackView; // temporary
 
    mutable int mSelIndex;      /// Keeps track of the currently selected label
    int mxMouseDisplacement;    /// Displacement of mouse cursor from the centre being dragged.
