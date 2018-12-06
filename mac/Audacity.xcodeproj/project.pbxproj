@@ -1223,6 +1223,7 @@
 		5E15126F1DB0010C00702E29 /* TrackUI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E15126A1DB0010C00702E29 /* TrackUI.cpp */; };
 		5E1512701DB0010C00702E29 /* TrackVRulerControls.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E15126B1DB0010C00702E29 /* TrackVRulerControls.cpp */; };
 		5E16FF4D1FF9CE0B0085E1B8 /* LanguageNames.txt in Resources */ = {isa = PBXBuildFile; fileRef = 5E16FF4C1FF9CE0B0085E1B8 /* LanguageNames.txt */; };
+		5E1731A121CECDF700FBFBAF /* TrackViewGroupData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E17319F21CECDF700FBFBAF /* TrackViewGroupData.cpp */; };
 		5E19D655217D51190024D0B1 /* PluginMenus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E19D64C217D51190024D0B1 /* PluginMenus.cpp */; };
 		5E2A19941EED688500217B58 /* SelectionState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E2A19921EED688500217B58 /* SelectionState.cpp */; };
 		5E36A0A8217FA2430068E082 /* EditMenus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E36A09F217FA2430068E082 /* EditMenus.cpp */; };
@@ -3105,6 +3106,8 @@
 		5E15126B1DB0010C00702E29 /* TrackVRulerControls.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TrackVRulerControls.cpp; sourceTree = "<group>"; };
 		5E15126C1DB0010C00702E29 /* TrackVRulerControls.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TrackVRulerControls.h; sourceTree = "<group>"; };
 		5E16FF4C1FF9CE0B0085E1B8 /* LanguageNames.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = LanguageNames.txt; path = ../locale/LanguageNames.txt; sourceTree = "<group>"; };
+		5E17319F21CECDF700FBFBAF /* TrackViewGroupData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TrackViewGroupData.cpp; sourceTree = "<group>"; };
+		5E1731A021CECDF700FBFBAF /* TrackViewGroupData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TrackViewGroupData.h; sourceTree = "<group>"; };
 		5E19D64C217D51190024D0B1 /* PluginMenus.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PluginMenus.cpp; path = menus/PluginMenus.cpp; sourceTree = "<group>"; };
 		5E2A19921EED688500217B58 /* SelectionState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SelectionState.cpp; sourceTree = "<group>"; };
 		5E2A19931EED688500217B58 /* SelectionState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SelectionState.h; sourceTree = "<group>"; };
@@ -5989,6 +5992,7 @@
 				5E1512681DB0010C00702E29 /* TrackControls.cpp */,
 				5E73965D1DAFDAEC00BA0A4D /* TrackSelectHandle.cpp */,
 				5E15126A1DB0010C00702E29 /* TrackUI.cpp */,
+				5E17319F21CECDF700FBFBAF /* TrackViewGroupData.cpp */,
 				5E15126B1DB0010C00702E29 /* TrackVRulerControls.cpp */,
 				5E73963C1DAFD86000BA0A4D /* ZoomHandle.cpp */,
 				5E73965B1DAFDAA400BA0A4D /* BackgroundCell.h */,
@@ -6004,6 +6008,7 @@
 				5E7396581DAFDA3600BA0A4D /* TrackButtonHandles.h */,
 				5E1512691DB0010C00702E29 /* TrackControls.h */,
 				5E73965E1DAFDAEC00BA0A4D /* TrackSelectHandle.h */,
+				5E1731A021CECDF700FBFBAF /* TrackViewGroupData.h */,
 				5E15126C1DB0010C00702E29 /* TrackVRulerControls.h */,
 				5E73963D1DAFD86000BA0A4D /* ZoomHandle.h */,
 			);
@@ -7848,6 +7853,7 @@
 				1790B13909883BFD008A330A /* Echo.cpp in Sources */,
 				1790B13A09883BFD008A330A /* Effect.cpp in Sources */,
 				1790B13B09883BFD008A330A /* Equalization.cpp in Sources */,
+				5E1731A121CECDF700FBFBAF /* TrackViewGroupData.cpp in Sources */,
 				1790B13C09883BFD008A330A /* Fade.cpp in Sources */,
 				1790B13E09883BFD008A330A /* Invert.cpp in Sources */,
 				1790B13F09883BFD008A330A /* LadspaEffect.cpp in Sources */,

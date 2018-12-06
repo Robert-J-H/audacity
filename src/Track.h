@@ -192,8 +192,11 @@ template < typename TrackType > struct TrackIterRange;
 
 struct TrackGroupData
    : std::enable_shared_from_this< TrackGroupData >
+   , ClientData::Extensions< TrackGroupData, true >
 {
-   TrackGroupData( const Track &track );
+   using Extensions = ClientData::Extensions< TrackGroupData, true >;
+
+   TrackGroupData( const Track &representative );
    virtual ~TrackGroupData();
    virtual std::shared_ptr< TrackGroupData > Clone() const;
 
@@ -241,7 +244,6 @@ class AUDACITY_DLL_API Track /* not final */
    TrackId mId;
 
  public:
-
    using GroupData = TrackGroupData;
 
  protected:

@@ -665,6 +665,8 @@ audacity_SOURCES = \
 	tracks/ui/TrackSelectHandle.cpp \
 	tracks/ui/TrackSelectHandle.h \
 	tracks/ui/TrackUI.cpp \
+	tracks/ui/TrackViewGroupData.cpp \
+	tracks/ui/TrackViewGroupData.h \
 	tracks/ui/TrackVRulerControls.cpp \
 	tracks/ui/TrackVRulerControls.h \
 	tracks/ui/ZoomHandle.cpp \

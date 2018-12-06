@@ -545,6 +545,8 @@ am__audacity_SOURCES_DIST = BlockFile.cpp BlockFile.h DirManager.cpp \
 	tracks/ui/TrackButtonHandles.h tracks/ui/TrackControls.cpp \
 	tracks/ui/TrackControls.h tracks/ui/TrackSelectHandle.cpp \
 	tracks/ui/TrackSelectHandle.h tracks/ui/TrackUI.cpp \
+	tracks/ui/TrackViewGroupData.cpp \
+	tracks/ui/TrackViewGroupData.h \
 	tracks/ui/TrackVRulerControls.cpp \
 	tracks/ui/TrackVRulerControls.h tracks/ui/ZoomHandle.cpp \
 	tracks/ui/ZoomHandle.h widgets/AButton.cpp widgets/AButton.h \
@@ -875,6 +877,7 @@ am_audacity_OBJECTS = $(am__objects_1) audacity-AboutDialog.$(OBJEXT) \
 	tracks/ui/audacity-TrackControls.$(OBJEXT) \
 	tracks/ui/audacity-TrackSelectHandle.$(OBJEXT) \
 	tracks/ui/audacity-TrackUI.$(OBJEXT) \
+	tracks/ui/audacity-TrackViewGroupData.$(OBJEXT) \
 	tracks/ui/audacity-TrackVRulerControls.$(OBJEXT) \
 	tracks/ui/audacity-ZoomHandle.$(OBJEXT) \
 	widgets/audacity-AButton.$(OBJEXT) \
@@ -1601,6 +1604,8 @@ audacity_SOURCES = $(libaudacity_la_SOURCES) AboutDialog.cpp \
 	tracks/ui/TrackButtonHandles.h tracks/ui/TrackControls.cpp \
 	tracks/ui/TrackControls.h tracks/ui/TrackSelectHandle.cpp \
 	tracks/ui/TrackSelectHandle.h tracks/ui/TrackUI.cpp \
+	tracks/ui/TrackViewGroupData.cpp \
+	tracks/ui/TrackViewGroupData.h \
 	tracks/ui/TrackVRulerControls.cpp \
 	tracks/ui/TrackVRulerControls.h tracks/ui/ZoomHandle.cpp \
 	tracks/ui/ZoomHandle.h widgets/AButton.cpp widgets/AButton.h \
@@ -2311,6 +2316,8 @@ tracks/ui/audacity-TrackSelectHandle.$(OBJEXT):  \
 	tracks/ui/$(am__dirstamp) tracks/ui/$(DEPDIR)/$(am__dirstamp)
 tracks/ui/audacity-TrackUI.$(OBJEXT): tracks/ui/$(am__dirstamp) \
 	tracks/ui/$(DEPDIR)/$(am__dirstamp)
+tracks/ui/audacity-TrackViewGroupData.$(OBJEXT):  \
+	tracks/ui/$(am__dirstamp) tracks/ui/$(DEPDIR)/$(am__dirstamp)
 tracks/ui/audacity-TrackVRulerControls.$(OBJEXT):  \
 	tracks/ui/$(am__dirstamp) tracks/ui/$(DEPDIR)/$(am__dirstamp)
 tracks/ui/audacity-ZoomHandle.$(OBJEXT): tracks/ui/$(am__dirstamp) \
@@ -2818,6 +2825,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@tracks/ui/$(DEPDIR)/audacity-TrackSelectHandle.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tracks/ui/$(DEPDIR)/audacity-TrackUI.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tracks/ui/$(DEPDIR)/audacity-TrackVRulerControls.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@tracks/ui/$(DEPDIR)/audacity-TrackViewGroupData.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tracks/ui/$(DEPDIR)/audacity-ZoomHandle.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@widgets/$(DEPDIR)/audacity-AButton.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@widgets/$(DEPDIR)/audacity-ASlider.Po@am__quote@
@@ -7108,6 +7116,20 @@ tracks/ui/audacity-TrackUI.obj: tracks/ui/TrackUI.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='tracks/ui/TrackUI.cpp' object='tracks/ui/audacity-TrackUI.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -c -o tracks/ui/audacity-TrackUI.obj `if test -f 'tracks/ui/TrackUI.cpp'; then $(CYGPATH_W) 'tracks/ui/TrackUI.cpp'; else $(CYGPATH_W) '$(srcdir)/tracks/ui/TrackUI.cpp'; fi`
+
+tracks/ui/audacity-TrackViewGroupData.o: tracks/ui/TrackViewGroupData.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -MT tracks/ui/audacity-TrackViewGroupData.o -MD -MP -MF tracks/ui/$(DEPDIR)/audacity-TrackViewGroupData.Tpo -c -o tracks/ui/audacity-TrackViewGroupData.o `test -f 'tracks/ui/TrackViewGroupData.cpp' || echo '$(srcdir)/'`tracks/ui/TrackViewGroupData.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) tracks/ui/$(DEPDIR)/audacity-TrackViewGroupData.Tpo tracks/ui/$(DEPDIR)/audacity-TrackViewGroupData.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='tracks/ui/TrackViewGroupData.cpp' object='tracks/ui/audacity-TrackViewGroupData.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -c -o tracks/ui/audacity-TrackViewGroupData.o `test -f 'tracks/ui/TrackViewGroupData.cpp' || echo '$(srcdir)/'`tracks/ui/TrackViewGroupData.cpp
+
+tracks/ui/audacity-TrackViewGroupData.obj: tracks/ui/TrackViewGroupData.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -MT tracks/ui/audacity-TrackViewGroupData.obj -MD -MP -MF tracks/ui/$(DEPDIR)/audacity-TrackViewGroupData.Tpo -c -o tracks/ui/audacity-TrackViewGroupData.obj `if test -f 'tracks/ui/TrackViewGroupData.cpp'; then $(CYGPATH_W) 'tracks/ui/TrackViewGroupData.cpp'; else $(CYGPATH_W) '$(srcdir)/tracks/ui/TrackViewGroupData.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) tracks/ui/$(DEPDIR)/audacity-TrackViewGroupData.Tpo tracks/ui/$(DEPDIR)/audacity-TrackViewGroupData.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='tracks/ui/TrackViewGroupData.cpp' object='tracks/ui/audacity-TrackViewGroupData.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -c -o tracks/ui/audacity-TrackViewGroupData.obj `if test -f 'tracks/ui/TrackViewGroupData.cpp'; then $(CYGPATH_W) 'tracks/ui/TrackViewGroupData.cpp'; else $(CYGPATH_W) '$(srcdir)/tracks/ui/TrackViewGroupData.cpp'; fi`
 
 tracks/ui/audacity-TrackVRulerControls.o: tracks/ui/TrackVRulerControls.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -MT tracks/ui/audacity-TrackVRulerControls.o -MD -MP -MF tracks/ui/$(DEPDIR)/audacity-TrackVRulerControls.Tpo -c -o tracks/ui/audacity-TrackVRulerControls.o `test -f 'tracks/ui/TrackVRulerControls.cpp' || echo '$(srcdir)/'`tracks/ui/TrackVRulerControls.cpp
