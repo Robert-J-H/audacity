@@ -134,9 +134,6 @@ public:
    void Import(wxTextFile & f);
    void Export(wxTextFile & f) const;
 
-   // Whether any label box is selected -- not, whether the track is selected.
-   bool HasSelection() const;
-
    int GetNumLabels() const;
    const LabelStruct *GetLabel(int index) const;
 
