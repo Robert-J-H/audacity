@@ -390,9 +390,9 @@ public:
 
    bool HasOwner() const { return static_cast<bool>(GetOwner());}
 
-private:
    std::shared_ptr<TrackList> GetOwner() const { return mList.lock(); }
 
+private:
    TrackNodePointer GetNode() const;
    void SetOwner
       (const std::weak_ptr<TrackList> &list, TrackNodePointer node);
