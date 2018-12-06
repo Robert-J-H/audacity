@@ -1,3 +1,4 @@
+
 /**********************************************************************
 
   Audacity: A Digital Audio Editor
@@ -727,7 +728,7 @@ void LabelStruct::getXPos( wxDC & dc, int * xPos1, int cursorPos) const
 
 bool LabelTrack::CalcCursorX(int * x) const
 {
-   if (mSelIndex >= 0) {
+   if ( HasSelection() ) {
       wxMemoryDC dc;
 
       if (msFont.Ok()) {
@@ -859,7 +860,7 @@ void LabelTrack::Draw
 #ifdef EXPERIMENTAL_TRACK_PANEL_HIGHLIGHTING
          highlight = highlightTrack && target->GetLabelNum() == i;
 #endif
-         bool selected = mSelIndex == i;
+         bool selected = GetSelectedIndex() == i;
 
          if( selected )
             dc.SetBrush( AColor::labelTextEditBrush );
@@ -873,7 +874,7 @@ void LabelTrack::Draw
    }
 
    // Draw highlights
-   if ((mInitialCursorPos != mCurrentCursorPos) && (mSelIndex >= 0 ))
+   if ( (mInitialCursorPos != mCurrentCursorPos) && HasSelection() )
    {
       int xpos1, xpos2;
       CalcHighlightXs(&xpos1, &xpos2);
@@ -882,15 +883,15 @@ void LabelTrack::Draw
 
    // Draw the text and the label boxes.
    { int i = -1; for (auto &labelStruct : mLabels) { ++i;
-      if( mSelIndex==i)
+      if( GetSelectedIndex() == i )
          dc.SetBrush(AColor::labelTextEditBrush);
       labelStruct.DrawText( dc, r );
-      if( mSelIndex==i)
+      if( GetSelectedIndex() == i )
          dc.SetBrush(AColor::labelTextNormalBrush);
    }}
 
    // Draw the cursor, if there is one.
-   if( mDrawCursor && mSelIndex >=0 )
+   if( mDrawCursor && HasSelection() )
    {
       const auto &labelStruct = mLabels[mSelIndex];
       int xPos = labelStruct.xText;
@@ -987,7 +988,7 @@ void LabelTrack::calculateFontHeight(wxDC & dc) const
 
 bool LabelTrack::IsTextSelected()
 {
-   if (mSelIndex == -1)
+   if ( !HasSelection() )
       return false;
    if (mCurrentCursorPos == mInitialCursorPos)
       return false;
@@ -1040,7 +1041,7 @@ bool LabelTrack::CutSelectedText()
 ///  @return true if text is selected in text box, false otherwise
 bool LabelTrack::CopySelectedText()
 {
-   if (mSelIndex == -1)
+   if ( !HasSelection() )
       return false;
 
    const auto &labelStruct = mLabels[mSelIndex];
@@ -1071,7 +1072,7 @@ bool LabelTrack::CopySelectedText()
 ///  @return true if mouse is clicked in text box, false otherwise
 bool LabelTrack::PasteSelectedText(double sel0, double sel1)
 {
-   if (mSelIndex == -1)
+   if ( !HasSelection() )
       AddLabel(SelectedRegion(sel0, sel1), wxT(""));
 
    wxString text, left, right;
@@ -1115,6 +1116,16 @@ bool LabelTrack::IsTextClipSupported()
 }
 
 
+int LabelTrack::GetSelectedIndex() const
+{
+   // may make delayed update of mutable mSelIndex after track selection change
+   if ( GetSelected() )
+      return mSelIndex = std::max( -1,
+         std::min<int>( mLabels.size() - 1, mSelIndex ) );
+   else
+      return mSelIndex = -1;
+}
+
 double LabelTrack::GetOffset() const
 {
    return mOffset;
@@ -1147,13 +1158,6 @@ double LabelTrack::GetEndTime() const
 Track::Holder LabelTrack::Clone() const
 {
    return std::make_shared<LabelTrack>( *this );
-}
-
-void LabelTrack::SetSelected(bool s)
-{
-   Track::SetSelected(s);
-   if (!s)
-      Unselect();
 }
 
 /// TODO: Investigate what happens with large
@@ -1531,7 +1535,7 @@ bool LabelTrack::HandleGlyphDragRelease
          MayAdjustLabel( hit, hit.mMouseOverLabelRight, +1, bAllowSwapping, fNewX );
       }
 
-      if( mSelIndex >=0 )
+      if( HasSelection() )
       {
          //Set the selection region to be equal to
          //the NEW size of the label.
@@ -1576,7 +1580,7 @@ void LabelTrack::HandleTextDragRelease(const wxMouseEvent & evt)
    }
 
    if (evt.RightUp()) {
-      if ((mSelIndex != -1) && OverTextBox(GetLabel(mSelIndex), evt.m_x, evt.m_y)) {
+      if (HasSelection() && OverTextBox(GetLabel(mSelIndex), evt.m_x, evt.m_y)) {
          // popup menu for editing
          ShowContextMenu();
       }
@@ -1724,7 +1728,7 @@ bool LabelTrack::DoCaptureKey(wxKeyEvent & event)
        !mLabels.empty())
       return true;
 
-   if (mSelIndex >= 0) {
+   if ( HasSelection() ) {
       if (IsGoodLabelEditKey(event)) {
          return true;
       }
@@ -1849,7 +1853,7 @@ bool LabelTrack::OnKeyDown(SelectedRegion &newSel, wxKeyEvent & event)
    }
 
    // All editing keys are only active if we're currently editing a label
-   if (mSelIndex >= 0) {
+   if ( HasSelection() ) {
       auto &labelStruct = mLabels[mSelIndex];
       auto &title = labelStruct.title;
       switch (keyCode) {
@@ -2083,7 +2087,7 @@ bool LabelTrack::OnChar(SelectedRegion &WXUNUSED(newSel), wxKeyEvent & event)
    }
    
    // If we've reached this point and aren't currently editing, add NEW label
-   if (mSelIndex < 0) {
+   if ( !HasSelection() ) {
       // Don't create a NEW label for a space
       if (wxIsspace(charCode)) {
          event.Skip();
@@ -2172,7 +2176,11 @@ void LabelTrack::ShowContextMenu()
       menu.Enable(OnDeleteSelectedLabelID, true);
       menu.Enable(OnEditSelectedLabelID, true);
 
-      wxASSERT(mSelIndex >= 0);
+      if( !HasSelection() ) {
+         wxASSERT( false );
+         return;
+      }
+
       const LabelStruct *ls = GetLabel(mSelIndex);
 
       wxClientDC dc(parent);
@@ -2274,7 +2282,8 @@ void LabelTrack::Unselect()
 
 bool LabelTrack::HasSelection() const
 {
-   return (mSelIndex >= 0 && mSelIndex < (int)mLabels.size());
+   auto selIndex = GetSelectedIndex();
+   return (selIndex >= 0 && selIndex < (int)mLabels.size());
 }
 
 /// Export labels including label start and end-times.
