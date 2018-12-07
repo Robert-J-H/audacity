@@ -318,7 +318,7 @@ TrackPanel::~TrackPanel()
 
 LWSlider *TrackPanel::GainSlider( const WaveTrack *wt )
 {
-   auto pControls = wt->GetTrackControl();
+   auto pControls = &TrackControls::Get( *wt );
    auto rect = FindRect( *pControls );
    wxRect sliderRect;
    TrackInfo::GetGainRect( rect.GetTopLeft(), sliderRect );
@@ -327,7 +327,7 @@ LWSlider *TrackPanel::GainSlider( const WaveTrack *wt )
 
 LWSlider *TrackPanel::PanSlider( const WaveTrack *wt )
 {
-   auto pControls = wt->GetTrackControl();
+   auto pControls = &TrackControls::Get( *wt );
    auto rect = FindRect( *pControls );
    wxRect sliderRect;
    TrackInfo::GetPanRect( rect.GetTopLeft(), sliderRect );
@@ -337,7 +337,7 @@ LWSlider *TrackPanel::PanSlider( const WaveTrack *wt )
 #ifdef EXPERIMENTAL_MIDI_OUT
 LWSlider *TrackPanel::VelocitySlider( const NoteTrack *nt )
 {
-   auto pControls = nt->GetTrackControl();
+   auto pControls = &TrackControls::Get( *nt );
    auto rect = FindRect( *pControls );
    wxRect sliderRect;
    TrackInfo::GetVelocityRect( rect.GetTopLeft(), sliderRect );
@@ -2105,7 +2105,8 @@ struct VRulerAndChannel final : TrackPanelGroup {
    Subdivision Children( const wxRect &rect ) override
    {
       return { Axis::X, Refinement{
-         { rect.GetLeft(), mpChannel->GetVRulerControl() },
+         { rect.GetLeft(),
+           TrackVRulerControls::Get( *mpChannel ).shared_from_this() },
          { mLeftOffset, mpChannel }
       } };
    }
@@ -2151,7 +2152,8 @@ struct LabeledChannelGroup final : TrackPanelGroup {
          : mpTrack{ pTrack }, mLeftOffset{ leftOffset } {}
    Subdivision Children( const wxRect &rect ) override
    { return { Axis::X, Refinement{
-      { rect.GetLeft(), mpTrack->GetTrackControl() },
+      { rect.GetLeft(),
+         TrackControls::Get( *mpTrack ).shared_from_this() },
       { rect.GetLeft() + kTrackInfoWidth,
         std::make_shared< ChannelGroup >( mpTrack, mLeftOffset ) }
    } }; }

@@ -24,12 +24,16 @@ class SelectButtonHandle;
 class TrackSelectHandle;
 
 class TrackControls /* not final */ : public CommonTrackPanelCell
+   , public std::enable_shared_from_this< TrackControls >
 {
 public:
    explicit
    TrackControls( std::shared_ptr<Track> pTrack );
 
    virtual ~TrackControls() = 0;
+
+   static TrackControls &Get( Track &track );
+   static const TrackControls &Get( const Track &track );
 
    // This is passed to the InitMenu() methods of the PopupMenuTable
    // objects returned by GetMenuExtension:

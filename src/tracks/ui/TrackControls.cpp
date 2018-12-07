@@ -36,6 +36,16 @@ TrackControls::~TrackControls()
 {
 }
 
+TrackControls &TrackControls::Get( Track &track )
+{
+   return *track.GetTrackControls();
+}
+
+const TrackControls &TrackControls::Get( const Track &track )
+{
+   return *track.GetTrackControls();
+}
+
 std::shared_ptr<Track> TrackControls::DoFindTrack()
 {
    return mwTrack.lock();
@@ -52,9 +62,7 @@ std::vector<UIHandlePtr> TrackControls::HitTest
    UIHandlePtr result;
    std::vector<UIHandlePtr> results;
 
-   auto pTrack = FindTrack();
-   // shared pointer to this:
-   auto sThis = pTrack->GetTrackControl();
+   auto sThis = shared_from_this();
 
    if (NULL != (result = CloseButtonHandle::HitTest(
       mCloseHandle, state, rect, this)))
@@ -74,7 +82,7 @@ std::vector<UIHandlePtr> TrackControls::HitTest
 
    if (results.empty()) {
       if (NULL != (result = TrackSelectHandle::HitAnywhere(
-         mSelectHandle, pTrack)))
+         mSelectHandle, FindTrack())))
          results.push_back(result);
    }
 

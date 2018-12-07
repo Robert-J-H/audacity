@@ -350,13 +350,13 @@ class AUDACITY_DLL_API Track /* not final */
 
    // Return another, associated TrackPanelCell object that implements the
    // drop-down, close and minimize buttons, etc.
-   std::shared_ptr<TrackControls> GetTrackControl();
-   std::shared_ptr<const TrackControls> GetTrackControl() const;
+   std::shared_ptr<TrackControls> GetTrackControls();
+   std::shared_ptr<const TrackControls> GetTrackControls() const;
 
    // Return another, associated TrackPanelCell object that implements the
    // mouse actions for the vertical ruler
-   std::shared_ptr<TrackVRulerControls> GetVRulerControl();
-   std::shared_ptr<const TrackVRulerControls> GetVRulerControl() const;
+   std::shared_ptr<TrackVRulerControls> GetVRulerControls();
+   std::shared_ptr<const TrackVRulerControls> GetVRulerControls() const;
 
    // Return another, associated TrackPanelCell object that implements the
    // click and drag to resize

@@ -81,10 +81,10 @@ std::vector<UIHandlePtr> Track::HitTest
 
 std::shared_ptr<TrackPanelCell> Track::ContextMenuDelegate()
 {
-   return FindTrack()->GetTrackControl();
+   return TrackControls::Get( *this ).shared_from_this();
 }
 
-std::shared_ptr<TrackControls> Track::GetTrackControl()
+std::shared_ptr<TrackControls> Track::GetTrackControls()
 {
    if (!mpControls)
       // create on demand
@@ -92,12 +92,12 @@ std::shared_ptr<TrackControls> Track::GetTrackControl()
    return mpControls;
 }
 
-std::shared_ptr<const TrackControls> Track::GetTrackControl() const
+std::shared_ptr<const TrackControls> Track::GetTrackControls() const
 {
-   return const_cast< Track* >( this )->GetTrackControl();
+   return const_cast< Track* >( this )->GetTrackControls();
 }
 
-std::shared_ptr<TrackVRulerControls> Track::GetVRulerControl()
+std::shared_ptr<TrackVRulerControls> Track::GetVRulerControls()
 {
    if (!mpVRulerContols)
       // create on demand
@@ -105,9 +105,9 @@ std::shared_ptr<TrackVRulerControls> Track::GetVRulerControl()
    return mpVRulerContols;
 }
 
-std::shared_ptr<const TrackVRulerControls> Track::GetVRulerControl() const
+std::shared_ptr<const TrackVRulerControls> Track::GetVRulerControls() const
 {
-   return const_cast< Track* >( this )->GetVRulerControl();
+   return const_cast< Track* >( this )->GetVRulerControls();
 }
 
 #include "../../TrackPanelResizeHandle.h"
