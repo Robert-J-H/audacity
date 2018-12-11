@@ -493,59 +493,63 @@ private:
 
 bool ImportXMLTagHandler::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
 {
-   if (wxStrcmp(tag, wxT("import")) || attrs==NULL || (*attrs)==NULL || wxStrcmp(*attrs++, wxT("filename")))
-       return false;
-   wxString strAttr = *attrs;
-   if (!XMLValueChecker::IsGoodPathName(strAttr))
-   {
-      // Maybe strAttr is just a fileName, not the full path. Try the project data directory.
-      wxFileNameWrapper fileName{
-         DirManager::Get( *mProject ).GetProjectDataDir(), strAttr };
-      if (XMLValueChecker::IsGoodFileName(strAttr, fileName.GetPath(wxPATH_GET_VOLUME)))
-         strAttr = fileName.GetFullPath();
-      else
-      {
-         wxLogWarning(wxT("Could not import file: %s"), strAttr);
-         return false;
-      }
-   }
-
-   WaveTrackArray trackArray;
-
-   // Guard this call so that C++ exceptions don't propagate through
-   // the expat library
-   GuardedCall(
-      [&] { mProject->Import(strAttr, &trackArray); },
-      [&] (AudacityException*) { trackArray.clear(); }
-   );
-
-   if (trackArray.empty())
+   if (wxStrcmp(tag, wxT("import")))
       return false;
-
-   // Handle other attributes, now that we have the tracks.
-   attrs++;
-   const wxChar** pAttr;
-   bool bSuccess = true;
-
-   for (size_t i = 0; i < trackArray.size(); i++)
-   {
-      // Most of the "import" tag attributes are the same as for "wavetrack" tags,
-      // so apply them via WaveTrack::HandleXMLTag().
-      bSuccess = trackArray[i]->HandleXMLTag(wxT("wavetrack"), attrs);
-
-      // "offset" tag is ignored in WaveTrack::HandleXMLTag except for legacy projects,
-      // so handle it here.
-      double dblValue;
-      pAttr = attrs;
-      while (*pAttr)
+   bool bSuccess = false;
+   if ( !wxStrcmp(*attrs, wxT("filename")) ) {
+      ++attrs;
+      wxString strAttr = *attrs;
+      if (!XMLValueChecker::IsGoodPathName(strAttr))
       {
-         const wxChar *attr = *pAttr++;
-         const wxChar *value = *pAttr++;
-         const wxString strValue = value;
-         if (!wxStrcmp(attr, wxT("offset")) &&
-               XMLValueChecker::IsGoodString(strValue) &&
-               Internat::CompatibleToDouble(strValue, &dblValue))
-            trackArray[i]->SetOffset(dblValue);
+         // Maybe strAttr is just a fileName, not the full path. Try the project data directory.
+         wxFileNameWrapper fileName{
+            DirManager::Get( *mProject ).GetProjectDataDir(), strAttr };
+         if (XMLValueChecker::IsGoodFileName(strAttr, fileName.GetPath(wxPATH_GET_VOLUME)))
+            strAttr = fileName.GetFullPath();
+         else
+         {
+            wxLogWarning(wxT("Could not import file: %s"), strAttr);
+            return false;
+         }
+      }
+
+      WaveTrackArray trackArray;
+
+      // Guard this call so that C++ exceptions don't propagate through
+      // the expat library
+      GuardedCall(
+         [&] { mProject->Import(strAttr, &trackArray); },
+         [&] (AudacityException*) { trackArray.clear(); }
+      );
+
+      if (trackArray.empty())
+         return false;
+
+      // Handle other attributes, now that we have the tracks.
+      attrs++;
+      const wxChar** pAttr;
+      bSuccess = true;
+
+      for (size_t i = 0; bSuccess && i < trackArray.size(); i++)
+      {
+         // Most of the "import" tag attributes are the same as for "wavetrack" tags,
+         // so apply them via WaveTrack::HandleXMLTag().
+         bSuccess = trackArray[i]->HandleXMLTag(wxT("wavetrack"), attrs);
+
+         // "offset" tag is ignored in WaveTrack::HandleXMLTag except for legacy projects,
+         // so handle it here.
+         double dblValue;
+         pAttr = attrs;
+         while (*pAttr)
+         {
+            const wxChar *attr = *pAttr++;
+            const wxChar *value = *pAttr++;
+            const wxString strValue = value;
+            if (!wxStrcmp(attr, wxT("offset")) &&
+                  XMLValueChecker::IsGoodString(strValue) &&
+                  Internat::CompatibleToDouble(strValue, &dblValue))
+               trackArray[i]->SetOffset(dblValue);
+         }
       }
    }
    return bSuccess;
@@ -3332,7 +3336,8 @@ bool AudacityProject::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
                mFileName = wxT("");
                projName = wxT("");
                projPath = wxT("");
-            } else
+            }
+            else
             {
                realFileName += wxT(".aup");
                projPath = realFileDir.GetFullPath();
@@ -3408,7 +3413,7 @@ bool AudacityProject::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
 
    if (!bFileVersionFound ||
          (fileVersion.length() != 5) || // expecting '1.1.0', for example
-         // JKC: I commentted out next line.  IsGoodInt is not for
+         // JKC: I commented out next line.  IsGoodInt is not for
          // checking dotted numbers.
          //!XMLValueChecker::IsGoodInt(fileVersion) ||
          (fileVersion > wxT(AUDACITY_FILE_FORMAT_VERSION)))

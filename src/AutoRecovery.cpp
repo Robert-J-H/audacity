@@ -352,7 +352,8 @@ bool RecordingRecoveryHandler::HandleXMLTag(const wxChar *tag,
       seq->AppendBlockFile(blockFile);
       clip->UpdateEnvelopeTrackLen();
 
-   } else if (wxStrcmp(tag, wxT("recordingrecovery")) == 0)
+   }
+   else if (wxStrcmp(tag, wxT("recordingrecovery")) == 0)
    {
       mAutoSaveIdent = 0;
 
