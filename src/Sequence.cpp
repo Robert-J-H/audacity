@@ -1021,7 +1021,7 @@ void Sequence::HandleXMLEndTag(const wxChar *tag)
    }
 }
 
-XMLTagHandler *Sequence::HandleXMLChild(const wxChar *tag)
+XMLTagHandlerPtr Sequence::HandleXMLChild(const wxChar *tag)
 {
    if (!wxStrcmp(tag, wxT("waveblock")))
       return this;

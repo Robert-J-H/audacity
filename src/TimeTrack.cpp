@@ -226,7 +226,7 @@ void TimeTrack::HandleXMLEndTag(const wxChar *tag)
    Track::HandleXMLEndTag( tag );
 }
 
-XMLTagHandler *TimeTrack::HandleXMLChild(const wxChar *tag)
+XMLTagHandlerPtr TimeTrack::HandleXMLChild(const wxChar *tag)
 {
    if (!wxStrcmp(tag, wxT("envelope")))
       return mEnvelope.get();

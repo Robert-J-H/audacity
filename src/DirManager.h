@@ -155,7 +155,7 @@ class PROFILE_DLL_API DirManager final
    void SetLoadingMaxSamples(size_t max) { mMaxSamples = max; }
 
    bool HandleXMLTag(const wxChar *tag, const wxChar **attrs) override;
-   XMLTagHandler *HandleXMLChild(const wxChar * WXUNUSED(tag)) override
+   XMLTagHandlerPtr HandleXMLChild(const wxChar * WXUNUSED(tag)) override
       { return NULL; }
    bool AssignFile(wxFileNameWrapper &filename, const wxString &value, bool check);
 

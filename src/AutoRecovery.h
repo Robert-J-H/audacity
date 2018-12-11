@@ -49,7 +49,7 @@ public:
    RecordingRecoveryHandler(AudacityProject* proj);
    bool HandleXMLTag(const wxChar *tag, const wxChar **attrs) override;
    void HandleXMLEndTag(const wxChar *tag) override;
-   XMLTagHandler *HandleXMLChild(const wxChar *tag) override;
+   XMLTagHandlerPtr HandleXMLChild(const wxChar *tag) override;
 
    // This class only knows reading tags
 

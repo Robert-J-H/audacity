@@ -430,7 +430,7 @@ void WaveClip::HandleXMLEndTag(const wxChar *tag)
       UpdateEnvelopeTrackLen();
 }
 
-XMLTagHandler *WaveClip::HandleXMLChild(const wxChar *tag)
+XMLTagHandlerPtr WaveClip::HandleXMLChild(const wxChar *tag)
 {
    if (!wxStrcmp(tag, wxT("sequence")))
       return mSequence.get();

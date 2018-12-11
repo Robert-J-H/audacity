@@ -823,7 +823,7 @@ bool FFmpegPresets::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
    return false;
 }
 
-XMLTagHandler *FFmpegPresets::HandleXMLChild(const wxChar *tag)
+XMLTagHandlerPtr FFmpegPresets::HandleXMLChild(const wxChar *tag)
 {
    if (mAbortImport)
    {

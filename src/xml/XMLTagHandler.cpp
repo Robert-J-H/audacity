@@ -218,7 +218,7 @@ void XMLTagHandler::ReadXMLContent(const char *s, int len)
    HandleXMLContent(wxString(s, wxConvUTF8, len));
 }
 
-XMLTagHandler *XMLTagHandler::ReadXMLChild(const char *tag)
+XMLTagHandlerPtr XMLTagHandler::ReadXMLChild(const char *tag)
 {
    return HandleXMLChild(UTF8CTOWX(tag));
 }

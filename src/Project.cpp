@@ -3488,7 +3488,7 @@ void AudacityProject::HandleXMLEndTag( const wxChar *tag )
    Track::PostLoad();
 }
 
-XMLTagHandler *AudacityProject::HandleXMLChild(const wxChar *tag)
+XMLTagHandlerPtr AudacityProject::HandleXMLChild(const wxChar *tag)
 {
    auto &project = *this;
    auto &tracks = TrackList::Get( project );

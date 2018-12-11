@@ -2075,7 +2075,7 @@ bool EffectEqualization::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
 //
 // Return handler for recognized tags
 //
-XMLTagHandler *EffectEqualization::HandleXMLChild(const wxChar *tag)
+XMLTagHandlerPtr EffectEqualization::HandleXMLChild(const wxChar *tag)
 {
    if( !wxStrcmp( tag, wxT("equalizationeffect") ) )
    {

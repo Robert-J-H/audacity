@@ -135,7 +135,7 @@ class ImportXMLTagHandler final : public XMLTagHandler
    ImportXMLTagHandler(AudacityProject* pProject) { mProject = pProject; }
 
    bool HandleXMLTag(const wxChar *tag, const wxChar **attrs) override;
-   XMLTagHandler *HandleXMLChild(const wxChar * WXUNUSED(tag))  override
+   XMLTagHandlerPtr HandleXMLChild(const wxChar * WXUNUSED(tag))  override
       { return NULL; }
 
    // Don't want a WriteXML method because ImportXMLTagHandler is not a WaveTrack.
@@ -479,8 +479,9 @@ public:
    // XMLTagHandler callback methods
 
    bool HandleXMLTag(const wxChar *tag, const wxChar **attrs) override;
+
    void HandleXMLEndTag(const wxChar *tag) override;
-   XMLTagHandler *HandleXMLChild(const wxChar *tag) override;
+   XMLTagHandlerPtr HandleXMLChild(const wxChar *tag) override;
    void WriteXML(
       XMLWriter &xmlFile, bool bWantSaveCopy) /* not override */;
 

@@ -420,7 +420,7 @@ bool Envelope::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
    return true;
 }
 
-XMLTagHandler *Envelope::HandleXMLChild(const wxChar *tag)
+XMLTagHandlerPtr Envelope::HandleXMLChild(const wxChar *tag)
 {
    if (wxStrcmp(tag, wxT("controlpoint")))
       return NULL;

@@ -566,7 +566,7 @@ bool Tags::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
    return false;
 }
 
-XMLTagHandler *Tags::HandleXMLChild(const wxChar *tag)
+XMLTagHandlerPtr Tags::HandleXMLChild(const wxChar *tag)
 {
    if (wxStrcmp(tag, wxT("tags")) == 0) {
       return this;

@@ -70,6 +70,8 @@ public:
 };
 
 
+struct XMLTagHandlerPtr;
+
 class AUDACITY_DLL_API XMLTagHandler /* not final */ {
  public:
    XMLTagHandler(){};
@@ -105,14 +107,30 @@ class AUDACITY_DLL_API XMLTagHandler /* not final */ {
    // object for the child, insert it into your own local data
    // structures, and then return it.  If you do not wish to
    // handle this child, return NULL and it will be ignored.
-   virtual XMLTagHandler *HandleXMLChild(const wxChar *tag) = 0;
+   virtual XMLTagHandlerPtr HandleXMLChild(const wxChar *tag) = 0;
 
    // These functions recieve data from expat.  They do charset
    // conversion and then pass the data to the handlers above.
    bool ReadXMLTag(const char *tag, const char **attrs);
    void ReadXMLEndTag(const char *tag);
    void ReadXMLContent(const char *s, int len);
-   XMLTagHandler *ReadXMLChild(const char *tag);
+   XMLTagHandlerPtr ReadXMLChild(const char *tag);
+};
+
+struct XMLTagHandlerPtr : std::shared_ptr<XMLTagHandler>
+{
+   // usual constructor, when the handler object's lifetime need not be managed
+   // by XMLFileReader
+   XMLTagHandlerPtr( XMLTagHandler *pHandler = nullptr )
+      // make a shared_ptr with a vacuous deleter
+      : std::shared_ptr<XMLTagHandler>( pHandler, [](void*){} )
+   {}
+
+   // constructor in case the handler object is a short-lived helper
+   // that was allocated with std::make_shared
+   XMLTagHandlerPtr( const std::shared_ptr<XMLTagHandler> &pHandler )
+   : std::shared_ptr<XMLTagHandler>( pHandler )
+   {}
 };
 
 #endif // define __AUDACITY_XML_TAG_HANDLER__
