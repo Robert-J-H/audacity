@@ -86,7 +86,7 @@ public:
 private:
    void Init(const WaveTrack &orig);
 
-   Track::Holder Duplicate() const override;
+   Track::Holder Clone() const override;
 
    friend class TrackFactory;
 
@@ -95,7 +95,7 @@ private:
    typedef WaveTrackLocation Location;
    using Holder = std::shared_ptr<WaveTrack>;
 
-   virtual ~WaveTrack();
+   ~WaveTrack() override;
 
    std::vector<UIHandlePtr> DetailedHitTest
       (const TrackPanelMouseState &state,
@@ -104,9 +104,20 @@ private:
 
    double GetOffset() const override;
    void SetOffset(double o) override;
-   virtual ChannelType GetChannelIgnoringPan() const;
-   ChannelType GetChannel() const override;
-   virtual void SetPanFromChannelType() override;
+
+   enum ChannelType
+   {
+      LeftChannel = 0,
+      RightChannel = 1,
+      MonoChannel = 2
+   };
+
+   // Used for loading and storing ChannelType values in XML
+   static bool IsValidChannel(const int nValue);
+
+   ChannelType GetChannelIgnoringPan() const;
+   ChannelType GetChannel() const;
+   void SetPanFromChannelType( ChannelType channelType );
 
    /** @brief Get the time at which the first clip in the track starts
     *
@@ -138,7 +149,7 @@ private:
 
    // -1.0 (left) -> 1.0 (right)
    float GetPan() const;
-   void SetPan(float newPan) override;
+   void SetPan(float newPan);
 
    // Takes gain and pan into account
    float GetChannelGain(int channel) const;

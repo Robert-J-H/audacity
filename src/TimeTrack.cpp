@@ -141,7 +141,7 @@ void TimeTrack::InsertSilence(double t, double len)
    mEnvelope->InsertSpace(t, len);
 }
 
-Track::Holder TimeTrack::Duplicate() const
+Track::Holder TimeTrack::Clone() const
 {
    return std::make_shared<TimeTrack>(*this);
 }
@@ -218,7 +218,7 @@ bool TimeTrack::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
    return false;
 }
 
-void TimeTrack::HandleXMLEndTag(const wxChar * WXUNUSED(tag))
+void TimeTrack::HandleXMLEndTag(const wxChar *tag)
 {
    if(mRescaleXMLValues)
    {
@@ -226,6 +226,8 @@ void TimeTrack::HandleXMLEndTag(const wxChar * WXUNUSED(tag))
       mEnvelope->RescaleValues(mRangeLower, mRangeUpper);
       mEnvelope->SetRange(TIMETRACK_MIN, TIMETRACK_MAX);
    }
+
+   Track::HandleXMLEndTag( tag );
 }
 
 XMLTagHandler *TimeTrack::HandleXMLChild(const wxChar *tag)

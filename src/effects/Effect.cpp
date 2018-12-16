@@ -1216,7 +1216,7 @@ bool Effect::DoEffect(wxWindow *parent,
    // We don't yet know the effect type for code in the Nyquist Prompt, so
    // assume it requires a track and handle errors when the effect runs.
    if ((GetType() == EffectTypeGenerate || GetPath() == NYQUIST_PROMPT_ID) && (mNumTracks == 0)) {
-      newTrack = mTracks->Add(mFactory->NewWaveTrack());
+      newTrack = mTracks->Add(mFactory->NewWaveTrack(), true);
       newTrack->SetSelected(true);
    }
 
@@ -1397,9 +1397,9 @@ bool Effect::ProcessPass()
          // which is a leader.
          for (auto channel :
               TrackList::Channels(left).StartingWith(left)) {
-            if (channel->GetChannel() == Track::LeftChannel)
+            if (channel->GetChannel() == WaveTrack::LeftChannel)
                map[mNumChannels] = ChannelNameFrontLeft;
-            else if (channel->GetChannel() == Track::RightChannel)
+            else if (channel->GetChannel() == WaveTrack::RightChannel)
                map[mNumChannels] = ChannelNameFrontRight;
             else
                map[mNumChannels] = ChannelNameMono;
@@ -2078,17 +2078,17 @@ void Effect::CopyInputTracks(bool allSyncLockSelected)
 
    for (auto aTrack : trackRange)
    {
-      Track *o = mOutputTracks->Add(aTrack->Duplicate());
+      Track *o = mOutputTracks->Add(aTrack->Duplicate(), aTrack->IsLeader());
       mIMap.push_back(aTrack);
       mOMap.push_back(o);
    }
 }
 
-Track *Effect::AddToOutputTracks(const std::shared_ptr<Track> &t)
+Track *Effect::AddToOutputTracks(const std::shared_ptr<Track> &t, bool leader)
 {
    mIMap.push_back(NULL);
    mOMap.push_back(t.get());
-   return mOutputTracks->Add(t);
+   return mOutputTracks->Add(t, leader);
 }
 
 Effect::AddedAnalysisTrack::AddedAnalysisTrack(Effect *pEffect, const wxString &name)
@@ -2098,7 +2098,7 @@ Effect::AddedAnalysisTrack::AddedAnalysisTrack(Effect *pEffect, const wxString &
    mpTrack = pTrack.get();
    if (!name.empty())
       pTrack->SetName(name);
-   pEffect->mTracks->Add( pTrack );
+   pEffect->mTracks->Add( pTrack, true );
 }
 
 Effect::AddedAnalysisTrack::AddedAnalysisTrack(AddedAnalysisTrack &&that)
@@ -2200,12 +2200,21 @@ void Effect::ReplaceProcessedTracks(const bool bGoodResult)
    wxASSERT(mOutputTracks); // Make sure we at least did the CopyInputTracks().
 
    auto iterOut = mOutputTracks->ListOfTracks::begin(),
-      iterEnd = mOutputTracks->ListOfTracks::end();
+      iterEnd = mOutputTracks->ListOfTracks::end(),
+      iterNextLeader = iterOut;
 
    size_t cnt = mOMap.size();
    size_t i = 0;
 
    for (; iterOut != iterEnd; ++i) {
+      // Whether the replacement track is a leader depends on position in
+      // mOutputTracks; figure that out before destroying some of the structure
+      // of mOutputTracks in erase().
+      bool leader = (iterOut == iterNextLeader);
+      if (leader)
+         do
+            ++iterNextLeader;
+         while ( iterNextLeader != iterEnd && !(*iterNextLeader)->IsLeader() );
       ListOfTracks::value_type o = *iterOut;
       // If tracks were removed from mOutputTracks, then there will be
       // tracks in the map that must be removed from mTracks.
@@ -2227,7 +2236,7 @@ void Effect::ReplaceProcessedTracks(const bool bGoodResult)
       if (t == NULL)
       {
          // This track is a NEW addition to output tracks; add it to mTracks
-         mTracks->Add( o );
+         mTracks->Add( o, leader );
       }
       else
       {
@@ -2554,14 +2563,13 @@ void Effect::Preview(bool dryOnly)
       mixLeft->Offset(-mixLeft->GetStartTime());
       mixLeft->SetSelected(true);
       mixLeft->SetDisplay(WaveTrack::NoDisplay);
-      auto pLeft = mTracks->Add( mixLeft );
+      auto pLeft = mTracks->Add( mixLeft, true );
       Track *pRight{};
       if (mixRight) {
          mixRight->Offset(-mixRight->GetStartTime());
          mixRight->SetSelected(true);
-         pRight = mTracks->Add( mixRight );
+         pRight = mTracks->Add( mixRight, false );
       }
-      mTracks->GroupChannels(*pLeft, pRight ? 2 : 1);
    }
    else {
       for (auto src : saveTracks->Any< const WaveTrack >()) {
@@ -2569,7 +2577,7 @@ void Effect::Preview(bool dryOnly)
             auto dest = src->Copy(mT0, t1);
             dest->SetSelected(src->GetSelected());
             static_cast<WaveTrack*>(dest.get())->SetDisplay(WaveTrack::NoDisplay);
-            mTracks->Add( dest );
+            mTracks->Add( dest, src->IsLeader() );
          }
       }
    }

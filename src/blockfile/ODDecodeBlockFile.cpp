@@ -30,6 +30,7 @@ The summary is eventually computed and written to a file in a background thread.
 #include "../FileException.h"
 #include "../FileFormats.h"
 #include "../Internat.h"
+#include "../WaveTrack.h"
 #include "NotYetAvailableException.h"
 
 const int bheaderTagLen = 20;
@@ -290,7 +291,8 @@ BlockFilePtr ODDecodeBlockFile::BuildFromXML(DirManager &dm, const wxChar **attr
       {  // integer parameters
          if (!wxStricmp(attr, wxT("aliaslen")) && (nValue >= 0))
             aliasLen = nValue;
-         else if (!wxStricmp(attr, wxT("aliaschannel")) && XMLValueChecker::IsValidChannel(aliasChannel))
+         else if (!wxStricmp(attr, wxT("aliaschannel")) &&
+            WaveTrack::IsValidChannel(aliasChannel))
             aliasChannel = nValue;
          else if( !wxStricmp(attr, wxT("decodetype")) )
             decodeType = nValue;

@@ -392,7 +392,7 @@ bool LabelDialog::TransferDataFromWindow()
       // Create the NEW track and add to track list
       auto newTrack = mFactory.NewLabelTrack();
       newTrack->SetName(name);
-      mTracks->Add( newTrack );
+      mTracks->Add( newTrack, true);
       tndx++;
    }
 

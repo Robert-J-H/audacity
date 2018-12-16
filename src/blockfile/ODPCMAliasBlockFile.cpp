@@ -35,6 +35,7 @@ The summary is eventually computed and written to a file in a background thread.
 
 #include "../ondemand/ODManager.h"
 #include "../AudioIO.h"
+#include "../WaveTrack.h"
 
 #include "NotYetAvailableException.h"
 
@@ -324,7 +325,8 @@ BlockFilePtr ODPCMAliasBlockFile::BuildFromXML(DirManager &dm, const wxChar **at
       {  // integer parameters
          if (!wxStricmp(attr, wxT("aliaslen")) && (nValue >= 0))
             aliasLen = nValue;
-         else if (!wxStricmp(attr, wxT("aliaschannel")) && XMLValueChecker::IsValidChannel(aliasChannel))
+         else if (!wxStricmp(attr, wxT("aliaschannel")) &&
+            WaveTrack::IsValidChannel(aliasChannel))
             aliasChannel = nValue;
       }
    }

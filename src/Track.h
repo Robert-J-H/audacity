@@ -188,6 +188,13 @@ private:
    long mValue;
 };
 
+struct TrackGroupData
+   : std::enable_shared_from_this< TrackGroupData >
+{
+   virtual ~TrackGroupData();
+   virtual std::shared_ptr< TrackGroupData > Clone() const;
+};
+
 class AUDACITY_DLL_API Track /* not final */
    : public CommonTrackPanelCell, public XMLTagHandler
    , public std::enable_shared_from_this<Track> // see SharedPointer()
@@ -197,6 +204,34 @@ class AUDACITY_DLL_API Track /* not final */
  // To be TrackDisplay
  private:
    TrackId mId;
+
+ public:
+
+   using GroupData = TrackGroupData;
+
+ protected:
+   // Create data appropriate for the subclass of track -- this assumes
+   // that only tracks of like type are grouped together, so the object
+   // is also appropriate for the partners.
+   virtual std::shared_ptr< TrackGroupData > CreateGroupData() const;
+
+ public:
+   template< typename Subclass = GroupData >
+   Subclass &GetGroupData()
+   {
+      EnsureGroupData();
+      return dynamic_cast< Subclass & >( *mpGroupData );
+   }
+
+   // const version of previous
+   template< typename Subclass = const GroupData >
+   auto GetGroupData() const
+      -> typename std::enable_if< std::is_const<Subclass>::value,
+         Subclass &
+      >::type
+   {
+      return const_cast<Track*>(this)->GetGroupData<Subclass>();
+   }
 
  protected:
    std::weak_ptr<TrackList> mList;
@@ -210,19 +245,14 @@ class AUDACITY_DLL_API Track /* not final */
  private:
    bool           mSelected;
 
- protected:
-   bool           mLinked;
+   void EnsureGroupData();
+   std::shared_ptr< TrackGroupData > mpGroupData;
+
+protected:
    bool           mMinimized;
 
  public:
 
-   enum ChannelType
-   {
-      LeftChannel = 0,
-      RightChannel = 1,
-      MonoChannel = 2
-   };
-   
    TrackId GetId() const { return mId; }
  private:
    void SetId( TrackId id ) { mId = id; }
@@ -333,24 +363,10 @@ protected:
 public:
    static void FinishCopy (const Track *n, Track *dest);
 
-   // For use when loading a file.  Return true if ok, else make repair
-   bool LinkConsistencyCheck();
-
    bool HasOwner() const { return static_cast<bool>(GetOwner());}
 
 private:
    std::shared_ptr<TrackList> GetOwner() const { return mList.lock(); }
-
-   Track *GetLink() const;
-   bool GetLinked  () const { return mLinked; }
-
-   friend WaveTrack; // WaveTrack needs to call SetLinked when reloading project
-   void SetLinked  (bool l);
-
-   void SetChannel(ChannelType c) { mChannel = c; }
-private:
-   // No need yet to make this virtual
-   void DoSetLinked(bool l);
 
    TrackNodePointer GetNode() const;
    void SetOwner
@@ -359,7 +375,6 @@ private:
  // Keep in Track
 
  protected:
-   ChannelType         mChannel;
    double              mOffset;
 
    mutable std::shared_ptr<DirManager> mDirManager;
@@ -376,7 +391,8 @@ private:
    void Init(const Track &orig);
 
    using Holder = std::shared_ptr<Track>;
-   virtual Holder Duplicate() const = 0;
+   // public nonvirtual duplication function that invokes Clone():
+   virtual Holder Duplicate() const;
 
    // Called when this track is merged to stereo with another, and should
    // take on some paramaters of its partner.
@@ -393,14 +409,10 @@ private:
 
 public:
 
-   virtual ChannelType GetChannel() const { return mChannel;}
    virtual double GetOffset() const = 0;
 
    void Offset(double t) { SetOffset(GetOffset() + t); }
    virtual void SetOffset (double o) { mOffset = o; }
-
-   virtual void SetPan( float ){ ;}
-   virtual void SetPanFromChannelType(){ ;};
 
    // AS: Note that the dirManager is mutable.  This is
    // mostly to support "Duplicate" of const objects,
@@ -437,6 +449,10 @@ public:
    virtual void InsertSilence(double WXUNUSED(t), double WXUNUSED(len)) = 0;
 
 private:
+   // Subclass responsibility implements only a part of Duplicate(), copying
+   // the track data proper (not associated data such as for groups and views):
+   virtual Holder Clone() const = 0;
+
    virtual TrackKind GetKind() const { return TrackKind::None; }
 
    template<typename T>
@@ -717,7 +733,14 @@ public:
       }
    }
 
-   // XMLTagHandler callback methods -- NEW virtual for writing
+   static void PreLoad( const std::shared_ptr<TrackList> &pList );
+   static void PostLoad();
+   static bool LoadError() { return sLoadError; }
+
+   // XMLTagHandler callback methods for loading and saving
+   void HandleXMLEndTag(const wxChar *tag) override;
+
+   // NEW virtual for writing
    virtual void WriteXML(XMLWriter &xmlFile) const = 0;
 
    // Returns true if an error was encountered while trying to
@@ -752,6 +775,11 @@ public:
    bool HandleCommonXMLAttribute(const wxChar *attr, const wxChar *value);
 
 protected:
+   static bool sLoadError;
+   static unsigned long sLoadingChannelsCount, sLoadingChannelsCounter;
+   static std::weak_ptr<TrackList> sLoadingChannelsTrackList;
+   static bool IsLoadingLeader() { return sLoadingChannelsCounter == 0; }
+
    std::shared_ptr<Track> DoFindTrack() override;
 
    // These are called to create controls on demand:
@@ -1347,8 +1375,8 @@ class TrackList final
    }
 
 private:
-   Track *DoAddToHead(const std::shared_ptr<Track> &t);
-   Track *DoAdd(const std::shared_ptr<Track> &t);
+   Track *DoAddToHead( const std::shared_ptr<Track> &t );
+   Track *DoAdd( const std::shared_ptr<Track> &t, bool leader );
 
    template< typename TrackType, typename InTrackType >
       static TrackIterRange< TrackType >
@@ -1387,14 +1415,17 @@ public:
 
    Track *FindById( TrackId id );
 
-   /// Add a Track, giving it a fresh id
+   /// Add a Track, giving it a fresh id; the track is always ungrouped
    template<typename TrackKind>
       TrackKind *AddToHead( const std::shared_ptr< TrackKind > &t )
          { return static_cast< TrackKind* >( DoAddToHead( t ) ); }
 
+   /// Add a Track at the end, giving it a fresh id; the track is ungrouped
+   /// if leader is true, otherwise if there is a previous track, then they
+   /// will share group data
    template<typename TrackKind>
-      TrackKind *Add( const std::shared_ptr< TrackKind > &t )
-         { return static_cast< TrackKind* >( DoAdd( t ) ); }
+      TrackKind *Add( const std::shared_ptr< TrackKind > &t, bool leader )
+         { return static_cast< TrackKind* >( DoAdd( t, leader ) ); }
 
    /** \brief Define a group of channels starting at the given track
    *
@@ -1403,11 +1434,12 @@ public:
    * @param groupSize must be at least 1.
    * @param resetChannels if true, disassociated channels will be marked Mono.
    */
-   void GroupChannels(
-      Track &track, size_t groupSize, bool resetChannels = true );
+   void GroupChannels( Track &track, size_t groupSize );
 
    /// Replace first track with second track, give back a holder
    /// Give the replacement the same id as the replaced
+   /// Grouping of tracks in this list will not change, but contents of track
+   /// group data will be replaced, if defined in @param with
    ListOfTracks::value_type Replace(
       Track * t, const ListOfTracks::value_type &with);
 
@@ -1429,14 +1461,6 @@ public:
 
    TimeTrack *GetTimeTrack();
    const TimeTrack *GetTimeTrack() const;
-
-   /** \brief Find out how many channels this track list mixes to
-   *
-   * This is used in exports of the tracks to work out whether to export in
-   * Mono, Stereo etc. @param selectionOnly Whether to consider the entire track
-   * list or only the selected members of it
-   */
-   unsigned GetNumExportChannels(bool selectionOnly) const;
 
    WaveTrackArray GetWaveTrackArray(bool selectionOnly, bool includeMuted = true);
    WaveTrackConstArray GetWaveTrackConstArray(bool selectionOnly, bool includeMuted = true) const;
@@ -1508,10 +1532,7 @@ private:
       return { { b, b, e, pred }, { b, e, e, pred } };
    }
 
-   Track *GetPrev(Track * t, bool linked = false) const;
-   Track *GetNext(Track * t, bool linked = false) const;
-   
-   std::pair<Track *, Track *> FindSyncLockGroup(Track *pMember) const;
+   std::pair<Track *, Track *> FindSyncLockGroup(Track *pMember);
 
    template < typename TrackType >
       TrackIter< TrackType >
@@ -1601,12 +1622,14 @@ public:
    );
 
    // Like the previous, but for a NEW track, not a replacement track.  Caller
-   // supplies the track, and there are no updates.
+   // supplies the track (specifying whether it is the leader of a group),
+   // and there are no updates.
    // Pending track will have an unassigned TrackId.
    // Pending changed tracks WILL occur in iterations, always after actual
    // tracks, and in the sequence that they were added.  They can be
    // distinguished from actual tracks by TrackId.
-   void RegisterPendingNewTrack( const std::shared_ptr<Track> &pTrack );
+   void RegisterPendingNewTrack(
+      const std::shared_ptr<Track> &pTrack, bool leader );
 
    // Invoke the updaters of pending tracks.  Pass any exceptions from the
    // updater functions.
@@ -1625,7 +1648,6 @@ public:
    bool HasPendingTracks() const;
 
 private:
-   // Need to put pending tracks into a list so that GetLink() works
    ListOfTracks mPendingUpdates;
    // This is in correspondence with mPendingUpdates
    std::vector< Updater > mUpdaters;

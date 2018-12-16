@@ -632,10 +632,10 @@ void WaveTrackMenuTable::InitMenu(Menu *pMenu, void *pUserData)
 
          int itemId;
          switch (pTrack2->GetChannel()) {
-            case Track::LeftChannel:
+            case WaveTrack::LeftChannel:
                itemId = OnChannelLeftID;
                break;
-            case Track::RightChannel:
+            case WaveTrack::RightChannel:
                itemId = OnChannelRightID;
                break;
             default:
@@ -819,15 +819,15 @@ void WaveTrackMenuTable::OnChannelChange(wxCommandEvent & event)
    switch (id) {
    default:
    case OnChannelMonoID:
-      channel = Track::MonoChannel;
+      channel = WaveTrack::MonoChannel;
       channelmsg = _("Mono");
       break;
    case OnChannelLeftID:
-      channel = Track::LeftChannel;
+      channel = WaveTrack::LeftChannel;
       channelmsg = _("Left Channel");
       break;
    case OnChannelRightID:
-      channel = Track::RightChannel;
+      channel = WaveTrack::RightChannel;
       channelmsg = _("Right Channel");
       break;
    }
@@ -905,7 +905,9 @@ void WaveTrackMenuTable::SplitStereo(bool stereo)
       // Keep original stereo track name.
       channel->SetName(pTrack->GetName());
       if (stereo)
-         channel->SetPanFromChannelType();
+         // PRL:  note that the split loses the effects of previous stereo pan
+         // setting, leaving one mono panned hard left and the other right.
+         channel->SetPanFromChannelType( channel->GetChannelIgnoringPan() );
 
       //On Demand - have each channel add its own.
       if (ODManager::IsInstanceCreated())
@@ -917,7 +919,11 @@ void WaveTrackMenuTable::SplitStereo(bool stereo)
       ++nChannels;
    }
 
-   TrackList::Get( *project ).GroupChannels( *pTrack, 1 );
+   // Ungroup "all" (both) channels, not just the first -- this would work more
+   // generally in splitting more-than-stereo tracks
+   for (auto channel : channels)
+      TrackList::Get( *project ).GroupChannels( *channel, 1 );
+
    int averageHeight = totalHeight / nChannels;
 
    for (auto channel : channels)
@@ -947,6 +953,9 @@ void WaveTrackMenuTable::OnSwapChannels(wxCommandEvent &)
 
    auto &tracks = TrackList::Get( *project );
    tracks.MoveUp( partner );
+   
+   // The channels were ungrouped in SplitStereo
+   // Re-group them
    tracks.GroupChannels( *partner, 2 );
 
    if (hasFocus)

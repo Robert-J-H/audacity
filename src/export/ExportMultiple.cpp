@@ -621,6 +621,67 @@ bool ExportMultiple::DirOk()
    return fn.Mkdir(0777, wxPATH_MKDIR_FULL);
 }
 
+namespace {
+/** \brief Find out how many channels this track list mixes to
+*
+* This is used in exports of the tracks to work out whether to export in
+* Mono, Stereo etc. @param selectionOnly Whether to consider the entire track
+* list or only the selected members of it
+*/
+unsigned GetNumExportChannels(TrackList &list, bool selectionOnly)
+{
+   /* counters for tracks panned different places */
+   int numLeft = 0;
+   int numRight = 0;
+   //int numMono = 0;
+   /* track iteration kit */
+
+   // Want only unmuted wave tracks.
+   for (auto tr :
+         list.Any< const WaveTrack >()
+            + (selectionOnly ? &Track::IsSelected : &Track::Any)
+            - &WaveTrack::GetMute
+   ) {
+      // Found a left channel
+      if (tr->GetChannel() == WaveTrack::LeftChannel) {
+         numLeft++;
+      }
+
+      // Found a right channel
+      else if (tr->GetChannel() == WaveTrack::RightChannel) {
+         numRight++;
+      }
+
+      // Found a mono channel, but it may be panned
+      else if (tr->GetChannel() == WaveTrack::MonoChannel) {
+         float pan = tr->GetPan();
+
+         // Figure out what kind of channel it should be
+         if (pan == -1.0) {   // panned hard left
+            numLeft++;
+         }
+         else if (pan == 1.0) {  // panned hard right
+            numRight++;
+         }
+         else if (pan == 0) { // panned dead center
+            // numMono++;
+         }
+         else {   // panned somewhere else
+            numLeft++;
+            numRight++;
+         }
+      }
+   }
+
+   // if there is stereo content, report 2, else report 1
+   if (numRight > 0 || numLeft > 0) {
+      return 2;
+   }
+
+   return 1;
+}
+}
+
 // TODO: JKC July2016: Merge labels/tracks duplicated export code.
 ProgressResult ExportMultiple::ExportMultipleByLabel(bool byName,
    const wxString &prefix, bool addNumber)
@@ -639,7 +700,7 @@ ProgressResult ExportMultiple::ExportMultipleByLabel(bool byName,
    }
 
    // Figure out how many channels we should export.
-   auto channels = mTracks->GetNumExportChannels(false);
+   auto channels = GetNumExportChannels(*mTracks, false);
 
    FilePaths otherNames;  // keep track of file names we will use, so we
    // don't duplicate them
