@@ -45,6 +45,7 @@ SetTrackAudioCommand and SetTrackVisualsCommand.
 #include "../prefs/SpectrogramSettings.h"
 #include "../Shuttle.h"
 #include "../ShuttleGui.h"
+#include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.h"
 #include "CommandContext.h"
 
 SetTrackBase::SetTrackBase(){
@@ -369,8 +370,8 @@ bool SetTrackVisualsCommand::ApplyInner(const CommandContext & context, Track * 
    if( wt && bHasDisplayType  )
       wt->SetDisplay(
          (mDisplayType == kWaveform) ?
-            WaveTrack::WaveTrackDisplayValues::Waveform
-            : WaveTrack::WaveTrackDisplayValues::Spectrum
+            WaveTrackViewConstants::Waveform
+            : WaveTrackViewConstants::Spectrum
          );
    if( wt && bHasScaleType )
       wt->GetIndependentWaveformSettings().scaleType = 

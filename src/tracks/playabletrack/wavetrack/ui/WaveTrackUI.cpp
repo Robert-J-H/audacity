@@ -11,6 +11,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../../../WaveTrack.h"
 
 #include "WaveTrackControls.h"
+#include "WaveTrackViewConstants.h"
 #include "WaveTrackVRulerControls.h"
 
 #include "../../../../HitTestResult.h"
@@ -35,7 +36,7 @@ std::vector<UIHandlePtr> WaveTrack::DetailedHitTest
 
    UIHandlePtr result;
    std::vector<UIHandlePtr> results;
-   bool isWaveform = (GetDisplay() == WaveTrack::Waveform);
+   bool isWaveform = (GetDisplay() == WaveTrackViewConstants::Waveform);
 
    if (bMultiTool && st.state.CmdDown()) {
       // Ctrl modifier key in multi-tool overrides everything else

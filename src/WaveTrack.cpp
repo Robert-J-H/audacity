@@ -64,6 +64,7 @@ Track classes.
 #include "InconsistencyException.h"
 
 #include "TrackPanel.h" // for TrackInfo
+#include "tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.h"
 // Assumptions in objects separation were wrong.  We need to activate
 // VZooming (that lives in WaveTrackVRulerHandle) from an action on the
 // TCP collapse/expand.  So we need visibility here.
@@ -98,8 +99,8 @@ WaveTrack::WaveTrack(const std::shared_ptr<DirManager> &projDirManager, sampleFo
    WaveformSettings &settings = GetIndependentWaveformSettings();
 
    mDisplay = TracksPrefs::ViewModeChoice();
-   if (mDisplay == obsoleteWaveformDBDisplay) {
-      mDisplay = Waveform;
+   if (mDisplay == WaveTrackViewConstants::obsoleteWaveformDBDisplay) {
+      mDisplay = WaveTrackViewConstants::Waveform;
       settings.scaleType = WaveformSettings::stLogarithmic;
    }
 
@@ -262,65 +263,6 @@ void WaveTrack::SetPanFromChannelType( ChannelType channel )
    else if( channel == RightChannel )
       SetPan( 1.0f );
 };
-
-
-// static
-WaveTrack::WaveTrackDisplay
-WaveTrack::ConvertLegacyDisplayValue(int oldValue)
-{
-   // Remap old values.
-   enum OldValues {
-      Waveform,
-      WaveformDB,
-      Spectrogram,
-      SpectrogramLogF,
-      Pitch,
-   };
-
-   WaveTrackDisplay newValue;
-   switch (oldValue) {
-   default:
-   case Waveform:
-      newValue = WaveTrack::Waveform; break;
-   case WaveformDB:
-      newValue = WaveTrack::obsoleteWaveformDBDisplay; break;
-   case Spectrogram:
-   case SpectrogramLogF:
-   case Pitch:
-      newValue = WaveTrack::Spectrum; break;
-      /*
-   case SpectrogramLogF:
-      newValue = WaveTrack::SpectrumLogDisplay; break;
-   case Pitch:
-      newValue = WaveTrack::PitchDisplay; break;
-      */
-   }
-   return newValue;
-}
-
-// static
-WaveTrack::WaveTrackDisplay
-WaveTrack::ValidateWaveTrackDisplay(WaveTrackDisplay display)
-{
-   switch (display) {
-      // non-obsolete codes
-   case Waveform:
-   case obsoleteWaveformDBDisplay:
-   case Spectrum:
-      return display;
-
-      // obsolete codes
-   case obsolete1: // was SpectrumLogDisplay
-   case obsolete2: // was SpectralSelectionDisplay
-   case obsolete3: // was SpectralSelectionLogDisplay
-   case obsolete4: // was PitchDisplay
-      return Spectrum;
-
-      // codes out of bounds (from future prefs files?)
-   default:
-      return MinDisplay;
-   }
-}
 
 void WaveTrack::SetLastScaleType() const
 {

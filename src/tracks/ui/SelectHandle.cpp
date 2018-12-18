@@ -16,6 +16,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "Scrubbing.h"
 #include "TrackControls.h"
 
+#include "../playabletrack/wavetrack/ui/WaveTrackViewConstants.h"
 #include "../../AColor.h"
 #include "../../SpectrumAnalyst.h"
 #include "../../HitTestResult.h"
@@ -130,7 +131,7 @@ namespace
       return pTrack && pTrack->TypeSwitch< bool >( [&](const WaveTrack *wt) {
          const SpectrogramSettings &settings = wt->GetSpectrogramSettings();
          const int display = wt->GetDisplay();
-         return (display == WaveTrack::Spectrum) &&
+         return (display == WaveTrackViewConstants::Spectrum) &&
             settings.SpectralSelectionEnabled();
       });
    }

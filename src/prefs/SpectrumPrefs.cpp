@@ -447,7 +447,7 @@ void SpectrumPrefs::Preview()
 
    if (mWt && isOpenPage) {
       for (auto channel : TrackList::Channels(mWt))
-         channel->SetDisplay(WaveTrack::Spectrum);
+         channel->SetDisplay(WaveTrackViewConstants::Spectrum);
    }
 
    if (isOpenPage) {

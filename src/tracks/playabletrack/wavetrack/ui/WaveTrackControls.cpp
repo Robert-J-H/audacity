@@ -15,6 +15,7 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "../../ui/PlayableTrackButtonHandles.h"
 #include "WaveTrackSliderHandles.h"
+#include "WaveTrackViewConstants.h"
 
 #include "../../../../AudioIO.h"
 #include "../../../../HitTestResult.h"
@@ -594,7 +595,7 @@ void WaveTrackMenuTable::InitMenu(Menu *pMenu, void *pUserData)
 
    const int display = pTrack->GetDisplay();
    checkedIds.push_back(
-      display == WaveTrack::Waveform
+      display == WaveTrackViewConstants::Waveform
          ? (pTrack->GetWaveformSettings().isLinear()
             ? OnWaveformID : OnWaveformDBID)
          : OnSpectrumID);
@@ -603,7 +604,7 @@ void WaveTrackMenuTable::InitMenu(Menu *pMenu, void *pUserData)
    // We can't change them on the fly yet anyway.
    const bool bAudioBusy = gAudioIO->IsBusy();
    pMenu->Enable(OnSpectrogramSettingsID,
-      (display == WaveTrack::Spectrum) && !bAudioBusy);
+      (display == WaveTrackViewConstants::Spectrum) && !bAudioBusy);
 
    AudacityProject *const project = ::GetActiveProject();
    auto &tracks = TrackList::Get( *project );
@@ -694,7 +695,7 @@ BEGIN_POPUP_MENU(WaveTrackMenuTable)
 #endif
 
    WaveTrack *const pTrack = static_cast<WaveTrack*>(mpTrack);
-   if( pTrack && pTrack->GetDisplay() != WaveTrack::Spectrum  ){
+   if( pTrack && pTrack->GetDisplay() != WaveTrackViewConstants::Spectrum  ){
       POPUP_MENU_SEPARATOR()
       POPUP_MENU_SUB_MENU(OnWaveColorID, _("&Wave Color"), WaveColorMenuTable)
    }
@@ -709,6 +710,7 @@ END_POPUP_MENU()
 ///  Set the Display mode based on the menu choice in the Track Menu.
 void WaveTrackMenuTable::OnSetDisplay(wxCommandEvent & event)
 {
+   using namespace WaveTrackViewConstants;
    int idInt = event.GetId();
    wxASSERT(idInt >= OnWaveformID && idInt <= OnSpectrumID);
    const auto pTrack = static_cast<WaveTrack*>(mpData->pTrack);
@@ -718,16 +720,16 @@ void WaveTrackMenuTable::OnSetDisplay(wxCommandEvent & event)
    switch (idInt) {
    default:
    case OnWaveformID:
-      linear = true, id = WaveTrack::Waveform; break;
+      linear = true, id = Waveform; break;
    case OnWaveformDBID:
-      id = WaveTrack::Waveform; break;
+      id = Waveform; break;
    case OnSpectrumID:
-      id = WaveTrack::Spectrum; break;
+      id = Spectrum; break;
    }
 
    const bool wrongType = pTrack->GetDisplay() != id;
    const bool wrongScale =
-      (id == WaveTrack::Waveform &&
+      (id == Waveform &&
       pTrack->GetWaveformSettings().isLinear() != linear);
    if (wrongType || wrongScale) {
       for (auto channel : TrackList::Channels(pTrack)) {

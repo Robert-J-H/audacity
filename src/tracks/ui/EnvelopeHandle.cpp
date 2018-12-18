@@ -15,6 +15,7 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "../../MemoryX.h"
 
+#include "../playabletrack/wavetrack/ui/WaveTrackViewConstants.h"
 #include "../../Envelope.h"
 #include "../../HitTestResult.h"
 #include "../../prefs/WaveformSettings.h"
@@ -99,7 +100,7 @@ UIHandlePtr EnvelopeHandle::WaveTrackHitTest
    const int displayType = wt->GetDisplay();
    // Not an envelope hit, unless we're using a type of wavetrack display
    // suitable for envelopes operations, ie one of the Wave displays.
-   if (displayType != WaveTrack::Waveform)
+   if (displayType != WaveTrackViewConstants::Waveform)
       return {};  // No envelope, not a hit, so return.
 
    // Get envelope point, range 0.0 to 1.0
@@ -185,7 +186,7 @@ UIHandle::Result EnvelopeHandle::Click
    if (pTrack)
       result = pTrack->TypeSwitch< decltype(RefreshNone) >(
       [&](WaveTrack *wt) {
-         if (wt->GetDisplay() != WaveTrack::Waveform)
+         if (wt->GetDisplay() != WaveTrackViewConstants::Waveform)
             return Cancelled;
 
          if (!mEnvelope)
