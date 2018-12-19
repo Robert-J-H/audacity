@@ -871,6 +871,9 @@ template<typename T>
 }
 
 template < typename TrackType > struct TrackIterRange;
+template < typename TrackType > class TrackGroupIter;
+template < typename TrackType >
+   using TrackGroupIterRange = IteratorRange< TrackGroupIter< TrackType > >;
 
 // new track iterators can eliminate the need to cast the result
 template <
@@ -1039,6 +1042,9 @@ template <
             ( begin, end )
    {}
 
+   // Convert to an iterator range over channel groups; defined later
+   TrackGroupIterRange< TrackType > ByGroups() const;
+
    // Conjoin the filter predicate with another predicate
    // Read + as "and"
    template< typename Predicate2 >
@@ -1149,6 +1155,89 @@ template <
    }
 };
 
+/// \brief a pair of a TrackGroupData pointer and a range of channels
+template <typename TrackType> struct TrackGroup
+{
+   using GroupDataType = typename std::remove_reference<
+      decltype( std::declval<TrackType>().GetGroupData() )
+   >::type;
+
+   TrackType *Leader() const { return *channels.begin(); }
+
+   GroupDataType *data;
+   TrackIterRange< TrackType > channels;
+};
+
+/// \brief A range of TrackGroupIter< TrackType > is obtainable from
+/// TrackIterRange< TrackType >::ByGroups(), and gives access to the GroupData
+/// type defined in TrackType and another TrackIterRange over the channels,
+/// for each track group whose leaders satisfy the type and predicate
+/// constraints of the original TrackIterRange.
+template<
+   typename TrackType // Track or a subclass, maybe const-qualified
+>
+class TrackGroupIter
+   : public ValueIterator<
+      TrackGroup< TrackType >, std::bidirectional_iterator_tag >
+{
+public:
+
+   // defined later
+   TrackGroup< TrackType > operator * () const;
+
+   TrackGroupIter &operator ++ ()
+   {
+      ++this->mIter;
+      return *this;
+   }
+
+   TrackGroupIter operator ++ (int)
+   {
+      auto copy = *this;
+      ++this->mIter;
+      return copy;
+   }
+
+   TrackGroupIter &operator -- ()
+   {
+      --this->mIter;
+      return *this;
+   }
+
+   TrackGroupIter operator -- (int)
+   {
+      auto copy = *this;
+      --this->mIter;
+      return copy;
+   }
+
+   friend inline bool
+   operator == ( const TrackGroupIter &lhs, const TrackGroupIter &rhs)
+   { return lhs.mIter == rhs.mIter; }
+
+   friend inline bool
+   operator != ( const TrackGroupIter &lhs, const TrackGroupIter &rhs)
+   { return !(lhs == rhs); }
+
+private:
+
+   friend TrackIterRange< TrackType >;
+   explicit TrackGroupIter( const TrackIter< TrackType > &iter )
+      : mIter{ iter }
+   {}
+
+   TrackIter< TrackType > mIter;
+};
+
+// Completing the definition of TrackIterRange using TrackGroupIter
+template< typename TrackType > inline
+   auto TrackIterRange< TrackType >::ByGroups() const
+      -> TrackGroupIterRange< TrackType >
+{
+   auto newRange = (*this) + &Track::IsLeader;
+   using Iter = TrackGroupIter< TrackType >;
+   return { Iter{ newRange.begin() }, Iter{ newRange.end() } };
+}
 
 struct TrackListEvent : public wxCommandEvent
 {
@@ -1651,6 +1740,23 @@ private:
    // This is in correspondence with mPendingUpdates
    std::vector< Updater > mUpdaters;
 };
+
+// Completing the definition of TrackGroupIter, using TrackList
+template< typename TrackType > inline
+   auto TrackGroupIter< TrackType >::operator * () const
+      -> TrackGroup< TrackType >
+{
+   const auto pTrack = *this->mIter;
+   return pTrack
+      ? TrackGroup< TrackType >{
+           &pTrack->GetGroupData(),
+           TrackList::Channels( pTrack )
+        }
+      : TrackGroup< TrackType >{
+           nullptr,
+           TrackList::EmptyRange().template Filter< TrackType >()
+        };
+}
 
 class AUDACITY_DLL_API TrackFactory final
    : public ClientData::Base
