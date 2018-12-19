@@ -60,6 +60,17 @@ auto TrackGroupData::Clone() const -> std::shared_ptr<TrackGroupData>
    return std::make_shared<TrackGroupData>( *this );
 }
 
+TrackIterRange<Track> TrackGroupData::FindChannels()
+{
+   auto pList = mList.lock();
+   if ( pList )
+      return pList->Any()
+         + [this](const Track *pTrack)
+            { return this == &pTrack->GetGroupData(); };
+   else
+      return TrackList::EmptyRange();
+}
+
 auto Track::CreateGroupData() const -> std::shared_ptr<TrackGroupData>
 {
    return std::make_shared<GroupData>();
@@ -70,6 +81,7 @@ void Track::EnsureGroupData()
    if (!mpGroupData) {
       // Create on demand
       mpGroupData = CreateGroupData();
+      mpGroupData->mList = mList;
    }
 }
 
@@ -704,7 +716,10 @@ Track *TrackList::DoAddToHead(const std::shared_ptr<Track> &t)
    Track *pTrack = t.get();
    push_front(ListOfTracks::value_type(t));
 
-   MakeUngrouped( pTrack->mpGroupData );
+   if ( pTrack->mpGroupData ) {
+      MakeUngrouped( pTrack->mpGroupData );
+      pTrack->mpGroupData->mList = shared_from_this();
+   }
 
    auto n = getBegin();
    pTrack->SetOwner(shared_from_this(), n);
@@ -720,8 +735,12 @@ Track *TrackList::DoAdd(const std::shared_ptr<Track> &t, bool leader)
 
    auto n = getPrev( getEnd() );
 
-   if (leader)
-      MakeUngrouped( t->mpGroupData );
+   if (leader) {
+      if ( t->mpGroupData ) {
+         MakeUngrouped( t->mpGroupData );
+         t->mpGroupData->mList = shared_from_this();
+      }
+   }
    else {
       auto prev = getPrev( n );
       if (prev != getEnd()) {
@@ -812,6 +831,10 @@ auto TrackList::Replace(Track * t, const ListOfTracks::value_type &with) ->
          for (auto channel : Channels( t ))
             channel->mpGroupData = pNewData;
       }
+
+      // Fix up the back pointer
+      if ( pNewData )
+         pNewData->mList = shared_from_this();
 
       auto node = t->GetNode();
       t->SetOwner({}, {});

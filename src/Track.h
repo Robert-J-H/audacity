@@ -188,11 +188,31 @@ private:
    long mValue;
 };
 
+template < typename TrackType > struct TrackIterRange;
+
 struct TrackGroupData
    : std::enable_shared_from_this< TrackGroupData >
 {
    virtual ~TrackGroupData();
    virtual std::shared_ptr< TrackGroupData > Clone() const;
+
+   template< typename Subclass = Track >
+   TrackIterRange< Subclass > Channels();
+
+   template< typename Subclass = const Track >
+   auto Channels() const
+      -> typename std::enable_if< std::is_const< Subclass >::value,
+         TrackIterRange< Subclass >
+      >::type
+         { return const_cast< TrackGroupData* >(this)->Channels< Subclass >(); }
+
+private:
+   TrackIterRange<Track> FindChannels();
+
+   friend Track;
+   friend TrackList;
+   // back-pointer to owning TrackList
+   std::weak_ptr<TrackList> mList;
 };
 
 class AUDACITY_DLL_API Track /* not final */
@@ -870,7 +890,6 @@ template<typename T>
       return nullptr;
 }
 
-template < typename TrackType > struct TrackIterRange;
 template < typename TrackType > class TrackGroupIter;
 template < typename TrackType >
    using TrackGroupIterRange = IteratorRange< TrackGroupIter< TrackType > >;
@@ -1740,6 +1759,11 @@ private:
    // This is in correspondence with mPendingUpdates
    std::vector< Updater > mUpdaters;
 };
+
+// Completing the definition of TrackGroupData, using TrackList
+template< typename Subclass >
+   TrackIterRange< Subclass > TrackGroupData::Channels()
+      { return FindChannels().template Filter< Subclass >(); }
 
 // Completing the definition of TrackGroupIter, using TrackList
 template< typename TrackType > inline
