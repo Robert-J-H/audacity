@@ -636,10 +636,9 @@ void TrackList::ResizingEvent(TrackNodePointer node)
    QueueEvent( safenew TrackListEvent{ EVT_TRACKLIST_RESIZING, *node.first } );
 }
 
-auto TrackList::EmptyRange() const
-   -> TrackIterRange< Track >
+auto TrackList::EmptyRange() -> TrackIterRange< Track >
 {
-   auto it = const_cast<TrackList*>(this)->getEnd();
+   auto it = TrackNodePointer{};
    return {
       { it, it, it, &Track::Any },
       { it, it, it, &Track::Any }

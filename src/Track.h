@@ -1287,6 +1287,7 @@ class TrackList final
          FindLeader( const_cast<Track*>(pTrack) ).Filter< const Track >();
    }
 
+   static TrackIterRange< Track > EmptyRange();
 
    template < typename TrackType = Track >
       auto Any()
@@ -1550,8 +1551,6 @@ private:
       auto e = const_cast<TrackList*>(this)->getEnd();
       return { e, e, e };
    }
-
-   TrackIterRange< Track > EmptyRange() const;
 
    bool isNull(TrackNodePointer p) const
    { return (p.second == this && p.first == ListOfTracks::end())
