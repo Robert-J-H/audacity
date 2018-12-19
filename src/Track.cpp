@@ -71,6 +71,13 @@ TrackIterRange<Track> TrackGroupData::FindChannels()
       return TrackList::EmptyRange();
 }
 
+void TrackGroupData::Notify( int code )
+{
+   auto pList = mList.lock();
+   if ( pList )
+      pList->GroupDataEvent( shared_from_this(), code );
+}
+
 auto Track::CreateGroupData() const -> std::shared_ptr<TrackGroupData>
 {
    return std::make_shared<GroupData>();
@@ -511,6 +518,8 @@ std::pair<Track *, Track *> TrackList::FindSyncLockGroup(Track *pMember)
 // is managing.  Any other classes that may be interested in get these updates
 // should use TrackList::Connect() or TrackList::Bind().
 //
+wxDEFINE_EVENT(EVT_TRACKLIST_GROUP_DATA_CHANGE, TrackListGroupEvent);
+wxDEFINE_EVENT(EVT_TRACKLIST_GROUP_SELECTION_CHANGE, TrackListGroupEvent);
 wxDEFINE_EVENT(EVT_TRACKLIST_TRACK_DATA_CHANGE, TrackListEvent);
 wxDEFINE_EVENT(EVT_TRACKLIST_SELECTION_CHANGE, TrackListEvent);
 wxDEFINE_EVENT(EVT_TRACKLIST_PERMUTED, TrackListEvent);
@@ -612,6 +621,22 @@ void TrackList::SelectionEvent( const std::shared_ptr<Track> &pTrack )
    // wxWidgets will own the event object
    QueueEvent(
       safenew TrackListEvent{ EVT_TRACKLIST_SELECTION_CHANGE, pTrack } );
+}
+
+void TrackList::GroupDataEvent(
+   const std::shared_ptr<TrackGroupData> &pData, int code )
+{
+   // wxWidgets will own the event object
+   QueueEvent( safenew TrackListGroupEvent{
+      EVT_TRACKLIST_GROUP_DATA_CHANGE, pData, code } );
+}
+
+void TrackList::GroupSelectionEvent(
+   const std::shared_ptr<TrackGroupData> &pData )
+{
+   // wxWidgets will own the event object
+   QueueEvent( safenew TrackListGroupEvent{
+      EVT_TRACKLIST_GROUP_SELECTION_CHANGE, pData } );
 }
 
 void TrackList::DataEvent( const std::shared_ptr<Track> &pTrack, int code )
