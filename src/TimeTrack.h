@@ -44,6 +44,7 @@ class TimeTrack final : public Track {
 
    virtual ~TimeTrack();
 
+   wxString GetDefaultName() const override;
 
    Holder Cut( double t0, double t1 ) override;
    Holder Copy( double t0, double t1, bool forClipboard ) const override;

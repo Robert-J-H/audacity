@@ -240,7 +240,6 @@ class AUDACITY_DLL_API Track /* not final */
    int            mY;
    int            mHeight;
    wxString       mName;
-   wxString       mDefaultName;
 
  private:
    bool           mSelected;
@@ -400,8 +399,10 @@ private:
 
    wxString GetName() const { return mName; }
    void SetName( const wxString &n );
-   wxString GetDefaultName() const { return mDefaultName; }
-   void SetDefaultName( const wxString &n ) { mDefaultName = n; }
+
+   // Return a localized string containing a default name appropriate to the
+   // track subtype
+   virtual wxString GetDefaultName() const = 0;
 
    bool GetSelected() const { return mSelected; }
 
