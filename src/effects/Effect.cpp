@@ -1218,7 +1218,7 @@ bool Effect::DoEffect(wxWindow *parent,
    // assume it requires a track and handle errors when the effect runs.
    if ((GetType() == EffectTypeGenerate || GetPath() == NYQUIST_PROMPT_ID) && (mNumTracks == 0)) {
       newTrack = mTracks->Add(mFactory->NewWaveTrack(), true);
-      newTrack->SetSelected(true);
+      newTrack->GetGroupData().SetSelected(true);
    }
 
    mT0 = selectedRegion->t0();
@@ -2562,24 +2562,26 @@ void Effect::Preview(bool dryOnly)
          return;
 
       mixLeft->Offset(-mixLeft->GetStartTime());
-      mixLeft->SetSelected(true);
+      mixLeft->GetGroupData().SetSelected(true);
       mixLeft->SetDisplay(WaveTrackViewConstants::NoDisplay);
       auto pLeft = mTracks->Add( mixLeft, true );
       Track *pRight{};
       if (mixRight) {
          mixRight->Offset(-mixRight->GetStartTime());
-         mixRight->SetSelected(true);
          pRight = mTracks->Add( mixRight, false );
       }
    }
    else {
       for (auto src : saveTracks->Any< const WaveTrack >()) {
          if (src->GetSelected() || mPreviewWithNotSelected) {
+            bool isLeader = src->IsLeader();
             auto dest = src->Copy(mT0, t1);
-            dest->SetSelected(src->GetSelected());
+            if (isLeader)
+               dest->GetGroupData().SetSelected(
+                  src->GetGroupData().GetSelected() );
             static_cast<WaveTrack*>(dest.get())
                ->SetDisplay(WaveTrackViewConstants::NoDisplay);
-            mTracks->Add( dest, src->IsLeader() );
+            mTracks->Add( dest, isLeader );
          }
       }
    }

@@ -832,8 +832,8 @@ ProgressResult ExportMultiple::ExportMultipleByTrack(bool byName,
 
    /* Remember which tracks were selected, and set them to unselected */
    SelectionStateChanger changer{ mSelectionState, *mTracks };
-   for (auto tr : mTracks->Selected<WaveTrack>())
-      tr->SetSelected(false);
+   for (auto group : mTracks->Selected<WaveTrack>().ByGroups())
+      group.data->SetSelected(false);
 
    /* Examine all tracks in turn, collecting export information */
    for (auto tr : mTracks->Leaders<WaveTrack>() - &WaveTrack::GetMute) {
@@ -904,7 +904,8 @@ ProgressResult ExportMultiple::ExportMultipleByTrack(bool byName,
    int count = 0; // count the number of sucessful runs
    ExportKit activeSetting;  // pointer to the settings in use for this export
    std::unique_ptr<ProgressDialog> pDialog;
-   for (auto tr : mTracks->Leaders<WaveTrack>() - &WaveTrack::GetMute) {
+   for (auto group :
+      (mTracks->Any<WaveTrack>() - &WaveTrack::GetMute).ByGroups() ) {
       wxLogDebug( "Get setting %i", count );
       /* get the settings to use for the export from the array */
       activeSetting = exportSettings[count];
@@ -915,9 +916,7 @@ ProgressResult ExportMultiple::ExportMultipleByTrack(bool byName,
 
       /* Select the track */
       SelectionStateChanger changer2{ mSelectionState, *mTracks };
-      const auto range = TrackList::Channels(tr);
-      for (auto channel : range)
-         channel->SetSelected(true);
+      group.data->SetSelected(true);
 
       // Export the data. "channels" are per track.
       ok = DoExport(pDialog,

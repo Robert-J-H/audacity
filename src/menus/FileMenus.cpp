@@ -124,7 +124,7 @@ AudacityProject *DoImportMIDI(
 
       pProject->SelectNone();
       auto pTrack = tracks.Add( newTrack, true );
-      pTrack->SetSelected(true);
+      pTrack->GetGroupData().SetSelected(true);
 
       pProject->PushState(wxString::Format(_("Imported MIDI from '%s'"),
          fileName), _("Import MIDI"));
@@ -474,8 +474,8 @@ void OnImportLabels(const CommandContext &context)
       newTrack->Import(f);
 
       project.SelectNone();
-      newTrack->SetSelected(true);
-      tracks.Add( newTrack, true );
+      newTrack->GetGroupData().SetSelected(true);
+      tracks.Add( newTrack, true);
 
       project.PushState(wxString::
                 Format(_("Imported labels from '%s'"), fileName),

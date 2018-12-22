@@ -917,8 +917,8 @@ MixerBoard::MixerBoard(AudacityProject* pProject,
       &MixerBoard::OnTimer,
       this);
 
-   mTracks->Bind(EVT_TRACKLIST_SELECTION_CHANGE,
-      &MixerBoard::OnTrackChanged,
+   mTracks->Bind(EVT_TRACKLIST_GROUP_SELECTION_CHANGE,
+      &MixerBoard::OnTrackGroupChanged,
       this);
 
    mTracks->Bind(EVT_TRACKLIST_PERMUTED,

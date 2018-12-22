@@ -2106,13 +2106,13 @@ bool LabelTrack::OnChar(SelectedRegion &WXUNUSED(newSel), wxKeyEvent & event)
              wxID_CANCEL) {
             return false;
          }
-         SetSelected(true);
+         GetGroupData().SetSelected(true);
          AddLabel(selectedRegion, title, -2);
          p->PushState(_("Added label"), _("Label"));
          return false;
       }
       else {
-         SetSelected(true);
+         GetGroupData().SetSelected(true);
          AddLabel(selectedRegion);
          p->PushState(_("Added label"), _("Label"));
       }

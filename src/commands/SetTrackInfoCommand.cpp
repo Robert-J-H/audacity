@@ -162,7 +162,7 @@ bool SetTrackStatusCommand::ApplyInner(const CommandContext & context, Track * t
 
    // In stereo tracks, both channels need selecting/deselecting.
    if( bHasSelected )
-      t->SetSelected(bSelected);
+      t->GetGroupData().SetSelected(bSelected);
 
    // These ones don't make sense on the second channel of a stereo track.
    if( !bIsSecondChannel ){

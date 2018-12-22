@@ -126,11 +126,12 @@ bool DoPasteNothingSelected(AudacityProject &project)
          if (!pFirstNewTrack)
             pFirstNewTrack = pNewTrack;
 
-         pNewTrack->SetSelected(true);
          if (uNewTrack)
             FinishCopy(pClip, uNewTrack, tracks);
          else
             Track::FinishCopy(pClip, pNewTrack);
+
+         pNewTrack->GetGroupData().SetSelected(true);
       }
 
       // Select some pasted samples, which is probably impossible to get right

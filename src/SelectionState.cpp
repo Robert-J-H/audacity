@@ -54,8 +54,7 @@ void SelectionState::SelectTrack(
 {
    //bool wasCorrect = (selected == track.GetSelected());
 
-   for (auto channel : TrackList::Channels(&track))
-      channel->SetSelected(selected);
+   track.GetGroupData().SetSelected( selected );
 
    if (updateLastPicked)
       mLastPickedTrack = track.SharedPointer();
@@ -150,8 +149,8 @@ SelectionStateChanger::SelectionStateChanger
 {
    // Save initial state of track selections
    mInitialTrackSelection.clear();
-   for (const auto track : tracks.Any()) {
-      const bool isSelected = track->GetSelected();
+   for (const auto group : tracks.Any().ByGroups()) {
+      const bool isSelected = group.data->GetSelected();
       mInitialTrackSelection.push_back(isSelected);
    }
 }
@@ -165,10 +164,10 @@ SelectionStateChanger::~SelectionStateChanger()
          it = mInitialTrackSelection.begin(),
          end = mInitialTrackSelection.end();
 
-      for (auto track : mTracks.Any()) {
+      for (auto group : mTracks.Any().ByGroups()) {
          if (it == end)
             break;
-         track->SetSelected( *it++ );
+         group.data->SetSelected( *it++ );
       }
    }
 }

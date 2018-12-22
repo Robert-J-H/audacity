@@ -33,8 +33,8 @@ void DoSelectTimeAndTracks
          tracks.GetMinOffset(), tracks.GetEndTime());
 
    if( bAllTracks ) {
-      for (auto t : tracks.Any())
-         t->SetSelected(true);
+      for (auto group : tracks.Any().ByGroups())
+         group.data->SetSelected(true);
 
       project.ModifyState(false);
       trackPanel.Refresh(false);
@@ -540,9 +540,10 @@ void OnSelectSyncLockSel(const CommandContext &context)
    auto &trackPanel = TrackPanel::Get( project );
 
    bool selected = false;
-   for (auto t : tracks.Any()
-         + &Track::IsSyncLockSelected - &Track::IsSelected) {
-      t->SetSelected(true);
+   for (auto group :
+      ( tracks.Any() + &Track::IsSyncLockSelected - &Track::IsSelected )
+         .ByGroups() ) {
+      group.data->SetSelected(true);
       selected = true;
    }
 

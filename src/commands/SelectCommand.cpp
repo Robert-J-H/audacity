@@ -240,29 +240,21 @@ bool SelectTracksCommand::Apply(const CommandContext &context)
       mFirstTrack = 0.0;
 
    // Multiple channels count as fractions of a track.
-   double last = mFirstTrack+mNumTracks;
+   double last = mFirstTrack + mNumTracks;
    double first = mFirstTrack;
 
-   for (auto t : tracks.Leaders()) {
-      auto channels = TrackList::Channels(t);
-      double term = 0.0;
-      // Add 0.01 so we are free of rounding errors in comparisons.
-      constexpr double fudge = 0.01;
-      for (auto channel : channels) {
-         double track = index + fudge + term;
-         bool sel = first <= track && track <= last;
-         if( mMode == 0 ){ // Set
-            channel->SetSelected(sel);
-         }
-         else if( mMode == 1 && sel ){ // Add
-            channel->SetSelected(sel);
-         }
-         else if( mMode == 2 && sel ){ // Remove
-            channel->SetSelected(!sel);
-         }
-         term += 1.0 / channels.size();
+   for (auto group : tracks.Any().ByGroups()) {
+      bool sel = first <= index && index <= last;
+      if( mMode == 0 ){ // Set
+         group.data->SetSelected(sel);
       }
-      ++index;
+      else if( mMode == 1 && sel ){ // Add
+         group.data->SetSelected(sel);
+      }
+      else if( mMode == 2 && sel ){ // Remove
+         group.data->SetSelected(!sel);
+      }
+      index += group.channels.size();
    }
    return true;
 }
