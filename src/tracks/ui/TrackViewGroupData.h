@@ -26,11 +26,20 @@ public:
    ~TrackViewGroupData() override;
    PointerType Clone() const override;
 
+   bool GetMinimized() const { return mMinimized; }
+   void SetMinimized( bool minimized );
+
    static const TrackViewGroupData &Get( const Track& );
    static TrackViewGroupData &Get( Track& );
 
    static const TrackViewGroupData &Get( const TrackGroupData& );
    static TrackViewGroupData &Get( TrackGroupData& );
+
+protected:
+   virtual void DoSetMinimized( bool minimized );
+
+private:
+   bool           mMinimized{ false };
 };
 
 struct CreateViewGroupDataTag{};

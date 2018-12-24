@@ -79,6 +79,7 @@
 #include "../FileNames.h"
 
 #include "../tracks/ui/Scrubbing.h"
+#include "../tracks/ui/TrackViewGroupData.h"
 #include "../prefs/TracksPrefs.h"
 #include "../toolbars/ToolManager.h"
 #include "../TrackPanel.h"
@@ -1221,9 +1222,9 @@ bool ControlToolBar::DoRecord(AudacityProject &project,
                      : baseTrackName + wxT("_") + nameSuffix
                );
             }
-               
+
             if ((recordingChannels > 2) && !(p->GetTracksFitVerticallyZoomed())) {
-               newTrack->SetMinimized(true);
+               TrackViewGroupData::Get( *newTrack ).SetMinimized(true);
             }
 
             TrackList::Get( *p ).RegisterPendingNewTrack( newTrack, c == 0 );

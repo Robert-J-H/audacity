@@ -22,6 +22,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "Track.h"
 #include "TrackPanelMouseEvent.h"
 #include "tracks/ui/TrackControls.h"
+#include "tracks/ui/TrackViewGroupData.h"
 
 HitTestPreview TrackPanelResizeHandle::HitPreview(bool bLinked)
 {
@@ -71,7 +72,7 @@ TrackPanelResizeHandle::TrackPanelResizeHandle
    auto last = *channels.rbegin();
    mInitialTrackHeight = last->GetHeight();
    mInitialActualHeight = last->GetActualHeight();
-   mInitialMinimized = last->GetMinimized();
+   mInitialMinimized = TrackViewGroupData::Get( *last ).GetMinimized();
 
    if (channels.size() > 1) {
       auto first = *channels.begin();
@@ -107,11 +108,12 @@ UIHandle::Result TrackPanelResizeHandle::Drag
    //
    // This used to be in HandleResizeClick(), but simply clicking
    // on a resize border would switch the minimized state.
-   if (pTrack->GetMinimized()) {
+   auto &data = TrackViewGroupData::Get( *pTrack );
+   if (data.GetMinimized()) {
+      data.SetMinimized( false );
       auto channels = TrackList::Channels( pTrack.get() );
       for (auto channel : channels) {
          channel->SetHeight(channel->GetHeight());
-         channel->SetMinimized(false);
       }
 
       if (channels.size() > 1) {
@@ -232,30 +234,26 @@ UIHandle::Result TrackPanelResizeHandle::Cancel(AudacityProject *pProject)
    if ( !pTrack )
       return RefreshCode::Cancelled;
 
+   TrackViewGroupData::Get( *pTrack ).SetMinimized( mInitialMinimized );
 
    switch (mMode) {
    case IsResizing:
    {
       pTrack->SetHeight(mInitialActualHeight);
-      pTrack->SetMinimized(mInitialMinimized);
    }
    break;
    case IsResizingBetweenLinkedTracks:
    {
       Track *const next = * ++ tracks.Find(pTrack.get());
       pTrack->SetHeight(mInitialUpperActualHeight);
-      pTrack->SetMinimized(mInitialMinimized);
       next->SetHeight(mInitialActualHeight);
-      next->SetMinimized(mInitialMinimized);
    }
    break;
    case IsResizingBelowLinkedTracks:
    {
       Track *const prev = * -- tracks.Find(pTrack.get());
       pTrack->SetHeight(mInitialActualHeight);
-      pTrack->SetMinimized(mInitialMinimized);
       prev->SetHeight(mInitialUpperActualHeight);
-      prev->SetMinimized(mInitialMinimized);
    }
    break;
    }

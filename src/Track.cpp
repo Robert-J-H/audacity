@@ -123,8 +123,6 @@ Track::Track(const std::shared_ptr<DirManager> &projDirManager)
    mHeight = DefaultHeight;
    mIndex = 0;
 
-   mMinimized = false;
-
    mOffset = 0.0;
 }
 
@@ -145,7 +143,6 @@ void Track::Init(const Track &orig)
    mDirManager = orig.mDirManager;
 
    mHeight = orig.mHeight;
-   mMinimized = orig.mMinimized;
 }
 
 Track::Holder Track::Duplicate() const
@@ -228,9 +225,10 @@ void Track::DoSetY(int y)
    mY = y;
 }
 
+#include "tracks/ui/TrackViewGroupData.h"
 int Track::GetHeight() const
 {
-   if (mMinimized) {
+   if ( TrackViewGroupData::Get( *this ).GetMinimized() ) {
       return GetMinimizedHeight();
    }
 
@@ -260,36 +258,6 @@ void Track::SetHeight(int h)
 void Track::DoSetHeight(int h)
 {
    mHeight = h;
-}
-
-bool Track::GetMinimized() const
-{
-   return mMinimized;
-}
-
-void Track::SetMinimized(bool isMinimized)
-{
-   auto pList = mList.lock();
-   if (pList && !pList->mPendingUpdates.empty()) {
-      auto orig = pList->FindById( GetId() );
-      if (orig && orig != this) {
-         // delegate, and rely on RecalcPositions to copy back
-         orig->SetMinimized(isMinimized);
-         return;
-      }
-   }
-
-   DoSetMinimized(isMinimized);
-
-   if (pList) {
-      pList->RecalcPositions(mNode);
-      pList->ResizingEvent(mNode);
-   }
-}
-
-void Track::DoSetMinimized(bool isMinimized)
-{
-   mMinimized = isMinimized;
 }
 
 namespace {
@@ -1174,7 +1142,6 @@ void TrackList::UpdatePendingTracks()
             updater( *pendingTrack, *src );
          pendingTrack->DoSetY(src->GetY());
          pendingTrack->DoSetHeight(src->GetActualHeight());
-         pendingTrack->DoSetMinimized(src->GetMinimized());
       }
       ++pUpdater;
    }
@@ -1346,6 +1313,7 @@ void Track::HandleXMLEndTag( const wxChar * )
       PostLoad();
 }
 
+#include "tracks/ui/TrackViewGroupData.h"
 // Serialize, not with tags of its own, but as attributes within a tag.
 void Track::WriteCommonXMLAttributes(XMLWriter &xmlFile, bool includeName) const
 {
@@ -1356,7 +1324,12 @@ void Track::WriteCommonXMLAttributes(XMLWriter &xmlFile, bool includeName) const
       xmlFile.WriteAttr(wxT("name"), GetGroupData().GetName());
    }
    xmlFile.WriteAttr(wxT("height"), this->GetActualHeight());
-   xmlFile.WriteAttr(wxT("minimized"), this->GetMinimized());
+
+   // It would be sufficient to write and read the minimized flag only for leader
+   // tracks in 2.3.2 and later, but for forward compatibility we continue
+   // to write it for all channels.
+   xmlFile.WriteAttr(wxT("minimized"),
+      TrackViewGroupData::Get( *this ).GetMinimized());
 
    // It would be sufficient to write and read the selection only for leader
    // tracks in 2.3.2 and later, but for forward compatibility we continue
@@ -1382,7 +1355,8 @@ bool Track::HandleCommonXMLAttribute(const wxChar *attr, const wxChar *value)
    }
    else if (!wxStrcmp(attr, wxT("minimized")) &&
          XMLValueChecker::IsGoodInt(strValue) && strValue.ToLong(&nValue)) {
-      SetMinimized(nValue != 0);
+      if ( Track::IsLoadingLeader() )
+         TrackViewGroupData::Get( *this ).SetMinimized(nValue != 0);
       return true;
    }
    else if (!wxStrcmp(attr, wxT("isSelected")) &&

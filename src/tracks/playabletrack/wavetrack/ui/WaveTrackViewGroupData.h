@@ -69,7 +69,8 @@ public:
       const wxRect &rect, int zoomStart, int zoomEnd,
       bool fixedMousePoint);
 
-   void DoSetMinimized( bool minimized );
+protected:
+   void DoSetMinimized( bool minimized ) override;
 
 private:
    mutable float         mDisplayMin{ -1.0 };

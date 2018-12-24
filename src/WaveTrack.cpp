@@ -262,14 +262,6 @@ void WaveTrack::SetOldChannelGain(int channel, float gain)
 
 
 
-#include "tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
-void WaveTrack::DoSetMinimized(bool isMinimized){
-
-   WaveTrackViewGroupData::Get( *this ).DoSetMinimized( isMinimized );
-
-   PlayableTrack::DoSetMinimized( isMinimized );
-}
-
 void WaveTrack::SetWaveColorIndex(int colorIndex)
 // STRONG-GUARANTEE
 {

@@ -41,6 +41,24 @@ auto TrackViewGroupData::Clone() const -> PointerType
    return std::make_unique< TrackViewGroupData >( *this );
 }
 
+void TrackViewGroupData::SetMinimized(bool isMinimized)
+{
+   // Do special changes appropriate to GroupData subclass
+   DoSetMinimized(isMinimized);
+
+   // Update positions and heights starting from the first track in the group
+   auto pGroup = GetParent();
+   if ( pGroup ) {
+      auto pTrack = *pGroup->Channels().begin();
+      pTrack->AdjustPositions();
+   }
+}
+
+void TrackViewGroupData::DoSetMinimized(bool isMinimized)
+{
+   mMinimized = isMinimized;
+}
+
 TrackViewGroupData &TrackViewGroupData::Get( Track &track )
 {
    return Get( track.GetGroupData() );
