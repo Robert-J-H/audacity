@@ -30,13 +30,6 @@ public:
 
    WaveTrackVZoomHandle &operator=(const WaveTrackVZoomHandle&) = default;
 
-   static void DoZoom
-   (AudacityProject *pProject,
-    WaveTrack *pTrack,
-    WaveTrackViewConstants::ZoomActions ZoomKind,
-    const wxRect &rect, int zoomStart, int zoomEnd,
-    bool fixedMousePoint);
-
    virtual ~WaveTrackVZoomHandle();
 
    std::shared_ptr<WaveTrack> GetTrack() const { return mpTrack.lock(); }

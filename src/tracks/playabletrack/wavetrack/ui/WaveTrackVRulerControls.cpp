@@ -50,25 +50,6 @@ std::vector<UIHandlePtr> WaveTrackVRulerControls::HitTest
    return results;
 }
 
-void WaveTrackVRulerControls::DoZoomPreset( int i)
-{
-
-   const auto pTrack = FindTrack();
-   if (!pTrack)
-      return;
-
-   const auto wt = static_cast<WaveTrack*>(pTrack.get());
-
-   using namespace WaveTrackViewConstants;
-   WaveTrackVZoomHandle::DoZoom(
-         NULL, wt,
-         (i==1)
-            ? kZoomHalfWave
-            : kZoom1to1,
-         wxRect(0,0,0,0), 0,0, true);
-}
-
-
 unsigned WaveTrackVRulerControls::HandleWheelRotation
 (const TrackPanelMouseEvent &evt, AudacityProject *pProject)
 {
@@ -134,12 +115,14 @@ unsigned WaveTrackVRulerControls::HandleWheelRotation
    else if (event.CmdDown() && !event.ShiftDown()) {
       const int yy = event.m_y;
       using namespace WaveTrackViewConstants;
-      WaveTrackVZoomHandle::DoZoom(
-         pProject, wt,
+      WaveTrackViewGroupData::Get( *wt ).DoZoom(
+         wt->GetRate(),
          (steps < 0)
             ? kZoomOut
             : kZoomIn,
          evt.rect, yy, yy, true);
+      if( pProject )
+         pProject->ModifyState(true);
    }
    else if (!event.CmdDown() && event.ShiftDown()) {
       // Scroll some fixed number of pixels, independent of zoom level or track height:

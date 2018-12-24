@@ -262,24 +262,11 @@ void WaveTrack::SetOldChannelGain(int channel, float gain)
 
 
 
+#include "tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
 void WaveTrack::DoSetMinimized(bool isMinimized){
 
-#ifdef EXPERIMENTAL_HALF_WAVE
-   bool bHalfWave;
-   gPrefs->Read(wxT("/GUI/CollapseToHalfWave"), &bHalfWave, false);
-   if( bHalfWave )
-   {
-      // Show half wave on collapse, full on restore.
-      std::shared_ptr<TrackVRulerControls> pTvc = GetVRulerControl();
-
-      // An awkward workaround for a function that lives 'in the wrong place'.
-      // We use magic numbers, 0 and 1, to tell it to zoom reset or zoom half-wave.
-      WaveTrackVRulerControls * pWtvc =
-         static_cast<WaveTrackVRulerControls*>(pTvc.get());
-      if( pWtvc )
-         pWtvc->DoZoomPreset( isMinimized ? 1:0);
-   }
-#endif
+   WaveTrackViewGroupData::Get( *this ).DoSetMinimized(
+      GetRate(), isMinimized );
 
    PlayableTrack::DoSetMinimized( isMinimized );
 }

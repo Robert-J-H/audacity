@@ -61,6 +61,16 @@ public:
    // bottom and top.  Maybe that is out of bounds.
    int ZeroLevelYCoordinate(wxRect rect) const;
 
+   static bool IsDragZooming(int zoomStart, int zoomEnd);
+
+   void DoZoom(
+      double rate,
+      WaveTrackViewConstants::ZoomActions ZoomKind,
+      const wxRect &rect, int zoomStart, int zoomEnd,
+      bool fixedMousePoint);
+
+   void DoSetMinimized( double rate, bool minimized );
+
 private:
    mutable float         mDisplayMin{ -1.0 };
    mutable float         mDisplayMax{  1.0 };
