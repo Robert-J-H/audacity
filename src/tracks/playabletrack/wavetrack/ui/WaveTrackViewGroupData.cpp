@@ -515,20 +515,35 @@ bool WaveTrackViewGroupData::IsDragZooming(int zoomStart, int zoomEnd)
    return bVZoom && (abs(zoomEnd - zoomStart) > DragThreshold);
 }
 
-void WaveTrackViewGroupData::DoSetMinimized( double rate, bool minimized )
+void WaveTrackViewGroupData::DoSetMinimized( bool minimized )
 {
 #ifdef EXPERIMENTAL_HALF_WAVE
    bool bHalfWave;
    gPrefs->Read(wxT("/GUI/CollapseToHalfWave"), &bHalfWave, false);
    if( bHalfWave )
    {
-      using namespace WaveTrackViewConstants;
-      DoZoom(
-            rate,
-            minimized
-               ? kZoomHalfWave
-               : kZoom1to1,
-            wxRect(0,0,0,0), 0,0, true);
+      const bool spectral =
+         (GetDisplay() == WaveTrackViewConstants::Spectrum);
+      if ( spectral ) {
+         // It is all right to set the top of scale to a huge number,
+         // not knowing the track rate here -- because when retrieving the
+         // value, then we pass in a sample rate and clamp it above to the
+         // Nyquist frequency.
+         constexpr auto max = std::numeric_limits<float>::max();
+         const bool spectrumLinear =
+            (GetSpectrogramSettings().scaleType ==
+               SpectrogramSettings::stLinear);
+         // Zoom out full
+         SetSpectrumBounds( spectrumLinear ? 0.0f : 1.0f, max );
+      }
+      else {
+         if (minimized)
+            // Zoom to show fractionally more than the top half of the wave.
+            SetDisplayBounds( -0.01f, 1.0f );
+         else
+            // Zoom out full
+            SetDisplayBounds( -1.0f, 1.0f );
+      }
    }
 #endif
 }
