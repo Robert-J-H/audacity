@@ -28,6 +28,9 @@ public:
 
    static const TrackViewGroupData &Get( const Track& );
    static TrackViewGroupData &Get( Track& );
+
+   static const TrackViewGroupData &Get( const TrackGroupData& );
+   static TrackViewGroupData &Get( TrackGroupData& );
 };
 
 struct CreateViewGroupDataTag{};

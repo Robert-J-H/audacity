@@ -43,8 +43,7 @@ auto TrackViewGroupData::Clone() const -> PointerType
 
 TrackViewGroupData &TrackViewGroupData::Get( Track &track )
 {
-   auto &data = track.GetGroupData();
-   return data.Extensions::Get< TrackViewGroupData >( sKey );
+   return Get( track.GetGroupData() );
 }
 
 const TrackViewGroupData
@@ -52,4 +51,16 @@ const TrackViewGroupData
 {
    // May create the data structure on demend but not change it if present
    return Get( const_cast< Track& >( track ) );
+}
+
+TrackViewGroupData &TrackViewGroupData::Get( TrackGroupData &data )
+{
+   return data.Extensions::Get< TrackViewGroupData >( sKey );
+}
+
+const TrackViewGroupData
+&TrackViewGroupData::Get( const TrackGroupData &data )
+{
+   // May create the data structure on demend but not change it if present
+   return Get( const_cast< TrackGroupData& >( data ) );
 }
