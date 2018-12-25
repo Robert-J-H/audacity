@@ -355,7 +355,7 @@ bool SetTrackVisualsCommand::ApplyInner(const CommandContext & context, Track * 
    // You can get some intriguing effects by setting R and L channels to 
    // different values.
    if( wt && bHasColour )
-      wt->SetWaveColorIndex( mColour );
+      wt->GetGroupData().SetWaveColorIndex( mColour, true );
 
    if( t && bHasHeight )
       TrackView::Get( *t ).SetHeight( mHeight );

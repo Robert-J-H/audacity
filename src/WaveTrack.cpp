@@ -86,7 +86,6 @@ WaveTrack::WaveTrack(const std::shared_ptr<DirManager> &projDirManager, sampleFo
    mRate = (int) rate;
    mOldGain[0] = 0.0;
    mOldGain[1] = 0.0;
-   mWaveColorIndex = 0;
 
    mAutoSaveIdent = 0;
 }
@@ -106,7 +105,6 @@ void WaveTrack::Init(const WaveTrack &orig)
 {
    PlayableTrack::Init(orig);
    mFormat = orig.mFormat;
-   mWaveColorIndex = orig.mWaveColorIndex;
    mRate = orig.mRate;
    mOldGain[0] = 0.0;
    mOldGain[1] = 0.0;
@@ -248,14 +246,16 @@ void WaveTrack::SetOldChannelGain(int channel, float gain)
 
 
 
-void WaveTrack::SetWaveColorIndex(int colorIndex)
+void WaveTrack::GroupData::SetWaveColorIndex( int colorIndex, bool setClips )
 // STRONG-GUARANTEE
 {
-   for (const auto &clip : mClips)
-      clip->SetColourIndex( colorIndex );
+   if (setClips) {
+      for (const auto channel : Channels<WaveTrack>())
+         for (const auto &clip : channel->GetClips())
+            clip->SetColourIndex( colorIndex );
+   }
    mWaveColorIndex = colorIndex;
 }
-
 
 void WaveTrack::ConvertToSampleFormat(sampleFormat format)
 // WEAK-GUARANTEE
@@ -1087,7 +1087,7 @@ void WaveTrack::InsertSilence(double t, double len)
    {
       // Special case if there is no clip yet
       auto clip = std::make_shared<WaveClip>(
-         mDirManager, mFormat, mRate, this->GetWaveColorIndex());
+         mDirManager, mFormat, mRate, GetGroupData().GetWaveColorIndex());
       clip->InsertSilence(0, len);
       // use NOFAIL-GUARANTEE
       mClips.push_back( clip );
@@ -1424,9 +1424,11 @@ bool WaveTrack::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
             mAutoSaveIdent = (int) nValue;
          else if (!wxStrcmp(attr, wxT("colorindex")) &&
                   XMLValueChecker::IsGoodString(strValue) &&
-                  strValue.ToLong(&nValue))
-            // Don't use SetWaveColorIndex as it sets the clips too.
-            mWaveColorIndex  = nValue;
+                  strValue.ToLong(&nValue)) {
+            if ( Track::IsLoadingLeader() )
+               GetGroupData().SetWaveColorIndex(
+                  nValue, false ); // Don't set the clips too.
+         }
       } // while
       return true;
    }
@@ -1516,7 +1518,10 @@ void WaveTrack::WriteXML(XMLWriter &xmlFile) const
    xmlFile.WriteAttr(wxT("gain"), (double)data.GetGain());
    xmlFile.WriteAttr(wxT("pan"), (double)data.GetPan());
 
-   xmlFile.WriteAttr(wxT("colorindex"), mWaveColorIndex );
+   // It would be sufficient to write and read the color index for leader
+   // tracks in 2.3.2 and later, but for forward compatibility we continue
+   // to write it for all channels.
+   xmlFile.WriteAttr(wxT("colorindex"), GetGroupData().GetWaveColorIndex() );
 
    for (const auto &clip : mClips)
    {
@@ -1918,7 +1923,7 @@ WaveClip* WaveTrack::GetClipAtTime(double time)
 WaveClip* WaveTrack::CreateClip()
 {
    mClips.push_back( std::make_shared<WaveClip>(
-      mDirManager, mFormat, mRate, GetWaveColorIndex()));
+      mDirManager, mFormat, mRate, GetGroupData().GetWaveColorIndex()));
    return mClips.back().get();
 }
 
