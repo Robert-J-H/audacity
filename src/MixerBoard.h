@@ -268,12 +268,15 @@ public:
 class MixerBoardFrame final
    : public wxFrame
    , public TopLevelKeystrokeHandlingWindow
+   , public PrefsListener
 {
 public:
    MixerBoardFrame(AudacityProject* parent);
    virtual ~MixerBoardFrame();
 
    void Recreate(AudacityProject *pProject);
+
+   void UpdatePrefs() override;
 
 private:
    // event handlers

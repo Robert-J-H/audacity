@@ -52,7 +52,6 @@
 #include "Envelope.h"
 #include "FFT.h"
 #include "FileFormats.h"
-#include "FreqWindow.h"
 #include "ImageManipulation.h"
 #include "Internat.h"
 #include "LabelTrack.h"

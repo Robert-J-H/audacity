@@ -1482,5 +1482,7 @@ void MixerBoardFrame::Recreate( AudacityProject *pProject )
    this->SetSize( siz2 );
 }
 
-
-
+void MixerBoardFrame::UpdatePrefs()
+{
+   mMixerBoard->UpdatePrefs();
+}
