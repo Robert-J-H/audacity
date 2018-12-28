@@ -34,6 +34,8 @@ enum CopyingPolicy {
    DeepCopying,     // requires ClientData to define a Clone() member;
                     // reparent the clones if they are back-pointing;
                     //    won't compile for weak_ptr (and wouldn't work)
+   CopyOnWrite,     // requires ClientData to define a Clone() member;
+                    //    won't compile for weak_ptr (and wouldn't work)
 };
 
 // forward declarations
@@ -148,6 +150,8 @@ template< typename Container > struct Copyable< Container, SkipCopying >
    Copyable &operator=( const Copyable & ) { return *this; }
    Copyable( Copyable && ) = default;
    Copyable &operator=( Copyable&& ) = default;
+   bool NeedCopyOnWrite() { return false; }
+   void DoCopyOnWrite() {}
 };
 template< typename Container > struct Copyable< Container, ShallowCopying >
 : Container {
@@ -167,6 +171,8 @@ template< typename Container > struct Copyable< Container, ShallowCopying >
    }
    Copyable( Copyable && ) = default;
    Copyable &operator=( Copyable&& ) = default;
+   bool NeedCopyOnWrite() { return false; }
+   void DoCopyOnWrite() {}
 };
 template< typename Container > struct Copyable< Container, DeepCopying >
 : Container {
@@ -187,6 +193,48 @@ template< typename Container > struct Copyable< Container, DeepCopying >
    }
    Copyable( Copyable && ) = default;
    Copyable &operator=( Copyable&& ) = default;
+   bool NeedCopyOnWrite() { return false; }
+   void DoCopyOnWrite() {}
+};
+template< typename Container > struct Copyable< Container, CopyOnWrite >
+: private std::shared_ptr<Container> {
+   using Base = std::shared_ptr<Container>;
+   using iterator = typename Container::iterator;
+   using size_type = typename Container::size_type;
+   
+   iterator begin() const { return (*this)->begin(); }
+   iterator end() const { return (*this)->end(); }
+   size_type size() const { return (*this)->size(); }
+   void resize( size_type newSize ) { (*this)->resize( newSize ); }
+
+   Copyable() : Base{ std::make_shared< Container >() } {}
+   Copyable( const Copyable &other ) : Base( other ) {}
+   Copyable &operator=( const Copyable &other )
+      // Nothing special needed:
+      // If this is not self-assignment, then old data are abandoned,
+      // and other's data become shared (if not already shared)
+      // and copy-on-write of either *this or other may happen later
+      = default;
+   Copyable( Copyable && ) = default;
+   Copyable &operator=( Copyable&& ) = default;
+   bool NeedCopyOnWrite()
+   {
+      return Base::use_count() > 1;
+   }
+   void DoCopyOnWrite()
+   {
+      if ( NeedCopyOnWrite() )
+         DoCopy( *this );
+   }
+   void DoCopy( const Copyable &other )
+   {
+      // Build first then share for strong exception guarantee
+      Copyable temp;
+      for ( auto &&p : other ) {
+         (*temp).push_back( p ? p->Clone() : ( decltype( p->Clone() ) ){} );
+      }
+      ( Base& )( *this ) = temp;
+   }
 };
 
 }
