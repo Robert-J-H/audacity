@@ -180,16 +180,86 @@ namespace {
 
 const auto MenuPathStart = wxT("MenuBar");
 
-void VisitItem( void *context, MenuTable::BaseItem *pItem );
-
-void VisitItems(
-   void *context, const MenuTable::BaseItemPtrs &items )
+using namespace MenuTable;
+struct CollectedItems
 {
-   for ( auto &pSubItem : items )
-      VisitItem( context, pSubItem.get() );
+   std::vector< BaseItem * > items;
+   std::vector< std::shared_ptr< BaseItem > > &computedItems;
+};
+
+// forward declaration for mutually recursive functions
+void CollectItem( void *context,
+   CollectedItems &collection, BaseItem *Item );
+void CollectItems( void *context,
+   CollectedItems &collection, const BaseItemPtrs &items )
+{
+   for ( auto &item : items )
+      CollectItem( context, collection, item.get() );
+}
+void CollectItem( void *context,
+   CollectedItems &collection, BaseItem *pItem )
+{
+   if (!pItem)
+      return;
+
+   using namespace MenuTable;
+   if (const auto pShared =
+       dynamic_cast<SharedItem*>( pItem )) {
+      auto delegate = pShared->ptr;
+      CollectItem( context, collection, delegate.get() );
+   }
+   else
+   if (const auto pComputed =
+       dynamic_cast<ComputedItem*>( pItem )) {
+      auto result = pComputed->factory( context );
+      if (result) {
+         // Guarantee long enough lifetime of the result
+         collection.computedItems.push_back( result );
+         // recursion
+         CollectItem( context, collection, result.get() );
+      }
+   }
+   else
+   if (auto pGroup = dynamic_cast<GroupItem*>(pItem)) {
+      if (dynamic_cast<GroupingItem*>(pItem) && pItem->name.empty())
+         // nameless grouping item is transparent to path calculations
+         CollectItems( context, collection, pGroup->items );
+      else
+         // all other group items
+         collection.items.push_back( pItem );
+   }
+   else {
+      wxASSERT( dynamic_cast<SingleItem*>(pItem) );
+      // common to all single items
+      collection.items.push_back( pItem );
+   }
 }
 
-void VisitItem( void *context, MenuTable::BaseItem *pItem )
+using Path = wxArrayString;
+
+// forward declaration for mutually recursive functions
+void VisitItem(
+   void *context, CollectedItems &collection,
+   Path &path, BaseItem *pItem );
+void VisitItems(
+   void *context, CollectedItems &collection,
+   Path &path, GroupItem *pGroup )
+{
+   // Make a new collection for this subtree, sharing the memo cache
+   CollectedItems newCollection{ {}, collection.computedItems };
+
+   // Gather items at this level
+   CollectItems( context, newCollection, pGroup->items );
+
+   // Now visit them
+   path.push_back( pGroup->name );
+   for ( auto &pSubItem : newCollection.items )
+      VisitItem( context, collection, path, pSubItem );
+   path.pop_back();
+}
+void VisitItem(
+   void *context, CollectedItems &collection,
+   Path &path, BaseItem *pItem )
 {
    if (!pItem)
       return;
@@ -197,23 +267,6 @@ void VisitItem( void *context, MenuTable::BaseItem *pItem )
    auto &project = *static_cast< AudacityProject* >( context );
    auto &manager = CommandManager::Get( project );
 
-   using namespace MenuTable;
-   if (const auto pShared =
-       dynamic_cast<SharedItem*>( pItem )) {
-      auto delegate = pShared->ptr;
-      VisitItem( context, delegate.get() );
-   }
-   else
-   if (const auto pComputed =
-       dynamic_cast<ComputedItem*>( pItem )) {
-      // TODO maybe?  memo-ize the results of the function, but that requires
-      // invalidating the memo at the right times
-      auto result = pComputed->factory( context );
-      if (result)
-         // recursion
-         VisitItem( context, result.get() );
-   }
-   else
    if (const auto pCommand =
        dynamic_cast<CommandItem*>( pItem )) {
       manager.AddItem(
@@ -238,7 +291,7 @@ void VisitItem( void *context, MenuTable::BaseItem *pItem )
          : ::wxGetTranslation( pMenu->title );
       manager.BeginMenu( title );
       // recursion
-      VisitItems( context, pMenu->items );
+      VisitItems( context, collection, path, pMenu );
       manager.EndMenu();
    }
    else
@@ -248,7 +301,7 @@ void VisitItem( void *context, MenuTable::BaseItem *pItem )
       if (!flag)
          manager.BeginOccultCommands();
       // recursion
-      VisitItems( context, pConditionalGroup->items );
+      VisitItems( context, collection, path, pConditionalGroup );
       if (!flag)
          manager.EndOccultCommands();
    }
@@ -256,7 +309,7 @@ void VisitItem( void *context, MenuTable::BaseItem *pItem )
    if (const auto pGroup =
        dynamic_cast<GroupingItem*>( pItem )) {
       // recursion
-      VisitItems( context, pGroup->items );
+      VisitItems( context, collection, path, pGroup );
    }
    else
    if (dynamic_cast<SeparatorItem*>( pItem )) {
@@ -271,6 +324,18 @@ void VisitItem( void *context, MenuTable::BaseItem *pItem )
    }
    else
       wxASSERT( false );
+}
+
+}
+
+namespace Registry {
+
+void VisitTopItem( void *context, BaseItem *pTopItem )
+{
+   std::vector< MenuTable::BaseItemSharedPtr > computedItems;
+   CollectedItems collection{ {}, computedItems };
+   Path emptyPath;
+   VisitItem( context, collection, emptyPath, pTopItem );
 }
 
 }
@@ -331,7 +396,7 @@ void MenuCreator::CreateMenusAndCommands(AudacityProject &project)
    auto menubar = commandManager.AddMenuBar(wxT("appmenu"));
    wxASSERT(menubar);
 
-   VisitItem( &project, menuTree.get() );
+   Registry::VisitTopItem( &project, menuTree.get() );
 
    ProjectWindow::Get( project ).SetMenuBar(menubar.release());
 
