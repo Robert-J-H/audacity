@@ -417,6 +417,7 @@ private:
 // Define classes and functions that associate parts of the user interface
 // with path names
 namespace Registry {
+
    // TODO C++17: maybe use std::variant (discriminated unions) to achieve
    // polymorphism by other means, not needing unique_ptr and dynamic_cast
    // and using less heap.
@@ -440,7 +441,8 @@ namespace Registry {
 
    // An item that delegates to another held in a shared pointer; this allows
    // static tables of items to be computed once and reused
-   // The name of the delegate is significant for path calculations
+   // The name of the delegate is significant for path calculations, but the
+   // SharedItem's ordering hint is used if the delegate has none
    struct SharedItem final : BaseItem {
       explicit SharedItem( const BaseItemSharedPtr &ptr_ )
          : BaseItem{ wxEmptyString }
@@ -457,7 +459,8 @@ namespace Registry {
 
    // An item that computes some other item to substitute for it, each time
    // the ComputedItem is visited
-   // The name of the substitute is significant for path calculations
+   // The name of the substitute is significant for path calculations, but the
+   // ComputedItem's ordering hint is used if the substitute has none
    struct ComputedItem final : BaseItem {
       // The type of functions that generate descriptions of items.
       // Return type is a shared_ptr to let the function decide whether to
@@ -528,6 +531,7 @@ namespace Registry {
 
    // Concrete subclass of GroupItem that adds nothing else
    // GroupingItem with an empty name is transparent to item path calculations
+   // and propagates its ordering hint if subordinates don't specify hints
    struct GroupingItem final : GroupItem
    {
       using GroupItem::GroupItem;
@@ -546,10 +550,20 @@ namespace Registry {
       virtual void Visit( SingleItem &item, const wxArrayString &path );
    };
 
-   // Top-down visitation of all items and groups in a tree
+   // Top-down visitation of all items and groups in a tree rooted in
+   // pTopItem, as merged with pRegistry.
+   // The merger of the trees is recomputed in each call, not saved.
+   // So neither given tree is modified.
+   // But there may be a side effect on preferences to remember the ordering
+   // imposed on each node of the unordered tree of registered items; each item
+   // seen in the registry for the first time is placed somehere, and that
+   // ordering should be kept the same thereafter in later runs (which may add
+   // yet other previously unknown items).
    // context argument is passed to ComputedItem functors
    void Visit(
-      Visitor &visitor, void *context, BaseItem *pTopItem );
+      Visitor &visitor,
+      BaseItem *pTopItem,
+      GroupItem *pRegistry = nullptr, void *context = nullptr );
 }
 
 // Define items that populate tables that specifically describe menu trees

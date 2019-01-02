@@ -50,6 +50,8 @@
 #include "toolbars/ControlToolBar.h"
 #include "toolbars/ToolManager.h"
 
+#include <unordered_set>
+
 #include <wx/menu.h>
 
 MenuCreator::MenuCreator()
@@ -188,7 +190,13 @@ const auto MenuPathStart = wxT("MenuBar");
 using namespace MenuTable;
 struct CollectedItems
 {
-   std::vector< BaseItem * > items;
+   struct Item{
+      // Predefined, or merged from registry already:
+      BaseItem *merged;
+      // Corresponding item from the registry, its sub-items to be merged:
+      GroupItem *merging;
+   };
+   std::vector< Item > items;
    std::vector< std::shared_ptr< BaseItem > > &computedItems;
 };
 
@@ -210,8 +218,9 @@ void CollectItem( void *context,
    using namespace MenuTable;
    if (const auto pShared =
        dynamic_cast<SharedItem*>( pItem )) {
-      auto delegate = pShared->ptr;
-      CollectItem( context, collection, delegate.get() );
+      auto delegate = pShared->ptr.get();
+      if ( delegate )
+         CollectItem( context, collection, delegate );
    }
    else
    if (const auto pComputed =
@@ -231,26 +240,271 @@ void CollectItem( void *context,
          CollectItems( context, collection, pGroup->items );
       else
          // all other group items
-         collection.items.push_back( pItem );
+         collection.items.push_back( {pItem, nullptr} );
    }
    else {
       wxASSERT( dynamic_cast<SingleItem*>(pItem) );
       // common to all single items
-      collection.items.push_back( pItem );
+      collection.items.push_back( {pItem, nullptr} );
    }
 }
 
 using Path = wxArrayString;
 
+namespace {
+   std::unordered_set< wxString > sBadPaths;
+   void BadPath(
+     const wxString &format, const wxString &key, const wxString &name )
+   {
+     // Warn, but not more than once in a session for each bad path
+     auto badPath = key + '/' + name;
+     if ( sBadPaths.insert( badPath ).second ) {
+        // debug message
+        wxLogDebug( wxString::Format( format, badPath ) );
+        // user-visible message
+        AudacityMessageBox(
+           wxString::Format( wxGetTranslation( format ), badPath ) );
+     }
+   }
+
+   void ReportGroupGroupCollision( const wxString &key, const wxString &name )
+   {
+        BadPath(
+XO("Plug-in group at %s was merged with a previously defined group"),
+                key, name);
+   }
+
+   void ReportItemGroupCollision( const wxString &key, const wxString &name )
+   {
+        BadPath(
+XO("Plug-in group at %s conflicts with a previously defined item.\n Its items were merged into the parent"),
+                key, name);
+   }
+
+   void ReportItemItemCollision( const wxString &key, const wxString &name )
+   {
+        BadPath(
+XO("Plug-in item at %s conflicts with a previously defined item and was discarded"),
+                key, name);
+   }
+}
+
+void MergeItems( void *context,
+   CollectedItems &collection, const Path &path, const BaseItemPtrs &registry,
+   bool &doFlush )
+{
+   // The set of path names determines only an unordered tree.
+   // We want an ordering of the tree that is stable across runs.
+   // The last used ordering for this node can be found in preferences at this
+   // key:
+   auto key = '/' + ::wxJoin( path, '/', '\0' );
+
+   // Retrieve the old ordering on demand, if needed to merge something.
+   bool gotValue = false;
+   wxString strValue;
+   wxArrayString ordering;
+   auto GetOrdering = [&]() -> wxArrayString & {
+      if ( !gotValue ) {
+         gPrefs->Read(key, &strValue);
+         ordering = ::wxSplit( strValue, ',' );
+         gotValue = true;
+      }
+      return ordering;
+   };
+
+   // A linear search lookup lambda.  Smarter search may not be worth the
+   // effort.
+   using Iterator = decltype( collection.items )::iterator;
+   Iterator begin, end;
+   auto find = [&](const wxString &name){
+      return name.empty()
+         ? end
+         : std::find_if( begin, end,
+            [&]( const CollectedItems::Item& item ){
+               return name == item.merged->name; } ); };
+
+   auto insertNewItemUsingPreferences = [&]( BaseItem *pItem ) {
+      // beware changes of collection.itemPairs in previous iterations!
+      begin = collection.items.begin(), end = collection.items.end();
+
+      // Note that if more than one plug-in registers items under the same
+      // node, then it is not specified which plug-in is handled first,
+      // the first time registration happens.  It might happen that you
+      // add a plug-in, run the program, then add another, then run again;
+      // registration order determined by those actions might not
+      // correspond to the order of re-loading of modules in later
+      // sessions.  But whatever ordering is chosen the first time some
+      // plug-in is seen -- that ordering gets remembered in preferences.
+
+      if ( !pItem->name.empty() ) {
+         // Check saved ordering first, and rebuild that as well as is possible
+         auto &ordering = GetOrdering();
+         auto begin2 = ordering.begin(), end2 = ordering.end(),
+            found2 = std::find( begin2, end2, pItem->name );
+         if ( found2 != end2 ) {
+            auto insertPoint = end;
+            // Find the next name in the saved ordering that is known already
+            // in the collection.
+            while ( ++found2 != end2 ) {
+               auto known = find( *found2 );
+               if ( known != end ) {
+                  insertPoint = known;
+                  break;
+               }
+            }
+            collection.items.insert( insertPoint, {pItem, nullptr} );
+            return true;
+         }
+      }
+
+      return false;
+   };
+
+   // Make some mutually recursive lambdas using the above ones
+   std::function< void( const BaseItemPtrs & ) >
+      mergeItems;
+   auto mergeItem = [&](
+      BaseItem *pItem,
+      std::vector<BaseItem*> *pNewItems ){
+      // beware changes of collection.itemPairs in previous iterations!
+      begin = collection.items.begin(), end = collection.items.end();
+
+      // Assume no null pointers in the registry
+      const auto &name = pItem->name;
+      auto found = find( name );
+      if (found != end) {
+         // Collision of names between collection and registry!
+         // There are 2 * 2 = 4 cases, as each of the two are group items or
+         // not.
+         auto pCollectionGroup = dynamic_cast< GroupItem * >( found->merged );
+         auto pRegistryGroup = dynamic_cast< GroupItem * >( pItem );
+         if (pCollectionGroup) {
+            if (pRegistryGroup) {
+               // This is the expected case of collision.
+               // Subordinate items from one of the groups will be merged in
+               // another call to MergeItems at a lower level of path.
+               // Note, however, that at most one of the two should be other
+               // than a plain grouping item; if not, we must lose the extra
+               // information carried by one of them.
+               auto pCollectionGrouping =
+                  dynamic_cast<GroupingItem*>( found->merged );
+               auto pRegistryGrouping =
+                  dynamic_cast<GroupingItem*>( pItem );
+               if ( !(pCollectionGrouping || pRegistryGrouping) )
+                  ReportGroupGroupCollision( key, name );
+
+               if ( pCollectionGrouping && !pRegistryGrouping ) {
+                  // Swap their roles
+                  found->merged = pRegistryGroup;
+                  found->merging = pCollectionGroup;
+               }
+               else
+                  found->merging = pRegistryGroup;
+            }
+            else {
+               // Registered non-group item collides with a previously defined
+               // group.
+               // Resolve this by subordinating the non-group item below
+               // that group.
+               auto subGroup = std::make_shared<GroupingItem>( name,
+                  std::make_unique<SharedItem>(
+                     // shared pointer with vacuous deleter
+                     std::shared_ptr<BaseItem>( pItem, [](void*){} ) ) );
+               found->merging = subGroup.get();
+               collection.computedItems.push_back( subGroup );
+            }
+         }
+         else {
+            if (pRegistryGroup) {
+               // (This is where the mutual recursion of this lambda and the
+               // other happens.  It's only an abnormal case)
+               // When a group item collides with a previously defined name,
+               // splice the sub-items at the same level, saving the items
+               // but losing the grouping.
+               mergeItems( pRegistryGroup->items );
+               ReportItemGroupCollision( key, name );
+            }
+            else
+               // Collision of non-group items is the worst case!
+               // The later-registered item is lost.
+               ReportItemItemCollision( key, name );
+         }
+      }
+      else {
+         // A name is registered that is not known in the collection.
+         if (pNewItems)
+            pNewItems->push_back( pItem );
+      }
+   };
+   mergeItems = [&](
+      const BaseItemPtrs &registry ){
+      // First do expansion of nameless groupings, and caching of computed
+      // items, just as for the previously defined menus
+      CollectedItems newCollection{ {}, collection.computedItems };
+      CollectItems( context, newCollection, registry );
+      std::vector<BaseItem*> newItems;
+      for ( const auto &item : newCollection.items )
+         mergeItem( item.merged, &newItems );
+
+      // There may still be unresolved name collisions among the new items,
+      // so treat them in sorted order
+      std::sort( newItems.begin(), newItems.end(),
+         [](const BaseItem *a, const BaseItem *b) {
+            return a->name < b->name; } );
+
+      BaseItem *pItem;
+      decltype( newItems.begin() ) iter;
+      auto resolveCollisions = [&]{
+         while (iter != newItems.end() && pItem->name == (*iter)->name) {
+            mergeItem( *iter, nullptr );
+            iter = newItems.erase( iter );
+         }
+      };
+
+      // Choose placement for items in the registry that were not merged with
+      // some previously added item.
+      // If such an item is a group, then we do retain the kind of grouping that
+      // was registered.
+      for ( iter = newItems.begin(); iter != newItems.end(); ) {
+         pItem = *iter;
+         if ( insertNewItemUsingPreferences( pItem ) ) {
+            iter = newItems.erase( iter );
+            resolveCollisions();
+         }
+         else
+            ++iter;
+      }
+   };
+
+   // Now invoke
+   mergeItems( registry );
+
+   // Remember the NEW ordering, if there was any need to use the old.
+   if ( gotValue ) {
+      wxString newValue;
+      for ( const auto &item : collection.items ) {
+         const auto &name = item.merged->name;
+         if ( !name.empty() )
+            newValue += newValue.empty()
+               ? name
+               : ',' + name;
+      }
+      if (newValue != strValue) {
+         gPrefs->Write( key, newValue );
+         doFlush = true;
+      }
+   }
+}
+
 // forward declaration for mutually recursive functions
 void VisitItem(
    Registry::Visitor &visitor,
    void *context, CollectedItems &collection,
-   Path &path, BaseItem *pItem );
+   Path &path, BaseItem *pItem, GroupItem *pRegistry, bool &doFlush );
 void VisitItems(
    Registry::Visitor &visitor,
    void *context, CollectedItems &collection,
-   Path &path, GroupItem *pGroup )
+   Path &path, GroupItem *pGroup, GroupItem *pRegistry, bool &doFlush )
 {
    // Make a new collection for this subtree, sharing the memo cache
    CollectedItems newCollection{ {}, collection.computedItems };
@@ -258,16 +512,23 @@ void VisitItems(
    // Gather items at this level
    CollectItems( context, newCollection, pGroup->items );
 
-   // Now visit them
    path.push_back( pGroup->name );
-   for ( auto &pSubItem : newCollection.items )
-      VisitItem( visitor, context, collection, path, pSubItem );
+
+   // Merge with the registry
+   if ( pRegistry )
+      MergeItems( context, newCollection, path, pRegistry->items, doFlush );
+
+   // Now visit them
+   for ( auto &item : newCollection.items )
+      VisitItem( visitor, context, collection, path, item.merged, item.merging,
+         doFlush );
+
    path.pop_back();
 }
 void VisitItem(
    Registry::Visitor &visitor,
    void *context, CollectedItems &collection,
-   Path &path, BaseItem *pItem )
+   Path &path, BaseItem *pItem, GroupItem *pRegistry, bool &doFlush )
 {
    if (!pItem)
       return;
@@ -281,7 +542,7 @@ void VisitItem(
        dynamic_cast<GroupItem*>( pItem )) {
       visitor.BeginGroup( *pGroup, path );
       // recursion
-      VisitItems( visitor, context, collection, path, pGroup );
+      VisitItems( visitor, context, collection, path, pGroup, pRegistry, doFlush );
       visitor.EndGroup( *pGroup, path );
    }
    else
@@ -293,13 +554,17 @@ void VisitItem(
 namespace Registry {
 
 void Visit(
-   Visitor &visitor, void *context,
-   BaseItem *pTopItem )
+   Visitor &visitor, BaseItem *pTopItem, GroupItem *pRegistry, void *context )
 {
    std::vector< MenuTable::BaseItemSharedPtr > computedItems;
+   bool doFlush = false;
    CollectedItems collection{ {}, computedItems };
    Path emptyPath;
-   VisitItem( visitor, context, collection, emptyPath, pTopItem );
+   VisitItem(
+      visitor, context, collection, emptyPath, pTopItem, pRegistry, doFlush );
+   // Flush any writes done by MergeItems()
+   if (doFlush)
+      gPrefs->Flush();
 }
 
 }
@@ -330,6 +595,14 @@ MenuTable::BaseItemSharedPtr WindowMenu();
 MenuTable::BaseItemSharedPtr ExtraMenu();
 
 MenuTable::BaseItemSharedPtr HelpMenu();
+
+namespace {
+static Registry::GroupItem &sRegistry()
+{
+   static Registry::GroupingItem registry{ MenuPathStart };
+   return registry;
+}
+}
 
 // Table of menu factories.
 // TODO:  devise a registration system instead.
@@ -470,7 +743,7 @@ void MenuCreator::CreateMenusAndCommands(AudacityProject &project)
 
 void MenuManager::Visit( Registry::Visitor &visitor, AudacityProject &project )
 {
-   Registry::Visit( visitor, &project, menuTree.get() );
+   Registry::Visit( visitor, menuTree.get(), &sRegistry(), &project );
 }
 
 // TODO: This surely belongs in CommandManager?
