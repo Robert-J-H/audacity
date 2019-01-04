@@ -563,6 +563,37 @@ namespace Registry {
       ~GroupingItem() override;
    };
 
+   // inline convenience function:
+
+   // Group items can be constructed two ways.
+   // Pointers to subordinate items are moved into the result.
+   // Null pointers are permitted, and ignored when building the menu.
+   // Items are spliced into the enclosing menu.
+   // The name is untranslated and may be empty, to make the group transparent
+   // in identification of items by path.  Otherwise try to keep the name
+   // stable across Audacity versions.
+   template< typename... Args >
+   inline std::unique_ptr<GroupingItem> Items(
+      const wxString &internalName, Args&&... args )
+         { return std::make_unique<GroupingItem>( internalName,
+            std::forward<Args>(args)... ); }
+
+   // The /-separated path is relative to the GroupItem supplied to
+   // RegisterItems.
+   // For instance, wxT("Transport/Cursor") to locate an item under a sub-menu
+   // of a main menu
+   struct Placement {
+      wxString path;
+      OrderingHint hint;
+
+      Placement( const wxString &path_, const OrderingHint &hint_ = {} )
+         : path( path_ ), hint( hint_ )
+      {}
+   };
+
+   void RegisterItems( GroupItem &registry, const Placement &placement,
+      BaseItemPtr &&pItem );
+   
    // Define actions to be done in Visit.
    // Default implementations do nothing
    // The supplied path does not include the name of the item
@@ -752,20 +783,8 @@ namespace MenuTable {
       Appender fn;
    };
 
-   // Following are the functions to use directly in writing table definitions.
-
-   // Group items can be constructed two ways.
-   // Pointers to subordinate items are moved into the result.
-   // Null pointers are permitted, and ignored when building the menu.
-   // Items are spliced into the enclosing menu.
-   // The name is untranslated and may be empty, to make the group transparent
-   // in identification of items by path.  Otherwise try to keep the name
-   // stable across Audacity versions.
-   template< typename... Args >
-   inline std::unique_ptr<GroupingItem> Items(
-      const wxString &internalName, Args&&... args )
-         { return std::make_unique<GroupingItem>( internalName,
-            std::forward<Args>(args)... ); }
+   // The following, and Shared() and Items(), are the functions to use directly
+   // in writing table definitions.
 
    // Menu items can be constructed two ways, as for group items
    // Items will appear in a main toolbar menu or in a sub-menu.
@@ -857,6 +876,20 @@ namespace MenuTable {
    inline std::unique_ptr<SpecialItem> Special(
       const wxString &name, const SpecialItem::Appender &fn )
          { return std::make_unique<SpecialItem>( name, fn ); }
+
+   // Typically you make a static object of this type in the .cpp file that
+   // also defines the added menu actions.
+   // pItem can be specified by an expression using the inline functions above.
+   struct AttachedItem final
+   {
+      AttachedItem( const Placement &placement, BaseItemPtr &&pItem );
+
+      AttachedItem( const wxString &path, BaseItemPtr &&pItem )
+         // Delegating constructor
+         : AttachedItem( Placement{ path }, std::move( pItem ) )
+      {}
+   };
+
 }
 
 #endif
