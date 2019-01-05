@@ -1124,3 +1124,54 @@ void FreqGauge::Reset()
    mRange = 0;
    Refresh(true);
 }
+
+// Remaining code hooks this add-on into the application
+#include "commands/CommandContext.h"
+#include "commands/CommandManager.h"
+#include "commands/ScreenshotCommand.h"
+
+namespace {
+
+AudacityProject::AttachedWindows::RegisteredFactory sFrequencyWindowKey{
+   []( AudacityProject &parent ) -> wxWeakRef< wxWindow > {
+      auto &window = ProjectWindow::Get( parent );
+      return safenew FreqWindow(
+         &window, -1, _("Frequency Analysis"),
+         wxPoint{ 150, 150 }
+      );
+   }
+};
+
+// Define our extra menu item that invokes that factory
+struct Handler : CommandHandlerObject {
+   void OnPlotSpectrum(const CommandContext &context)
+   {
+      auto &project = context.project;
+      auto freqWindow =
+         &project.AttachedWindows::Get< FreqWindow >( sFrequencyWindowKey );
+
+      if( ScreenshotCommand::MayCapture( freqWindow ) )
+         return;
+      freqWindow->Show(true);
+      freqWindow->Raise();
+      freqWindow->SetFocus();
+   }
+};
+CommandHandlerObject &findCommandHandler(AudacityProject &) {
+   // Handler is not stateful.  Doesn't need a factory registered with
+   // AudacityProject.
+   static Handler instance;
+   return instance;
+}
+
+// Register that menu item
+
+using namespace MenuTable;
+AttachedItem sAttachment{ wxT("Analyze/Windows"),
+   FinderScope( findCommandHandler ).Eval(
+      Command( wxT("PlotSpectrum"), XXO("Plot Spectrum..."),
+         &Handler::OnPlotSpectrum,
+         AudioIONotBusyFlag | WaveTracksSelectedFlag | TimeSelectedFlag ) )
+};
+
+}

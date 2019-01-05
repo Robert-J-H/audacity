@@ -1484,3 +1484,46 @@ void MixerBoardFrame::UpdatePrefs()
 {
    mMixerBoard->UpdatePrefs();
 }
+
+// Remaining code hooks this add-on into the application
+#include "commands/CommandContext.h"
+
+namespace {
+
+// Mixer board window attached to each project is built on demand by:
+AudacityProject::AttachedWindows::RegisteredFactory sMixerBoardKey{
+   []( AudacityProject &parent ) -> wxWeakRef< wxWindow > {
+      return safenew MixerBoardFrame( &parent );
+   }
+};
+
+// Define our extra menu item that invokes that factory
+struct Handler : CommandHandlerObject {
+   void OnMixerBoard(const CommandContext &context)
+   {
+      auto &project = context.project;
+
+      auto mixerBoardFrame = &project.AttachedWindows::Get( sMixerBoardKey );
+      mixerBoardFrame->Show();
+      mixerBoardFrame->Raise();
+      mixerBoardFrame->SetFocus();
+   }
+};
+CommandHandlerObject &findCommandHandler(AudacityProject &) {
+   // Handler is not stateful.  Doesn't need a factory registered with
+   // AudacityProject.
+   static Handler instance;
+   return instance;
+}
+
+// Register that menu item
+
+using namespace MenuTable;
+AttachedItem sAttachment{ wxT("View/Windows"),
+   FinderScope( findCommandHandler ).Eval(
+      Command( wxT("MixerBoard"), XXO("&Mixer Board..."), &Handler::OnMixerBoard,
+         PlayableTracksExistFlag) )
+};
+
+}
+

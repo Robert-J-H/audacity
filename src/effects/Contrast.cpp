@@ -609,3 +609,56 @@ void ContrastDialog::OnReset(wxCommandEvent & /*event*/)
    mPassFailText->ChangeValue(wxT(""));
    mDiffText->ChangeValue(wxT(""));
 }
+
+// Remaining code hooks this add-on into the application
+#include "commands/CommandContext.h"
+#include "commands/CommandManager.h"
+#include "../commands/ScreenshotCommand.h"
+
+namespace {
+
+// Contrast window attached to each project is built on demand by:
+AudacityProject::AttachedWindows::RegisteredFactory sContrastDialogKey{
+   []( AudacityProject &parent ) -> wxWeakRef< wxWindow > {
+      auto &window = ProjectWindow::Get( parent );
+      return safenew ContrastDialog(
+         &window, -1, _("Contrast Analysis (WCAG 2 compliance)"),
+         wxPoint{ 150, 150 }
+      );
+   }
+};
+
+
+// Define our extra menu item that invokes that factory
+struct Handler : CommandHandlerObject {
+   void OnContrast(const CommandContext &context)
+   {
+      auto &project = context.project;
+      auto contrastDialog =
+         &project.AttachedWindows::Get< ContrastDialog >( sContrastDialogKey );
+
+      contrastDialog->CentreOnParent();
+      if( ScreenshotCommand::MayCapture( contrastDialog ) )
+         return;
+      contrastDialog->Show();
+   }
+};
+CommandHandlerObject &findCommandHandler(AudacityProject &) {
+   // Handler is not stateful.  Doesn't need a factory registered with
+   // AudacityProject.
+   static Handler instance;
+   return instance;
+}
+
+// Register that menu item
+
+using namespace MenuTable;
+AttachedItem sAttachment{ wxT("Analyze/Windows"),
+   FinderScope( findCommandHandler ).Eval(
+      Command( wxT("ContrastAnalyser"), XXO("Contrast..."),
+         &Handler::OnContrast,
+         AudioIONotBusyFlag | WaveTracksSelectedFlag | TimeSelectedFlag,
+         wxT("Ctrl+Shift+T") ) )
+};
+
+}

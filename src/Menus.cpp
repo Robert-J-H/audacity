@@ -50,6 +50,7 @@
 #include "toolbars/ControlToolBar.h"
 #include "toolbars/ToolManager.h"
 
+#include <mutex>
 #include <unordered_set>
 
 #include <wx/menu.h>
@@ -778,6 +779,35 @@ static const auto menuTree = MenuTable::Items( MenuPathStart
 );
 
 namespace {
+// Once only, cause initial population of preferences for the ordering
+// of some menu items that used to be given in tables but are now separately
+// registered in several .cpp files; the sequence of registration depends
+// on unspecified accidents of static initialization order across
+// compilation units, so we need something specific here to preserve old
+// default appearance of menus.
+// But this needs only to mention some strings -- there is no compilation or
+// link dependency of this source file on those other implementation files.
+void InitializeMenuOrdering()
+{
+   using Pair = std::pair<const wxChar *, const wxChar *>;
+   static const Pair pairs [] = {
+      {wxT("/View/Windows"), wxT("UndoHistory,Karaoke,MixerBoard")},
+      {wxT("/Analyze/Windows"), wxT("ContrastAnalyser,PlotSpectrum")},
+   };
+
+   bool doFlush = false;
+   for (auto pair : pairs) {
+      const auto key = wxString{'/'} + MenuPathStart + pair.first;
+      if ( gPrefs->Read(key).empty() ) {
+         gPrefs->Write( key, pair.second );
+         doFlush = true;
+      }
+   }
+   
+   if (doFlush)
+      gPrefs->Flush();
+}
+
 struct MenuItemVisitor : Registry::Visitor
 {
    MenuItemVisitor( AudacityProject &proj, CommandManager &man )
@@ -875,6 +905,9 @@ struct MenuItemVisitor : Registry::Visitor
 
 void MenuCreator::CreateMenusAndCommands(AudacityProject &project)
 {
+   static std::once_flag flag;
+   std::call_once( flag, InitializeMenuOrdering );
+
    auto &commandManager = CommandManager::Get( project );
 
    // The list of defaults to exclude depends on
