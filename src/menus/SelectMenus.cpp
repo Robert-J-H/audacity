@@ -1102,8 +1102,7 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &project) {
 
 // Menu definitions
 
-#define FN(X) findCommandHandler, \
-   static_cast<CommandFunctorPointer>(& SelectActions::Handler :: X)
+#define FN(X) (& SelectActions::Handler :: X)
 
 MenuTable::BaseItemPtr ClipSelectMenu( AudacityProject& );
 
@@ -1111,9 +1110,10 @@ MenuTable::BaseItemPtr SelectMenu( AudacityProject& )
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
-   
+
+   return FinderScope( findCommandHandler ).Eval(
    /* i18n-hint: (verb) It's an item on a menu. */
-   return Menu( XO("&Select"),
+   Menu( XO("&Select"),
       Command( wxT("SelectAll"), XXO("&All"), FN(OnSelectAll),
          TracksExistFlag,
          Options{ wxT("Ctrl+A"), XO("Select All") } ),
@@ -1211,13 +1211,15 @@ MenuTable::BaseItemPtr SelectMenu( AudacityProject& )
       Command( wxT("ZeroCross"), XXO("At &Zero Crossings"),
          FN(OnZeroCrossing), TracksSelectedFlag,
          Options{ wxT("Z"), XO("Select Zero Crossing") } )
-   );
+   ) );
 }
 
 MenuTable::BaseItemPtr ExtraSelectionMenu( AudacityProject & )
 {
    using namespace MenuTable;
-   return Menu( XO("&Selection"),
+
+   return FinderScope( findCommandHandler ).Eval(
+   Menu( XO("&Selection"),
       Command( wxT("SnapToOff"), XXO("Snap-To &Off"), FN(OnSnapToOff),
          AlwaysEnabledFlag ),
       Command( wxT("SnapToNearest"), XXO("Snap-To &Nearest"),
@@ -1250,7 +1252,7 @@ MenuTable::BaseItemPtr ExtraSelectionMenu( AudacityProject & )
          FN(OnSelContractRight),
          TracksExistFlag | TrackPanelHasFocus,
          wxT("Ctrl+Shift+Left\twantKeyup") )
-   );
+   ) );
 }
 
 MenuTable::BaseItemPtr ClipCursorItems( AudacityProject & );
@@ -1266,7 +1268,8 @@ MenuTable::BaseItemPtr CursorMenu( AudacityProject & )
    // GA: 'Skip to' moves the viewpoint to center of the track and preserves the
    // selection. 'Cursor to' does neither. 'Center at' might describe it better
    // than 'Skip'.
-   return Menu( XO("&Cursor to"),
+   return FinderScope( findCommandHandler ).Eval(
+   Menu( XO("&Cursor to"),
       Command( wxT("CursSelStart"), XXO("Selection Star&t"),
          FN(OnCursorSelStart),
          TimeSelectedFlag,
@@ -1294,7 +1297,7 @@ MenuTable::BaseItemPtr CursorMenu( AudacityProject & )
       Command( wxT("CursProjectEnd"), XXO("Project E&nd"), FN(OnSkipEnd),
          CanStopFlags,
          Options{ wxT("End"), XO("Cursor to Project End") } )
-   );
+   ) );
 }
 
 MenuTable::BaseItemPtr ExtraClipCursorItems( AudacityProject & );
@@ -1303,7 +1306,8 @@ MenuTable::BaseItemPtr ExtraCursorMenu( AudacityProject & )
 {
    using namespace MenuTable;
 
-   return Menu( XO("&Cursor"),
+   return FinderScope( findCommandHandler ).Eval(
+   Menu( XO("&Cursor"),
       Command( wxT("CursorLeft"), XXO("Cursor &Left"), FN(OnCursorLeft),
          TracksExistFlag | TrackPanelHasFocus,
          wxT("Left\twantKeyup\tallowDup") ),
@@ -1324,13 +1328,15 @@ MenuTable::BaseItemPtr ExtraCursorMenu( AudacityProject & )
          TracksExistFlag | TrackPanelHasFocus, wxT("Shift+.") ),
 
       ExtraClipCursorItems
-   );
+   ) );
 }
 
 MenuTable::BaseItemPtr ExtraSeekMenu( AudacityProject & )
 {
    using namespace MenuTable;
-   return Menu( XO("See&k"),
+
+   return FinderScope( findCommandHandler ).Eval(
+   Menu( XO("See&k"),
       Command( wxT("SeekLeftShort"), XXO("Short Seek &Left During Playback"),
          FN(OnSeekLeftShort), AudioIOBusyFlag, wxT("Left\tallowDup") ),
       Command( wxT("SeekRightShort"),
@@ -1340,7 +1346,7 @@ MenuTable::BaseItemPtr ExtraSeekMenu( AudacityProject & )
          FN(OnSeekLeftLong), AudioIOBusyFlag, wxT("Shift+Left\tallowDup") ),
       Command( wxT("SeekRightLong"), XXO("Long Seek Rig&ht During Playback"),
          FN(OnSeekRightLong), AudioIOBusyFlag, wxT("Shift+Right\tallowDup") )
-   );
+   ) );
 }
 
 #undef FN

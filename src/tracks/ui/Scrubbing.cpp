@@ -1173,18 +1173,18 @@ bool Scrubber::CanScrub() const
    return cm.GetEnabled(menuItems[ 0 ].name);
 }
 
-// To supply the "finder" argument
-static CommandHandlerObject &findme(AudacityProject &project)
-{ return Scrubber::Get( project ); }
-
 MenuTable::BaseItemPtr Scrubber::Menu()
 {
    using Options = CommandManager::Options;
 
+   auto scope = MenuTable::FinderScope(
+      [](AudacityProject &project) -> CommandHandlerObject&
+         { return Scrubber::Get( project ); } );
+
    MenuTable::BaseItemPtrs ptrs;
    for (const auto &item : menuItems) {
       ptrs.push_back( MenuTable::Command( item.name, item.label,
-          findme, static_cast<CommandFunctorPointer>(item.memFn),
+          item.memFn,
           item.flags,
           item.StatusTest
              ? // a checkmark item

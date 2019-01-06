@@ -501,6 +501,35 @@ namespace MenuTable {
       ~SeparatorItem() override;
    };
 
+   // usage:
+   //   auto scope = FinderScope( findCommandHandler );
+   //   return Items( ... );
+   //
+   // or:
+   //   return FinderScope( findCommandHandler )
+   //      .Eval( Items( ... ) );
+   //
+   // where findCommandHandler names a function.
+   // This is used before a sequence of many calls to Command() and
+   // CommandGroup(), so that the finder argument need not be specified
+   // in each call.
+   class FinderScope : ValueRestorer< CommandHandlerFinder >
+   {
+      static CommandHandlerFinder sFinder;
+
+   public:
+      static CommandHandlerFinder DefaultFinder() { return sFinder; }
+
+      explicit
+      FinderScope( CommandHandlerFinder finder )
+         : ValueRestorer( sFinder, finder )
+      {}
+
+      // See usage comment above about this pass-through function
+      template< typename Value > Value&& Eval( Value &&value ) const
+         { return std::forward<Value>(value); }
+   };
+
    struct CommandItem final : BaseItem {
       CommandItem(const CommandID &name_,
                const wxString &label_in_, // untranslated
@@ -508,6 +537,21 @@ namespace MenuTable {
                CommandFunctorPointer callback_,
                CommandFlag flags_,
                const CommandManager::Options &options_);
+
+      // Takes a pointer to member function directly, and delegates to the
+      // previous constructor; useful within the lifetime of a FinderScope
+      template< typename Handler >
+      CommandItem(const wxString &name_,
+               const wxString &label_in_, // untranslated
+               void (Handler::*pmf)(const CommandContext&),
+               CommandFlag flags_,
+               const CommandManager::Options &options_,
+               CommandHandlerFinder finder = FinderScope::DefaultFinder())
+         : CommandItem(name_, label_in_,
+            finder, static_cast<CommandFunctorPointer>(pmf),
+            flags_, options_)
+      {}
+
       ~CommandItem() override;
 
       const CommandID name;
@@ -525,6 +569,21 @@ namespace MenuTable {
                CommandFunctorPointer callback_,
                CommandFlag flags_,
                bool isEffect_);
+
+      // Takes a pointer to member function directly, and delegates to the
+      // previous constructor; useful within the lifetime of a FinderScope
+      template< typename Handler >
+      CommandGroupItem(const wxString &name_,
+               std::initializer_list< ComponentInterfaceSymbol > items_,
+               void (Handler::*pmf)(const CommandContext&),
+               CommandFlag flags_,
+               bool isEffect_,
+               CommandHandlerFinder finder = FinderScope::DefaultFinder())
+         : CommandGroupItem(name_, items_,
+            finder, static_cast<CommandFunctorPointer>(pmf),
+            flags_, isEffect_)
+      {}
+
       ~CommandGroupItem() override;
 
       const wxString name;
@@ -599,25 +658,29 @@ namespace MenuTable {
    inline std::unique_ptr<SeparatorItem> Separator()
       { return std::make_unique<SeparatorItem>(); }
 
+   template< typename Handler >
    inline std::unique_ptr<CommandItem> Command(
       const CommandID &name,
       const wxString &label_in, // untranslated
-      CommandHandlerFinder finder, CommandFunctorPointer callback,
-      CommandFlag flags, const CommandManager::Options &options = {})
+      void (Handler::*pmf)(const CommandContext&),
+      CommandFlag flags, const CommandManager::Options &options = {},
+      CommandHandlerFinder finder = FinderScope::DefaultFinder())
    {
       return std::make_unique<CommandItem>(
-         name, label_in, finder, callback, flags, options
+         name, label_in, pmf, flags, options, finder
       );
    }
 
+   template< typename Handler >
    inline std::unique_ptr<CommandGroupItem> CommandGroup(
       const wxString &name,
       std::initializer_list< ComponentInterfaceSymbol > items,
-      CommandHandlerFinder finder, CommandFunctorPointer callback,
-      CommandFlag flags, bool isEffect = false)
+      void (Handler::*pmf)(const CommandContext&),
+      CommandFlag flags, bool isEffect = false,
+      CommandHandlerFinder finder = FinderScope::DefaultFinder())
    {
       return std::make_unique<CommandGroupItem>(
-         name, items, finder, callback, flags, isEffect
+         name, items, pmf, flags, isEffect, finder
       );
    }
 

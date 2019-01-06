@@ -154,6 +154,15 @@ CommandGroupItem::~CommandGroupItem() {}
 
 SpecialItem::~SpecialItem() {}
 
+CommandHandlerFinder FinderScope::sFinder =
+   [](AudacityProject &project) -> CommandHandlerObject & {
+      // If this default finder function is reached, then FinderScope should
+      // have been used somewhere, or an explicit CommandHandlerFinder passed
+      // to menu item constructors
+      wxASSERT( false );
+      return project;
+   };
+
 }
 
 namespace {
