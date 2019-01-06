@@ -1473,7 +1473,6 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 #define FN(X) findCommandHandler, \
    static_cast<CommandFunctorPointer>(& TrackActions::Handler :: X)
-#define XXO(X) _(X), wxString{X}.Contains("...")
 
 MenuTable::BaseItemPtr TracksMenu( AudacityProject & )
 {
@@ -1546,13 +1545,13 @@ MenuTable::BaseItemPtr TracksMenu( AudacityProject & )
          // require the tracks to be selected.
          Command( wxT("PanLeft"), XXO("&Left"), FN(OnPanLeft),
             TracksSelectedFlag,
-            Options{}.LongName( _("Pan Left") ) ),
+            Options{}.LongName( XO("Pan Left") ) ),
          Command( wxT("PanRight"), XXO("&Right"), FN(OnPanRight),
             TracksSelectedFlag,
-            Options{}.LongName( _("Pan Right") ) ),
+            Options{}.LongName( XO("Pan Right") ) ),
          Command( wxT("PanCenter"), XXO("&Center"), FN(OnPanCenter),
             TracksSelectedFlag,
-            Options{}.LongName( _("Pan Center") ) )
+            Options{}.LongName( XO("Pan Center") ) )
       ),
 
       Separator(),
@@ -1607,10 +1606,10 @@ MenuTable::BaseItemPtr TracksMenu( AudacityProject & )
       Menu( _("S&ort Tracks"),
          Command( wxT("SortByTime"), XXO("By &Start Time"), FN(OnSortTime),
             TracksExistFlag,
-            Options{}.LongName( _("Sort by Time") ) ),
+            Options{}.LongName( XO("Sort by Time") ) ),
          Command( wxT("SortByName"), XXO("By &Name"), FN(OnSortName),
             TracksExistFlag,
-            Options{}.LongName( _("Sort by Name") ) )
+            Options{}.LongName( XO("Sort by Name") ) )
       )
 
       //////////////////////////////////////////////////////////////////////////
@@ -1679,5 +1678,4 @@ MenuTable::BaseItemPtr ExtraTrackMenu( AudacityProject & )
    );
 }
 
-#undef XXO
 #undef FN

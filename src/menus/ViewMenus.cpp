@@ -433,7 +433,6 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 #define FN(X) findCommandHandler, \
    static_cast<CommandFunctorPointer>(& ViewActions::Handler :: X)
-#define XXO(X) _(X), wxString{X}.Contains("...")
 
 MenuTable::BaseItemPtr ToolbarsMenu( AudacityProject& );
 
@@ -476,10 +475,10 @@ MenuTable::BaseItemPtr ViewMenu( AudacityProject& )
       Menu( _("Sk&ip to"),
          Command( wxT("SkipSelStart"), XXO("Selection Sta&rt"),
             FN(OnGoSelStart), TimeSelectedFlag,
-            Options{ wxT("Ctrl+["), _("Skip to Selection Start") } ),
+            Options{ wxT("Ctrl+["), XO("Skip to Selection Start") } ),
          Command( wxT("SkipSelEnd"), XXO("Selection En&d"), FN(OnGoSelEnd),
             TimeSelectedFlag,
-            Options{ wxT("Ctrl+]"), _("Skip to Selection End") } )
+            Options{ wxT("Ctrl+]"), XO("Skip to Selection End") } )
       ),
 
       Separator(),
@@ -552,5 +551,4 @@ MenuTable::BaseItemPtr ViewMenu( AudacityProject& )
    );
 }
 
-#undef XXO
 #undef FN

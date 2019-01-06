@@ -222,7 +222,8 @@ void AddEffectMenuItems(
 
          if (plug->IsEffectInteractive())
          {
-            name += wxT("...");
+            name += _("...");
+            hasDialog = true;
          }
 
          if (groupBy == wxT("groupby:publisher"))
@@ -295,7 +296,8 @@ void AddEffectMenuItems(
 
          if (plug->IsEffectInteractive())
          {
-            name += wxT("...");
+            name += _("...");
+            hasDialog = true;
          }
 
          wxString group;
@@ -747,7 +749,6 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 #define FN(X) findCommandHandler, \
    static_cast<CommandFunctorPointer>(& PluginActions::Handler :: X)
-#define XXO(X) _(X), wxString{X}.Contains("...")
 
 // ... buf first some more helper definitions, which use FN
 namespace {
@@ -819,7 +820,6 @@ void AddEffectMenuItemGroup(
             if( plug->GetPluginType() == PluginTypeEffect )
                temp2.push_back( Command( item,
                   item,
-                  item.Contains("..."),
                   FN(OnEffect),
                   flags[i],
                   CommandManager::Options{}
@@ -838,11 +838,13 @@ void AddEffectMenuItemGroup(
          if( plug->GetPluginType() == PluginTypeEffect )
             pTable->push_back( Command( names[i],
                names[i],
-               vHasDialog[i],
                FN(OnEffect),
                flags[i],
                CommandManager::Options{}
-                  .IsEffect().Parameter( plugs[i] ) ) );
+                  .IsEffect()
+                  .IsTranslated()
+                  .Interactive( vHasDialog[i] )
+                  .Parameter( plugs[i] ) ) );
       }
 
       if (max > 0)
@@ -879,7 +881,7 @@ MenuTable::BaseItemPtrs PopulateMacrosMenu( CommandFlag flags  )
    for (i = 0; i < (int)names.size(); i++) {
       auto MacroID = ApplyMacroDialog::MacroIdOfName( names[i] );
       result.push_back( MenuTable::Command( MacroID,
-         names[i], false, FN(OnApplyMacroDirectly),
+         names[i], FN(OnApplyMacroDirectly),
          flags ) );
    }
 
@@ -921,8 +923,8 @@ MenuTable::BaseItemPtr EffectMenu( AudacityProject &project )
    const auto &lastEffect = MenuManager::Get(project).mLastEffect;
    wxString buildMenuLabel;
    if (!lastEffect.empty()) {
-      buildMenuLabel.Printf(_("Repeat %s"),
-         EffectManager::Get().GetCommandName(lastEffect));
+      buildMenuLabel = wxString::Format(
+         _("Repeat %s"), EffectManager::Get().GetCommandName(lastEffect) );
    }
    else
       buildMenuLabel = _("Repeat Last Effect");
@@ -935,11 +937,12 @@ MenuTable::BaseItemPtr EffectMenu( AudacityProject &project )
       Separator(),
 
 #endif
-      Command( wxT("RepeatLastEffect"), buildMenuLabel, false,
+      Command( wxT("RepeatLastEffect"), buildMenuLabel,
          FN(OnRepeatLastEffect),
          AudioIONotBusyFlag | TimeSelectedFlag |
             WaveTracksSelectedFlag | HasLastEffectFlag,
-         wxT("Ctrl+R") ),
+            CommandManager::Options{ wxT("Ctrl+R") }
+               .IsTranslated() ),
 
       Separator(),
 
@@ -1131,5 +1134,4 @@ MenuTable::BaseItemPtr ExtraScriptablesIIMenu( AudacityProject & )
    );
 }
 
-#undef XXO
 #undef FN

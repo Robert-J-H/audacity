@@ -145,7 +145,6 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 #define FN(X) findCommandHandler, \
    static_cast<CommandFunctorPointer>(& ExtraActions::Handler :: X)
-#define XXO(X) _(X), wxString{X}.Contains("...")
 
 // Imported menu item definitions
 
@@ -263,5 +262,4 @@ MenuTable::BaseItemPtr ExtraMiscItems( AudacityProject &project )
    );
 }
 
-#undef XXO
 #undef FN

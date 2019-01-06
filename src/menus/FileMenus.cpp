@@ -570,7 +570,6 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 #define FN(X) findCommandHandler, \
    static_cast<CommandFunctorPointer>(& FileActions::Handler :: X)
-#define XXO(X) _(X), wxString{X}.Contains("...")
 
 MenuTable::BaseItemPtr FileMenu( AudacityProject& )
 {
@@ -718,5 +717,4 @@ MenuTable::BaseItemPtr FileMenu( AudacityProject& )
    );
 }
 
-#undef XXO
 #undef FN

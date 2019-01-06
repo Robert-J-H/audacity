@@ -152,7 +152,9 @@ class AUDACITY_DLL_API CommandManager final
       // a very common case
       Options( const wxChar *accel_ ) : accel{ accel_ } {}
       // A two-argument constructor for another common case
-      Options( const wxChar *accel_, const wxString &longName_ )
+      Options(
+         const wxChar *accel_,
+         const wxString &longName_ /* usually untranslated */ )
       : accel{ accel_ }, longName{ longName_ } {}
 
       Options &&Accel (const wxChar *value) &&
@@ -165,18 +167,27 @@ class AUDACITY_DLL_API CommandManager final
          { parameter = value; return std::move(*this); }
       Options &&Mask (CommandMask value) &&
          { mask = value; return std::move(*this); }
-      Options &&LongName (const wxString &value) &&
+      Options &&LongName (const wxString &value /* usually untranslated */ ) &&
          { longName = value; return std::move(*this); }
       Options &&IsGlobal () &&
          { global = true; return std::move(*this); }
+      Options &&IsTranslated ( bool value = true ) &&
+         { translated = value; return std::move(*this); }
+      // Affirm that the command has a dialog, regardless of the name:
+      Options &&Interactive ( bool value = true ) &&
+         { interactive = value; return std::move(*this); }
 
       const wxChar *accel{ wxT("") };
       int check{ -1 }; // default value means it's not a check item
       bool bIsEffect{ false };
       CommandParameter parameter{};
       CommandMask mask{ NoFlagsSpecified };
-      wxString longName{}; // translated
+      wxString longName{}; // usually untranslated
       bool global{ false };
+      bool translated{ false };
+      // If defaulted, deduce whether there is a dialog from ellipsis in the
+      // name:
+      bool interactive{ false };
    };
 
    void AddItemList(const CommandID & name,
@@ -187,9 +198,8 @@ class AUDACITY_DLL_API CommandManager final
                     CommandFlag flags,
                     bool bIsEffect = false);
 
-   void AddItem(const CommandID &name,
-                const wxChar *label_in,
-                bool hasDialog,
+   void AddItem(const CommandID & name,
+                const wxChar *label_in, // untranslated
                 CommandHandlerFinder finder,
                 CommandFunctorPointer callback,
                 CommandFlag flags,
@@ -307,7 +317,6 @@ private:
    int NextIdentifier(int ID);
    CommandListEntry *NewIdentifier(const CommandID & name,
                                    const wxString & label,
-                                   bool hasDialog,
                                    wxMenu *menu,
                                    CommandHandlerFinder finder,
                                    CommandFunctorPointer callback,
@@ -317,8 +326,7 @@ private:
                                    const Options &options);
    
    void AddGlobalCommand(const CommandID &name,
-                         const wxChar *label,
-                         bool hasDialog,
+                         const wxChar *label, // untranslated
                          CommandHandlerFinder finder,
                          CommandFunctorPointer callback,
                          const Options &options = {});
@@ -493,8 +501,7 @@ namespace MenuTable {
 
    struct CommandItem final : BaseItem {
       CommandItem(const CommandID &name_,
-               const wxString &label_in_,
-               bool hasDialog_,
+               const wxString &label_in_, // untranslated
                CommandHandlerFinder finder_,
                CommandFunctorPointer callback_,
                CommandFlag flags_,
@@ -502,8 +509,7 @@ namespace MenuTable {
       ~CommandItem() override;
 
       const CommandID name;
-      const wxString label_in;
-      bool hasDialog;
+      const wxString label_in; // untranslated
       CommandHandlerFinder finder;
       CommandFunctorPointer callback;
       CommandFlag flags;
@@ -592,12 +598,13 @@ namespace MenuTable {
       { return std::make_unique<SeparatorItem>(); }
 
    inline std::unique_ptr<CommandItem> Command(
-      const CommandID &name, const wxString &label_in, bool hasDialog,
+      const CommandID &name,
+      const wxString &label_in, // untranslated
       CommandHandlerFinder finder, CommandFunctorPointer callback,
       CommandFlag flags, const CommandManager::Options &options = {})
    {
       return std::make_unique<CommandItem>(
-         name, label_in, hasDialog, finder, callback, flags, options
+         name, label_in, finder, callback, flags, options
       );
    }
 
