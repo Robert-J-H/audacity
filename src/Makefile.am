@@ -229,6 +229,8 @@ audacity_SOURCES = \
 	SoundActivatedRecord.h \
 	Spectrum.cpp \
 	Spectrum.h \
+	SpectrumAnalyst.cpp \
+	SpectrumAnalyst.h \
 	SplashDialog.cpp \
 	SplashDialog.h \
 	SseMathFuncs.cpp \

@@ -1264,6 +1264,7 @@
 		5E78388E1DE4995F003270C0 /* AudacityException.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E78388D1DE4995E003270C0 /* AudacityException.cpp */; };
 		5E79B3411D5CC38D001D677D /* ImportGStreamer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E79B33F1D5CC38D001D677D /* ImportGStreamer.cpp */; };
 		5E89EEEA1F78D017000F5E82 /* zh_CN.po in Sources */ = {isa = PBXBuildFile; fileRef = 5E89EEE91F78D017000F5E82 /* zh_CN.po */; };
+		5E8F59AB21E2FE38003CE6E3 /* SpectrumAnalyst.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E8F59A921E2FE38003CE6E3 /* SpectrumAnalyst.cpp */; };
 		5E94A1BA1D1F1C8400A8713A /* wxPanelWrapper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5E94A1B81D1F1C8400A8713A /* wxPanelWrapper.cpp */; };
 		5EA018281EC7B226001F2996 /* NoteTrackControls.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5EA0181C1EC7B226001F2996 /* NoteTrackControls.cpp */; };
 		5EA018291EC7B226001F2996 /* NoteTrackUI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5EA0181E1EC7B226001F2996 /* NoteTrackUI.cpp */; };
@@ -3181,6 +3182,8 @@
 		5E79B33F1D5CC38D001D677D /* ImportGStreamer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ImportGStreamer.cpp; sourceTree = "<group>"; };
 		5E79B3401D5CC38D001D677D /* ImportGStreamer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImportGStreamer.h; sourceTree = "<group>"; };
 		5E89EEE91F78D017000F5E82 /* zh_CN.po */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = zh_CN.po; path = ../locale/zh_CN.po; sourceTree = "<group>"; };
+		5E8F59A921E2FE38003CE6E3 /* SpectrumAnalyst.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SpectrumAnalyst.cpp; sourceTree = "<group>"; };
+		5E8F59AA21E2FE38003CE6E3 /* SpectrumAnalyst.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SpectrumAnalyst.h; sourceTree = "<group>"; };
 		5E94A1B81D1F1C8400A8713A /* wxPanelWrapper.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = wxPanelWrapper.cpp; sourceTree = "<group>"; };
 		5E94A1B91D1F1C8400A8713A /* wxPanelWrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = wxPanelWrapper.h; sourceTree = "<group>"; };
 		5E9985D0218D0A7D00278D81 /* ComponentInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ComponentInterface.h; path = ../include/audacity/ComponentInterface.h; sourceTree = "<group>"; };
@@ -4158,6 +4161,7 @@
 				282D474A0B9E8D900034BC49 /* Snap.cpp */,
 				2860BA200E0F0D8600A13878 /* SoundActivatedRecord.cpp */,
 				1790B0DE09883BFD008A330A /* Spectrum.cpp */,
+				5E8F59A921E2FE38003CE6E3 /* SpectrumAnalyst.cpp */,
 				28501E9F0CEECEF80029ABAA /* SplashDialog.cpp */,
 				EDFCEBA418894B2A00C98E51 /* SseMathFuncs.cpp */,
 				1790B0E009883BFD008A330A /* Tags.cpp */,
@@ -4269,6 +4273,7 @@
 				282D474B0B9E8D900034BC49 /* Snap.h */,
 				2860BA210E0F0D8600A13878 /* SoundActivatedRecord.h */,
 				1790B0DF09883BFD008A330A /* Spectrum.h */,
+				5E8F59AA21E2FE38003CE6E3 /* SpectrumAnalyst.h */,
 				28501EA00CEECEF80029ABAA /* SplashDialog.h */,
 				EDFCEBA518894B2A00C98E51 /* SseMathFuncs.h */,
 				1790B0E109883BFD008A330A /* Tags.h */,
@@ -8159,6 +8164,7 @@
 				5EF3E65B203FDACE006C6882 /* SetLabelCommand.cpp in Sources */,
 				2888496B131B6CF600B59735 /* sk.po in Sources */,
 				5EF3E64F203FBAFB006C6882 /* Demo.cpp in Sources */,
+				5E8F59AB21E2FE38003CE6E3 /* SpectrumAnalyst.cpp in Sources */,
 				EDAD326B1544452E009C6220 /* sl.po in Sources */,
 				EDAD326C1544452E009C6220 /* sr_RS.po in Sources */,
 				EDAD326D1544452E009C6220 /* sr_RS@latin.po in Sources */,

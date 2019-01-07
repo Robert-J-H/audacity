@@ -3,7 +3,7 @@
 
 #include "../AdornedRulerPanel.h"
 #include "../AudioIO.h"
-#include "../FreqWindow.h"
+#include "../SpectrumAnalyst.h"
 #include "../Menus.h" // for PrefsListener
 #include "../Prefs.h"
 #include "../Project.h"
