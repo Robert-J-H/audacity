@@ -533,6 +533,23 @@ namespace Registry {
       using GroupItem::GroupItem;
       ~GroupingItem() override;
    };
+
+   // Define actions to be done in Visit.
+   // Default implementations do nothing
+   // The supplied path does not include the name of the item
+   class Visitor
+   {
+   public:
+      virtual ~Visitor();
+      virtual void BeginGroup( GroupItem &item, const wxArrayString &path );
+      virtual void EndGroup( GroupItem &item, const wxArrayString &path );
+      virtual void Visit( SingleItem &item, const wxArrayString &path );
+   };
+
+   // Top-down visitation of all items and groups in a tree
+   // context argument is passed to ComputedItem functors
+   void Visit(
+      Visitor &visitor, void *context, BaseItem *pTopItem );
 }
 
 // Define items that populate tables that specifically describe menu trees
