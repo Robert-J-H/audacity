@@ -7,6 +7,7 @@
 #include "../AudioIO.h"
 #include "../Dependencies.h"
 #include "../FileNames.h"
+#include "../Menus.h"
 #include "../Project.h"
 #include "../ShuttleGui.h"
 #include "../SplashDialog.h"
@@ -23,7 +24,8 @@ namespace {
 
 void ShowDiagnostics(
    AudacityProject &project, const wxString &info,
-   const wxString &description, const wxString &defaultPath)
+   const wxString &description, const wxString &defaultPath,
+   bool fixedWidth = false)
 {
    auto &window = ProjectWindow::Get( project );
    wxDialogWrapper dlg( &window, wxID_ANY, description);
@@ -33,11 +35,20 @@ void ShowDiagnostics(
    wxTextCtrl *text;
    S.StartVerticalLay();
    {
-      S.SetStyle(wxTE_MULTILINE | wxTE_READONLY);
-      text = S.Id(wxID_STATIC).AddTextWindow(info);
+      S.SetStyle(wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH);
+      text = S.Id(wxID_STATIC).AddTextWindow("");
+
       S.AddStandardButtons(eOkButton | eCancelButton);
    }
    S.EndVerticalLay();
+
+   if (fixedWidth) {
+      auto style = text->GetDefaultStyle();
+      style.SetFontFamily( wxFONTFAMILY_TELETYPE );
+      text->SetDefaultStyle(style);
+   }
+
+   *text << info;
 
    dlg.FindWindowById(wxID_OK)->SetLabel(_("&Save"));
    dlg.SetSize(350, 450);
@@ -153,6 +164,52 @@ void OnCheckDependencies(const CommandContext &context)
    ::ShowDependencyDialogIfNeeded(&project, false);
 }
 
+void OnMenuTree(const CommandContext &context)
+{
+   auto &project = context.project;
+   
+   using namespace MenuTable;
+   struct MyVisitor : Visitor
+   {
+      enum : unsigned { TAB = 3 };
+      void BeginGroup( GroupItem &item, const wxArrayString& ) override
+      {
+         Indent();
+         info += item.name;
+         Return();
+         indentation = wxString{ ' ', TAB * ++level };
+      }
+
+      void EndGroup( GroupItem &, const wxArrayString& ) override
+      {
+         indentation = wxString{ ' ', TAB * --level };
+      }
+
+      void Visit( SingleItem &item, const wxArrayString& ) override
+      {
+         static const wxString separatorName{ '=', 20 };
+
+         Indent();
+         info += dynamic_cast<SeparatorItem*>(&item)
+            ? separatorName
+            : item.name;
+         Return();
+      }
+
+      void Indent() { info += indentation; }
+      void Return() { info += '\n'; }
+
+      unsigned level{};
+      wxString indentation;
+      wxString info;
+   } visitor;
+
+   MenuManager::Visit( visitor, project );
+
+   ShowDiagnostics( project, visitor.info,
+      _("Menu Tree"), wxT("menutree.txt"), true );
+}
+
 void OnCheckForUpdates(const CommandContext &WXUNUSED(context))
 {
    ::OpenInDefaultBrowser( VerCheckUrl());
@@ -250,6 +307,14 @@ MenuTable::BaseItemSharedPtr HelpMenu()
          Command( wxT("CheckDeps"), XXO("Chec&k Dependencies..."),
             FN(OnCheckDependencies),
             AudioIONotBusyFlag )
+
+#ifdef IS_ALPHA
+         ,
+         // Menu explorer.  Perhaps this should become a macro command
+         Command( wxT("MenuTree"), XXO("Menu Tree..."),
+            FN(OnMenuTree),
+            AlwaysEnabledFlag )
+#endif
       ),
 
 #ifndef __WXMAC__
