@@ -469,13 +469,15 @@ namespace MenuTable {
       MenuItem( const wxString &title_, BaseItemPtrs &&items_ );
       // In-line, variadic constructor that doesn't require building a vector
       template< typename... Args >
-         MenuItem( const wxString &title_, Args&&... args )
+         MenuItem(
+            const wxString &title_ /* usually untranslated */, Args&&... args )
             : GroupItem{ std::forward<Args>(args)... }
             , title{ title_ }
          {}
       ~MenuItem() override;
 
       wxString title; // translated
+      bool translated{ false };
    };
 
    struct ConditionalGroupItem final : GroupItem {

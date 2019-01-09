@@ -204,7 +204,10 @@ void VisitItem( AudacityProject &project, MenuTable::BaseItem *pItem )
    else
    if (const auto pMenu =
        dynamic_cast<MenuItem*>( pItem )) {
-      manager.BeginMenu( pMenu->title );
+      auto title = pMenu->translated
+         ? pMenu->title
+         : ::wxGetTranslation( pMenu->title );
+      manager.BeginMenu( title );
       // recursion
       VisitItems( project, pMenu->items );
       manager.EndMenu();

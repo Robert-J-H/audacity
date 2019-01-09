@@ -824,7 +824,7 @@ MenuTable::BaseItemPtr ClipSelectMenu( AudacityProject& )
    using namespace MenuTable;
    using Options = CommandManager::Options;
 
-   return Menu( _("Clip B&oundaries"),
+   return Menu( XO("Clip B&oundaries"),
       Command( wxT("SelPrevClipBoundaryToCursor"),
          XXO("Pre&vious Clip Boundary to Cursor"),
          FN(OnSelectPrevClipBoundaryToCursor),

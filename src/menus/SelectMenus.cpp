@@ -1113,7 +1113,7 @@ MenuTable::BaseItemPtr SelectMenu( AudacityProject& )
    using Options = CommandManager::Options;
    
    /* i18n-hint: (verb) It's an item on a menu. */
-   return Menu( _("&Select"),
+   return Menu( XO("&Select"),
       Command( wxT("SelectAll"), XXO("&All"), FN(OnSelectAll),
          TracksExistFlag,
          Options{ wxT("Ctrl+A"), XO("Select All") } ),
@@ -1123,7 +1123,7 @@ MenuTable::BaseItemPtr SelectMenu( AudacityProject& )
 
       //////////////////////////////////////////////////////////////////////////
 
-      Menu( _("&Tracks"),
+      Menu( XO("&Tracks"),
          Command( wxT("SelAllTracks"), XXO("In All &Tracks"),
             FN(OnSelectAllTracks),
             TracksExistFlag,
@@ -1140,7 +1140,7 @@ MenuTable::BaseItemPtr SelectMenu( AudacityProject& )
 
       //////////////////////////////////////////////////////////////////////////
 
-      Menu( _("R&egion"),
+      Menu( XO("R&egion"),
          Command( wxT("SetLeftSelection"), XXO("&Left at Playback Position"),
             FN(OnSetLeftSelection), TracksExistFlag,
             Options{ wxT("["), XO("Set Selection Left at Play Position") } ),
@@ -1174,7 +1174,7 @@ MenuTable::BaseItemPtr SelectMenu( AudacityProject& )
       //////////////////////////////////////////////////////////////////////////
 
 #ifdef EXPERIMENTAL_SPECTRAL_EDITING
-      Menu( _("S&pectral"),
+      Menu( XO("S&pectral"),
          Command( wxT("ToggleSpectralSelection"),
             XXO("To&ggle Spectral Selection"), FN(OnToggleSpectralSelection),
             TracksExistFlag, wxT("Q") ),
@@ -1217,7 +1217,7 @@ MenuTable::BaseItemPtr SelectMenu( AudacityProject& )
 MenuTable::BaseItemPtr ExtraSelectionMenu( AudacityProject & )
 {
    using namespace MenuTable;
-   return Menu( _("&Selection"),
+   return Menu( XO("&Selection"),
       Command( wxT("SnapToOff"), XXO("Snap-To &Off"), FN(OnSnapToOff),
          AlwaysEnabledFlag ),
       Command( wxT("SnapToNearest"), XXO("Snap-To &Nearest"),
@@ -1266,7 +1266,7 @@ MenuTable::BaseItemPtr CursorMenu( AudacityProject & )
    // GA: 'Skip to' moves the viewpoint to center of the track and preserves the
    // selection. 'Cursor to' does neither. 'Center at' might describe it better
    // than 'Skip'.
-   return Menu( _("&Cursor to"),
+   return Menu( XO("&Cursor to"),
       Command( wxT("CursSelStart"), XXO("Selection Star&t"),
          FN(OnCursorSelStart),
          TimeSelectedFlag,
@@ -1303,7 +1303,7 @@ MenuTable::BaseItemPtr ExtraCursorMenu( AudacityProject & )
 {
    using namespace MenuTable;
 
-   return Menu( _("&Cursor"),
+   return Menu( XO("&Cursor"),
       Command( wxT("CursorLeft"), XXO("Cursor &Left"), FN(OnCursorLeft),
          TracksExistFlag | TrackPanelHasFocus,
          wxT("Left\twantKeyup\tallowDup") ),
@@ -1330,7 +1330,7 @@ MenuTable::BaseItemPtr ExtraCursorMenu( AudacityProject & )
 MenuTable::BaseItemPtr ExtraSeekMenu( AudacityProject & )
 {
    using namespace MenuTable;
-   return Menu( _("See&k"),
+   return Menu( XO("See&k"),
       Command( wxT("SeekLeftShort"), XXO("Short Seek &Left During Playback"),
          FN(OnSeekLeftShort), AudioIOBusyFlag, wxT("Left\tallowDup") ),
       Command( wxT("SeekRightShort"),
