@@ -827,16 +827,22 @@ void CommandManager::AddItem(const CommandID &name,
    SetCommandFlags(name, flags, mask);
 
 
-   auto checkmark = options.check;
-   if (checkmark >= 0) {
+   auto &checker = options.checker;
+   if (checker) {
       CurrentMenu()->AppendCheckItem(ID, label);
-      CurrentMenu()->Check(ID, checkmark != 0);
+      CurrentMenu()->Check(ID, checker());
    }
    else {
       CurrentMenu()->Append(ID, label);
    }
 
    mbSeparatorAllowed = true;
+}
+
+auto CommandManager::Options::MakeCheckFn(
+   const wxString key, bool defaultValue ) -> CheckFn
+{
+   return [=](){ return gPrefs->ReadBool( key, defaultValue ); };
 }
 
 ///

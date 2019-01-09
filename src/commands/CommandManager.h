@@ -147,6 +147,9 @@ class AUDACITY_DLL_API CommandManager final
    // For specifying unusual arguments in AddItem
    struct Options
    {
+      // type of a function that determines checkmark state
+      using CheckFn = std::function< bool() >;
+
       Options() {}
       // Allow implicit construction from an accelerator string, which is
       // a very common case
@@ -159,8 +162,6 @@ class AUDACITY_DLL_API CommandManager final
 
       Options &&Accel (const wxChar *value) &&
          { accel = value; return std::move(*this); }
-      Options &&CheckState (bool value) &&
-         { check = value ? 1 : 0; return std::move(*this); }
       Options &&IsEffect (bool value = true) &&
          { bIsEffect = value; return std::move(*this); }
       Options &&Parameter (const CommandParameter &value) &&
@@ -177,8 +178,26 @@ class AUDACITY_DLL_API CommandManager final
       Options &&Interactive ( bool value = true ) &&
          { interactive = value; return std::move(*this); }
 
+      // Specify a constant check state
+      Options &&CheckState (bool value) && {
+         checker = value
+            ? [](){ return true; }
+            : [](){ return false; }
+           ;
+           return std::move(*this);
+      }
+      // CheckTest is overloaded
+      // Take arbitrary predicate
+      Options &&CheckTest (const CheckFn &fn) &&
+         { checker = fn; return std::move(*this); }
+      // Take a preference path
+      Options &&CheckTest (const wxChar *key, bool defaultValue) && {
+         checker = MakeCheckFn( key, defaultValue );
+         return std::move(*this);
+      }
+
       const wxChar *accel{ wxT("") };
-      int check{ -1 }; // default value means it's not a check item
+      CheckFn checker; // default value means it's not a check item
       bool bIsEffect{ false };
       CommandParameter parameter{};
       CommandMask mask{ NoFlagsSpecified };
@@ -188,6 +207,9 @@ class AUDACITY_DLL_API CommandManager final
       // If defaulted, deduce whether there is a dialog from ellipsis in the
       // name:
       bool interactive{ false };
+
+   private:
+      static CheckFn MakeCheckFn( const wxString key, bool defaultValue );
    };
 
    void AddItemList(const CommandID & name,

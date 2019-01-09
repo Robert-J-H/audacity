@@ -1048,12 +1048,14 @@ MenuTable::BaseItemPtr ToolsMenu( AudacityProject & )
          XXO("Simulate Recording Errors"),
          FN(OnSimulateRecordingErrors),
          AudioIONotBusyFlag,
-         Options{}.CheckState( gAudioIO->mSimulateRecordingErrors ) ),
+         Options{}.CheckTest(
+            [](){ return gAudioIO->mSimulateRecordingErrors; } ) ),
       Command( wxT("DetectUpstreamDropouts"),
          XXO("Detect Upstream Dropouts"),
          FN(OnDetectUpstreamDropouts),
          AudioIONotBusyFlag,
-         Options{}.CheckState( gAudioIO->mDetectUpstreamDropouts ) )
+         Options{}.CheckTest(
+            [](){ return gAudioIO->mDetectUpstreamDropouts; } ) )
 #endif
    ) );
 }
