@@ -106,8 +106,8 @@ ComputedItem::~ComputedItem() {}
 
 SingleItem::~SingleItem() {}
 
-GroupItem::GroupItem( BaseItemPtrs &&items_ )
-: items{ std::move( items_ ) }
+GroupItem::GroupItem( const wxString &internalName, BaseItemPtrs &&items_ )
+: BaseItem{ internalName }, items{ std::move( items_ ) }
 {
 }
 void GroupItem::AppendOne( BaseItemPtr&& ptr )
@@ -122,16 +122,17 @@ GroupingItem::~GroupingItem() {}
 
 namespace MenuTable {
 
-MenuItem::MenuItem( const wxString &title_, BaseItemPtrs &&items_ )
-: GroupItem{ std::move( items_ ) }, title{ title_ }
+MenuItem::MenuItem( const wxString &internalName,
+   const wxString &title_, BaseItemPtrs &&items_ )
+: GroupItem{ internalName, std::move( items_ ) }, title{ title_ }
 {
    wxASSERT( !title.empty() );
 }
 MenuItem::~MenuItem() {}
 
 ConditionalGroupItem::ConditionalGroupItem(
-   Condition condition_, BaseItemPtrs &&items_ )
-: GroupItem{ std::move( items_ ) }, condition{ condition_ }
+   const wxString &internalName, Condition condition_, BaseItemPtrs &&items_ )
+: GroupItem{ internalName, std::move( items_ ) }, condition{ condition_ }
 {
 }
 ConditionalGroupItem::~ConditionalGroupItem() {}
@@ -144,7 +145,7 @@ CommandItem::CommandItem(const CommandID &name_,
          CommandFunctorPointer callback_,
          CommandFlag flags_,
          const CommandManager::Options &options_)
-: name{ name_ }, label_in{ label_in_ }
+: SingleItem{ name_ }, label_in{ label_in_ }
 , finder{ finder_ }, callback{ callback_ }
 , flags{ flags_ }, options{ options_ }
 {}
@@ -156,7 +157,7 @@ CommandGroupItem::CommandGroupItem(const wxString &name_,
          CommandFunctorPointer callback_,
          CommandFlag flags_,
          bool isEffect_)
-: name{ name_ }, items{ items_ }
+: SingleItem{ name_ }, items{ items_ }
 , finder{ finder_ }, callback{ callback_ }
 , flags{ flags_ }, isEffect{ isEffect_ }
 {}
@@ -176,6 +177,8 @@ CommandHandlerFinder FinderScope::sFinder =
 }
 
 namespace {
+
+const auto MenuPathStart = wxT("MenuBar");
 
 void VisitItem( AudacityProject &project, MenuTable::BaseItem *pItem );
 
@@ -300,8 +303,8 @@ MenuTable::BaseItemSharedPtr HelpMenu();
 
 // Table of menu factories.
 // TODO:  devise a registration system instead.
-static const auto menuTree = MenuTable::Items(
-     FileMenu()
+static const auto menuTree = MenuTable::Items( MenuPathStart
+   , FileMenu()
    , EditMenu()
    , SelectMenu()
    , ViewMenu()

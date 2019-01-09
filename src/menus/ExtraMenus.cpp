@@ -171,9 +171,8 @@ MenuTable::BaseItemSharedPtr ExtraMenu()
 
    // Table of menu factories.
    // TODO:  devise a registration system instead.
-   static BaseItemSharedPtr extraItems{
-   Items(
-        ExtraTransportMenu()
+   static BaseItemSharedPtr extraItems{ Items( wxEmptyString
+      , ExtraTransportMenu()
       , ExtraToolsMenu()
       , ExtraMixerMenu()
       , ExtraEditMenu()
@@ -198,18 +197,19 @@ MenuTable::BaseItemSharedPtr ExtraMenu()
    static const auto pred =
       []{ return gPrefs->ReadBool(wxT("/GUI/ShowExtraMenus"), false); };
    static BaseItemSharedPtr menu{
-      ConditionalItems(
-         pred, Menu( XO("Ext&ra"), extraItems ) )
+      ConditionalItems( wxT("Optional"),
+         pred, Menu( wxT("Extra"), XO("Ext&ra"), extraItems ) )
    };
    return menu;
 }
 
+// Under /MenuBar/Optional/Extra
 MenuTable::BaseItemSharedPtr ExtraMixerMenu()
 {
    using namespace MenuTable;
    static BaseItemSharedPtr menu{
    FinderScope( findCommandHandler ).Eval(
-   Menu( XO("Mi&xer"),
+   Menu( wxT("Mixer"), XO("Mi&xer"),
       Command( wxT("OutputGain"), XXO("Ad&just Playback Volume..."),
          FN(OnOutputGain), AlwaysEnabledFlag ),
       Command( wxT("OutputGainInc"), XXO("&Increase Playback Volume"),
@@ -226,12 +226,13 @@ MenuTable::BaseItemSharedPtr ExtraMixerMenu()
    return menu;
 }
 
+// Under /MenuBar/Optional/Extra
 MenuTable::BaseItemSharedPtr ExtraDeviceMenu()
 {
    using namespace MenuTable;
    static BaseItemSharedPtr menu{
    FinderScope( findCommandHandler ).Eval(
-   Menu( XO("De&vice"),
+   Menu( wxT("Device"), XO("De&vice"),
       Command( wxT("InputDevice"), XXO("Change &Recording Device..."),
          FN(OnInputDevice),
          AudioIONotBusyFlag, wxT("Shift+I") ),
@@ -247,6 +248,7 @@ MenuTable::BaseItemSharedPtr ExtraDeviceMenu()
    return menu;
 }
 
+// Under /MenuBar/Optional/Extra
 MenuTable::BaseItemPtr ExtraMiscItems( AudacityProject &project )
 {
    using namespace MenuTable;
@@ -262,7 +264,7 @@ MenuTable::BaseItemPtr ExtraMiscItems( AudacityProject &project )
 
    // Not a menu.
    return FinderScope( findCommandHandler ).Eval(
-   Items(
+   Items( wxT("Misc"),
       // Accel key is not bindable.
       Command( wxT("FullScreenOnOff"), XXO("&Full Screen (on/off)"),
          FN(OnFullScreen),
