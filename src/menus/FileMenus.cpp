@@ -570,11 +570,11 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 #define FN(X) (& FileActions::Handler :: X)
 
-MenuTable::BaseItemPtr FileMenu( AudacityProject& )
+MenuTable::BaseItemSharedPtr FileMenu()
 {
    using namespace MenuTable;
-
-   return FinderScope( findCommandHandler ).Eval(
+   static BaseItemSharedPtr menu{
+   FinderScope( findCommandHandler ).Eval(
    Menu( XO("&File"),
       /*i18n-hint: "New" is an action (verb) to create a NEW project*/
       Command( wxT("New"), XXO("&New"), FN(OnNew),
@@ -714,7 +714,8 @@ MenuTable::BaseItemPtr FileMenu( AudacityProject& )
       /* i18n-hint: (verb) It's item on a menu. */
       Command( wxT("Exit"), XXO("E&xit"), FN(OnExit),
          AlwaysEnabledFlag, wxT("Ctrl+Q") )
-   ) );
+   ) ) };
+   return menu;
 }
 
 #undef FN

@@ -579,7 +579,7 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 #define FN(X) (& LabelEditActions::Handler :: X)
 
-MenuTable::BaseItemPtr LabelEditMenus( AudacityProject & )
+MenuTable::BaseItemSharedPtr LabelEditMenus()
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
@@ -592,10 +592,10 @@ MenuTable::BaseItemPtr LabelEditMenus( AudacityProject & )
 
    // Returns TWO menus.
    
-
-   return FinderScope( findCommandHandler ).Eval(
+   static BaseItemSharedPtr menus{
+   FinderScope( findCommandHandler ).Eval(
    Items(
-
+   
    Menu( XO("&Labels"),
       Command( wxT("EditLabels"), XXO("&Edit Labels..."), FN(OnEditLabels),
                  AudioIONotBusyFlag ),
@@ -672,7 +672,8 @@ MenuTable::BaseItemPtr LabelEditMenus( AudacityProject & )
          wxT("Alt+Shift+J") )
    ) // second menu
 
-   ) ); // two menus
+   ) ) }; // two menus
+   return menus;
 }
 
 #undef FN

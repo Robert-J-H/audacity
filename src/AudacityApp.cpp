@@ -1073,6 +1073,10 @@ wxString AudacityApp::SetLang( const wxString & lang )
    // we're not using them yet...
    wxString future1 = _("Master Gain Control");
 
+#ifdef __WXMAC__
+      wxGetApp().s_macHelpMenuTitleName = _("&Help");
+#endif
+
    return result;
 }
 

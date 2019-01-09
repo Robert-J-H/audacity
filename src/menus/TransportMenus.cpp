@@ -1036,9 +1036,9 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 #define FN(X) (& TransportActions::Handler :: X)
 
-MenuTable::BaseItemPtr CursorMenu( AudacityProject& );
+MenuTable::BaseItemSharedPtr CursorMenu();
 
-MenuTable::BaseItemPtr TransportMenu( AudacityProject &project )
+MenuTable::BaseItemSharedPtr TransportMenu()
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
@@ -1048,7 +1048,8 @@ MenuTable::BaseItemPtr TransportMenu( AudacityProject &project )
 
    constexpr auto CanStopFlags = AudioIONotBusyFlag | CanStopAudioStreamFlag;
 
-   return FinderScope( findCommandHandler ).Eval(
+   static BaseItemSharedPtr menu{
+   FinderScope( findCommandHandler ).Eval(
    /* i18n-hint: 'Transport' is the name given to the set of controls that
       play, record, pause etc. */
    Menu( XO("Tra&nsport"),
@@ -1068,10 +1069,13 @@ MenuTable::BaseItemPtr TransportMenu( AudacityProject &project )
          /* i18n-hint: (verb)*/
          Command( wxT("Record1stChoice"), XXO("&Record"), FN(OnRecord),
             CanStopFlags, wxT("R") ),
+
          // The OnRecord2ndChoice function is: if normal record records beside,
          // it records below, if normal record records below, it records beside.
          // TODO: Do 'the right thing' with other options like TimerRecord.
-         Command( wxT("Record2ndChoice"),
+         // Delayed evaluation in case gPrefs is not yet defined
+         [](const AudacityProject&)
+         { return Command( wxT("Record2ndChoice"),
             // Our first choice is bound to R (by default)
             // and gets the prime position.
             // We supply the name for the 'other one' here.
@@ -1079,8 +1083,9 @@ MenuTable::BaseItemPtr TransportMenu( AudacityProject &project )
             (gPrefs->ReadBool("/GUI/PreferNewTrackRecord", false)
              ? XO("&Append Record") : XO("Record &New Track")),
             FN(OnRecord2ndChoice), CanStopFlags,
-            wxT("Shift+R")
-         ),
+            wxT("Shift+R"),
+            findCommandHandler
+         ); },
 
          Command( wxT("TimerRecord"), XXO("&Timer Record..."),
             FN(OnTimerRecord), CanStopFlags, wxT("Shift+T") ),
@@ -1100,9 +1105,10 @@ MenuTable::BaseItemPtr TransportMenu( AudacityProject &project )
       ),
 
       // Scrubbing sub-menu
-      Scrubber::Get( project ).Menu(),
+      // Delayed evaluation:
+      [](AudacityProject &project){ return Scrubber::Get( project ).Menu(); },
 
-      CursorMenu,
+      CursorMenu(),
 
       Separator(),
 
@@ -1153,14 +1159,15 @@ MenuTable::BaseItemPtr TransportMenu( AudacityProject &project )
             AudioIONotBusyFlag | CanStopAudioStreamFlag, checkOff )
 #endif
       )
-   ) );
+   ) ) };
+   return menu;
 }
 
-MenuTable::BaseItemPtr ExtraTransportMenu( AudacityProject & )
+MenuTable::BaseItemSharedPtr ExtraTransportMenu()
 {
    using namespace MenuTable;
-
-   return FinderScope( findCommandHandler ).Eval(
+   static BaseItemSharedPtr menu{
+   FinderScope( findCommandHandler ).Eval(
    Menu( XO("T&ransport"),
       // PlayStop is already in the menus.
       /* i18n-hint: (verb) Start playing audio*/
@@ -1197,14 +1204,15 @@ MenuTable::BaseItemPtr ExtraTransportMenu( AudacityProject & )
       Command( wxT("PlayCutPreview"), XXO("Play C&ut Preview"),
          FN(OnPlayCutPreview),
          CaptureNotBusyFlag, wxT("C") )
-   ) );
+   ) ) };
+   return menu;
 }
 
-MenuTable::BaseItemPtr ExtraPlayAtSpeedMenu( AudacityProject & )
+MenuTable::BaseItemSharedPtr ExtraPlayAtSpeedMenu()
 {
    using namespace MenuTable;
-
-   return FinderScope( findCommandHandler ).Eval(
+   static BaseItemSharedPtr menu{
+   FinderScope( findCommandHandler ).Eval(
    Menu( XO("&Play-at-Speed"),
       /* i18n-hint: 'Normal Play-at-Speed' doesn't loop or cut preview. */
       Command( wxT("PlayAtSpeed"), XXO("Normal Pl&ay-at-Speed"),
@@ -1229,7 +1237,8 @@ MenuTable::BaseItemPtr ExtraPlayAtSpeedMenu( AudacityProject & )
       Command( wxT("MoveToNextLabel"), XXO("Move to &Next Label"),
          FN(OnMoveToNextLabel),
          CaptureNotBusyFlag | TrackPanelHasFocus, wxT("Alt+Right") )
-   ) );
+   ) ) };
+   return menu;
 }
 
 #undef FN
