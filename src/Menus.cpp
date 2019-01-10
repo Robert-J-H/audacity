@@ -100,7 +100,11 @@ namespace MenuTable {
 
 BaseItem::~BaseItem() {}
 
+SharedItem::~SharedItem() {}
+
 ComputedItem::~ComputedItem() {}
+
+SingleItem::~SingleItem() {}
 
 GroupItem::GroupItem( BaseItemPtrs &&items_ )
 : items{ std::move( items_ ) }
@@ -111,6 +115,11 @@ void GroupItem::AppendOne( BaseItemPtr&& ptr )
    items.push_back( std::move( ptr ) );
 }
 GroupItem::~GroupItem() {}
+
+GroupingItem::~GroupingItem() {}
+}
+
+namespace MenuTable {
 
 MenuItem::MenuItem( const wxString &title_, BaseItemPtrs &&items_ )
 : GroupItem{ std::move( items_ ) }, title{ title_ }
@@ -130,12 +139,11 @@ SeparatorItem::~SeparatorItem() {}
 
 CommandItem::CommandItem(const CommandID &name_,
          const wxString &label_in_,
-         bool hasDialog_,
          CommandHandlerFinder finder_,
          CommandFunctorPointer callback_,
          CommandFlag flags_,
          const CommandManager::Options &options_)
-: name{ name_ }, label_in{ label_in_ }, hasDialog{ hasDialog_ }
+: name{ name_ }, label_in{ label_in_ }
 , finder{ finder_ }, callback{ callback_ }
 , flags{ flags_ }, options{ options_ }
 {}
@@ -154,6 +162,15 @@ CommandGroupItem::CommandGroupItem(const wxString &name_,
 CommandGroupItem::~CommandGroupItem() {}
 
 SpecialItem::~SpecialItem() {}
+
+CommandHandlerFinder FinderScope::sFinder =
+   [](AudacityProject &project) -> CommandHandlerObject & {
+      // If this default finder function is reached, then FinderScope should
+      // have been used somewhere, or an explicit CommandHandlerFinder passed
+      // to menu item constructors
+      wxASSERT( false );
+      return project;
+   };
 
 }
 
@@ -176,6 +193,12 @@ void VisitItem( AudacityProject &project, MenuTable::BaseItem *pItem )
    auto &manager = CommandManager::Get( project );
 
    using namespace MenuTable;
+   if (const auto pShared =
+       dynamic_cast<SharedItem*>( pItem )) {
+      auto delegate = pShared->ptr;
+      VisitItem( project, delegate.get() );
+   }
+   else
    if (const auto pComputed =
        dynamic_cast<ComputedItem*>( pItem )) {
       // TODO maybe?  memo-ize the results of the function, but that requires
@@ -189,7 +212,7 @@ void VisitItem( AudacityProject &project, MenuTable::BaseItem *pItem )
    if (const auto pCommand =
        dynamic_cast<CommandItem*>( pItem )) {
       manager.AddItem(
-         pCommand->name, pCommand->label_in, pCommand->hasDialog,
+         pCommand->name, pCommand->label_in,
          pCommand->finder, pCommand->callback,
          pCommand->flags, pCommand->options
       );
@@ -205,7 +228,10 @@ void VisitItem( AudacityProject &project, MenuTable::BaseItem *pItem )
    else
    if (const auto pMenu =
        dynamic_cast<MenuItem*>( pItem )) {
-      manager.BeginMenu( pMenu->title );
+      auto title = pMenu->translated
+         ? pMenu->title
+         : ::wxGetTranslation( pMenu->title );
+      manager.BeginMenu( title );
       // recursion
       VisitItems( project, pMenu->items );
       manager.EndMenu();
@@ -223,7 +249,7 @@ void VisitItem( AudacityProject &project, MenuTable::BaseItem *pItem )
    }
    else
    if (const auto pGroup =
-       dynamic_cast<GroupItem*>( pItem )) {
+       dynamic_cast<GroupingItem*>( pItem )) {
       // recursion
       VisitItems( project, pGroup->items );
    }
@@ -248,45 +274,45 @@ void VisitItem( AudacityProject &project, MenuTable::BaseItem *pItem )
 /// changes in configured preferences - for example changes in key-bindings
 /// affect the short-cut key legend that appears beside each command,
 
-MenuTable::BaseItemPtr FileMenu( AudacityProject& );
+MenuTable::BaseItemSharedPtr FileMenu();
 
-MenuTable::BaseItemPtr EditMenu( AudacityProject& );
+MenuTable::BaseItemSharedPtr EditMenu();
 
-MenuTable::BaseItemPtr SelectMenu( AudacityProject& );
+MenuTable::BaseItemSharedPtr SelectMenu();
 
-MenuTable::BaseItemPtr ViewMenu( AudacityProject& );
+MenuTable::BaseItemSharedPtr ViewMenu();
 
-MenuTable::BaseItemPtr TransportMenu( AudacityProject& );
+MenuTable::BaseItemSharedPtr TransportMenu();
 
-MenuTable::BaseItemPtr TracksMenu( AudacityProject& );
+MenuTable::BaseItemSharedPtr TracksMenu();
 
-MenuTable::BaseItemPtr GenerateMenu( AudacityProject& );
-MenuTable::BaseItemPtr EffectMenu( AudacityProject& );
-MenuTable::BaseItemPtr AnalyzeMenu( AudacityProject& );
-MenuTable::BaseItemPtr ToolsMenu( AudacityProject& );
+MenuTable::BaseItemSharedPtr GenerateMenu();
+MenuTable::BaseItemSharedPtr EffectMenu();
+MenuTable::BaseItemSharedPtr AnalyzeMenu();
+MenuTable::BaseItemSharedPtr ToolsMenu();
 
-MenuTable::BaseItemPtr WindowMenu( AudacityProject& );
+MenuTable::BaseItemSharedPtr WindowMenu();
 
-MenuTable::BaseItemPtr ExtraMenu( AudacityProject& );
+MenuTable::BaseItemSharedPtr ExtraMenu();
 
-MenuTable::BaseItemPtr HelpMenu( AudacityProject& );
+MenuTable::BaseItemSharedPtr HelpMenu();
 
 // Table of menu factories.
 // TODO:  devise a registration system instead.
 static const auto menuTree = MenuTable::Items(
-   FileMenu
-   , EditMenu
-   , SelectMenu
-   , ViewMenu
-   , TransportMenu
-   , TracksMenu
-   , GenerateMenu
-   , EffectMenu
-   , AnalyzeMenu
-   , ToolsMenu
-   , WindowMenu
-   , ExtraMenu
-   , HelpMenu
+     FileMenu()
+   , EditMenu()
+   , SelectMenu()
+   , ViewMenu()
+   , TransportMenu()
+   , TracksMenu()
+   , GenerateMenu()
+   , EffectMenu()
+   , AnalyzeMenu()
+   , ToolsMenu()
+   , WindowMenu()
+   , ExtraMenu()
+   , HelpMenu()
 );
 
 void MenuCreator::CreateMenusAndCommands(AudacityProject &project)

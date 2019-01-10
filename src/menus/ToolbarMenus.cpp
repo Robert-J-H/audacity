@@ -244,18 +244,18 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 // Menu definitions
 
-#define FN(X) findCommandHandler, \
-   static_cast<CommandFunctorPointer>(& ToolbarActions::Handler :: X)
-#define XXO(X) _(X), wxString{X}.Contains("...")
+#define FN(X) (& ToolbarActions::Handler :: X)
 
-MenuTable::BaseItemPtr ToolbarsMenu( AudacityProject& )
+MenuTable::BaseItemSharedPtr ToolbarsMenu()
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
    
    static const auto checkOff = Options{}.CheckState( false );
 
-   return Menu( _("&Toolbars"),
+   static BaseItemSharedPtr menu{
+   FinderScope( findCommandHandler ).Eval(
+   Menu( XO("&Toolbars"),
       /* i18n-hint: (verb)*/
       Command( wxT("ResetToolbars"), XXO("Reset Toolb&ars"),
          FN(OnResetToolBars), AlwaysEnabledFlag ),
@@ -277,12 +277,14 @@ MenuTable::BaseItemPtr ToolbarsMenu( AudacityProject& )
       /* i18n-hint: Clicking this menu item shows the toolbar
          with the playback level meter*/
       Command( wxT("ShowPlayMeterTB"), XXO("&Playback Meter Toolbar"),
-         FN(OnShowPlayMeterToolBar), AlwaysEnabledFlag, checkOff ),
+         FN(OnShowPlayMeterToolBar), AlwaysEnabledFlag, checkOff )
 
       /* --i18nhint: Clicking this menu item shows the toolbar
          which has sound level meters*/
       //Command( wxT("ShowMeterTB"), XXO("Co&mbined Meter Toolbar"),
       //   FN(OnShowMeterToolBar), AlwaysEnabledFlag, checkOff ),
+
+         ,
 
       /* i18n-hint: Clicking this menu item shows the toolbar
          with the mixer*/
@@ -315,13 +317,16 @@ MenuTable::BaseItemPtr ToolbarsMenu( AudacityProject& )
          XXO("Spe&ctral Selection Toolbar"),
          FN(OnShowSpectralSelectionToolBar), AlwaysEnabledFlag, checkOff )
 #endif
-   );
+   ) ) };
+   return menu;
 }
 
-MenuTable::BaseItemPtr ExtraToolsMenu( AudacityProject & )
+MenuTable::BaseItemSharedPtr ExtraToolsMenu()
 {
    using namespace MenuTable;
-   return Menu( _("T&ools"),
+   static BaseItemSharedPtr menu{
+   FinderScope( findCommandHandler ).Eval(
+   Menu( XO("T&ools"),
       Command( wxT("SelectTool"), XXO("&Selection Tool"), FN(OnSelectTool),
          AlwaysEnabledFlag, wxT("F1") ),
       Command( wxT("EnvelopeTool"), XXO("&Envelope Tool"),
@@ -338,8 +343,8 @@ MenuTable::BaseItemPtr ExtraToolsMenu( AudacityProject & )
          AlwaysEnabledFlag, wxT("A") ),
       Command( wxT("NextTool"), XXO("&Next Tool"), FN(OnNextTool),
          AlwaysEnabledFlag, wxT("D") )
-   );
+   ) ) };
+   return menu;
 }
 
-#undef XXO
 #undef FN

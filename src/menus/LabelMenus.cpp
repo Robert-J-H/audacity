@@ -577,11 +577,9 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 // Menu definitions
 
-#define FN(X) findCommandHandler, \
-   static_cast<CommandFunctorPointer>(& LabelEditActions::Handler :: X)
-#define XXO(X) _(X), wxString{X}.Contains("...")
+#define FN(X) (& LabelEditActions::Handler :: X)
 
-MenuTable::BaseItemPtr LabelEditMenus( AudacityProject & )
+MenuTable::BaseItemSharedPtr LabelEditMenus()
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
@@ -594,9 +592,11 @@ MenuTable::BaseItemPtr LabelEditMenus( AudacityProject & )
 
    // Returns TWO menus.
    
-   return Items(
-
-   Menu( _("&Labels"),
+   static BaseItemSharedPtr menus{
+   FinderScope( findCommandHandler ).Eval(
+   Items(
+   
+   Menu( XO("&Labels"),
       Command( wxT("EditLabels"), XXO("&Edit Labels..."), FN(OnEditLabels),
                  AudioIONotBusyFlag ),
 
@@ -626,54 +626,54 @@ MenuTable::BaseItemPtr LabelEditMenus( AudacityProject & )
 
    /////////////////////////////////////////////////////////////////////////////
 
-   Menu( _("La&beled Audio"),
+   Menu( XO("La&beled Audio"),
       /* i18n-hint: (verb)*/
       Command( wxT("CutLabels"), XXO("&Cut"), FN(OnCutLabels),
          AudioIONotBusyFlag | LabelsSelectedFlag | WaveTracksExistFlag |
             TimeSelectedFlag | IsNotSyncLockedFlag,
-            Options{ wxT("Alt+X"), _("Label Cut") } ),
+            Options{ wxT("Alt+X"), XO("Label Cut") } ),
       Command( wxT("DeleteLabels"), XXO("&Delete"), FN(OnDeleteLabels),
          AudioIONotBusyFlag | LabelsSelectedFlag | WaveTracksExistFlag |
             TimeSelectedFlag | IsNotSyncLockedFlag,
-         Options{ wxT("Alt+K"), _("Label Delete") } ),
+         Options{ wxT("Alt+K"), XO("Label Delete") } ),
 
       Separator(),
 
       /* i18n-hint: (verb) A special way to cut out a piece of audio*/
       Command( wxT("SplitCutLabels"), XXO("&Split Cut"),
          FN(OnSplitCutLabels), NotBusyLabelsAndWaveFlags,
-         Options{ wxT("Alt+Shift+X"), _("Label Split Cut") } ),
+         Options{ wxT("Alt+Shift+X"), XO("Label Split Cut") } ),
       Command( wxT("SplitDeleteLabels"), XXO("Sp&lit Delete"),
          FN(OnSplitDeleteLabels), NotBusyLabelsAndWaveFlags,
-         Options{ wxT("Alt+Shift+K"), _("Label Split Delete") } ),
+         Options{ wxT("Alt+Shift+K"), XO("Label Split Delete") } ),
 
       Separator(),
 
       Command( wxT("SilenceLabels"), XXO("Silence &Audio"),
          FN(OnSilenceLabels), NotBusyLabelsAndWaveFlags,
-         Options{ wxT("Alt+L"), _("Label Silence") } ),
+         Options{ wxT("Alt+L"), XO("Label Silence") } ),
       /* i18n-hint: (verb)*/
       Command( wxT("CopyLabels"), XXO("Co&py"), FN(OnCopyLabels),
          NotBusyLabelsAndWaveFlags,
-         Options{ wxT("Alt+Shift+C"), _("Label Copy") } ),
+         Options{ wxT("Alt+Shift+C"), XO("Label Copy") } ),
 
       Separator(),
 
       /* i18n-hint: (verb)*/
       Command( wxT("SplitLabels"), XXO("Spli&t"), FN(OnSplitLabels),
          AudioIONotBusyFlag | LabelsSelectedFlag | WaveTracksExistFlag,
-         Options{ wxT("Alt+I"), _("Label Split") } ),
+         Options{ wxT("Alt+I"), XO("Label Split") } ),
       /* i18n-hint: (verb)*/
       Command( wxT("JoinLabels"), XXO("&Join"), FN(OnJoinLabels),
          NotBusyLabelsAndWaveFlags,
-         Options{ wxT("Alt+J"), _("Label Join") } ),
+         Options{ wxT("Alt+J"), XO("Label Join") } ),
       Command( wxT("DisjoinLabels"), XXO("Detac&h at Silences"),
          FN(OnDisjoinLabels), NotBusyLabelsAndWaveFlags,
          wxT("Alt+Shift+J") )
    ) // second menu
 
-   ); // two menus
+   ) ) }; // two menus
+   return menus;
 }
 
-#undef XXO
 #undef FN

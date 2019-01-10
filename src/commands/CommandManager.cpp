@@ -797,7 +797,6 @@ void CommandManager::ClearCurrentMenu()
 
 void CommandManager::AddItem(const CommandID &name,
                              const wxChar *label_in,
-                             bool hasDialog,
                              CommandHandlerFinder finder,
                              CommandFunctorPointer callback,
                              CommandFlag flags,
@@ -806,7 +805,7 @@ void CommandManager::AddItem(const CommandID &name,
    if (options.global) {
       wxASSERT( flags == AlwaysEnabledFlag );
       AddGlobalCommand(
-         name, label_in, hasDialog, finder, callback, options.accel );
+         name, label_in, finder, callback, options );
       return;
    }
 
@@ -816,35 +815,34 @@ void CommandManager::AddItem(const CommandID &name,
    if (mask == NoFlagsSpecified)
       mask = flags;
 
-   CommandParameter cookedParameter;
-   const auto &parameter = options.parameter;
-   if( parameter.empty() )
-      cookedParameter = name;
-   else
-      cookedParameter = parameter;
    CommandListEntry *entry =
       NewIdentifier(name,
          label_in,
-         options.longName,
-         hasDialog,
-         options.accel, CurrentMenu(), finder, callback,
-         {}, 0, 0, options.bIsEffect, cookedParameter);
+         CurrentMenu(), finder, callback,
+         {}, 0, 0,
+         options);
    int ID = entry->id;
    wxString label = GetLabelWithDisabledAccel(entry);
 
    SetCommandFlags(name, flags, mask);
 
 
-   auto checkmark = options.check;
-   if (checkmark >= 0) {
+   auto &checker = options.checker;
+   if (checker) {
       CurrentMenu()->AppendCheckItem(ID, label);
-      CurrentMenu()->Check(ID, checkmark != 0);
+      CurrentMenu()->Check(ID, checker());
    }
    else {
       CurrentMenu()->Append(ID, label);
    }
 
    mbSeparatorAllowed = true;
+}
+
+auto CommandManager::Options::MakeCheckFn(
+   const wxString key, bool defaultValue ) -> CheckFn
+{
+   return [=](){ return gPrefs->ReadBool( key, defaultValue ); };
 }
 
 ///
@@ -863,18 +861,20 @@ void CommandManager::AddItemList(const CommandID & name,
 {
    for (size_t i = 0, cnt = nItems; i < cnt; i++) {
       auto translated = items[i].Translation();
-      CommandListEntry *entry = NewIdentifier(name,
-                                              translated,
-                                              translated,
-                                              // No means yet to specify !
-                                              false,
-                                              CurrentMenu(),
-                                              finder,
-                                              callback,
-                                              items[i].Internal(),
-                                              i,
-                                              cnt,
-                                              bIsEffect);
+      auto stripped = translated.BeforeFirst(wxT('\t'));
+      auto accel = translated.AfterFirst(wxT('\t'));
+      CommandListEntry *entry =
+         NewIdentifier(name,
+            stripped,
+            CurrentMenu(),
+            finder,
+            callback,
+            items[i].Internal(),
+            i,
+            cnt,
+            Options{}
+               .Accel(accel)
+               .IsEffect(bIsEffect));
       entry->mask = entry->flags = flags;
       CurrentMenu()->Append(entry->id, GetLabel(entry));
       mbSeparatorAllowed = true;
@@ -885,38 +885,30 @@ void CommandManager::AddItemList(const CommandID & name,
 /// Add a command that doesn't appear in a menu.  When the key is pressed, the
 /// given function pointer will be called (via the CommandManagerListener)
 void CommandManager::AddCommand(const CommandID &name,
-                                const wxChar *label,
-                                CommandHandlerFinder finder,
-                                CommandFunctorPointer callback,
-                                CommandFlag flags)
-{
-   AddCommand(name, label, finder, callback, wxT(""), flags);
-}
-
-void CommandManager::AddCommand(const CommandID &name,
                                 const wxChar *label_in,
                                 CommandHandlerFinder finder,
                                 CommandFunctorPointer callback,
-                                const wxChar *accel,
-                                CommandFlag flags)
+                                CommandFlag flags,
+                                const Options &options)
 {
    wxASSERT( flags != NoFlagsSpecified );
 
-   NewIdentifier(name, label_in, label_in, false, accel, NULL, finder, callback, {}, 0, 0, false, {});
+   NewIdentifier(
+      name, label_in, NULL, finder, callback, {}, 0, 0,
+      options);
 
    SetCommandFlags(name, flags, flags);
 }
 
 void CommandManager::AddGlobalCommand(const CommandID &name,
                                       const wxChar *label_in,
-                                      bool hasDialog,
                                       CommandHandlerFinder finder,
                                       CommandFunctorPointer callback,
-                                      const wxChar *accel)
+                                      const Options &options)
 {
    CommandListEntry *entry =
-      NewIdentifier(name, label_in, label_in, hasDialog, accel, NULL, finder, callback,
-                    {}, 0, 0, false, {});
+      NewIdentifier(name, label_in, NULL, finder, callback,
+                    {}, 0, 0, options);
 
    entry->enabled = false;
    entry->isGlobal = true;
@@ -947,47 +939,36 @@ int CommandManager::NextIdentifier(int ID)
 ///WARNING: Does this conflict with the identifiers set for controls/windows?
 ///If it does, a workaround may be to keep controls below wxID_LOWEST
 ///and keep menus above wxID_HIGHEST
-CommandListEntry *CommandManager::NewIdentifier(const CommandID & name,
-                                                const wxString & label,
-                                                const wxString & longLabel,
-                                                bool hasDialog,
-                                                wxMenu *menu,
-                                                CommandHandlerFinder finder,
-                                                CommandFunctorPointer callback,
-                                                const CommandID &nameSuffix,
-                                                int index,
-                                                int count,
-                                                bool bIsEffect)
-{
-   return NewIdentifier(name,
-                        label.BeforeFirst(wxT('\t')),
-                        longLabel.BeforeFirst(wxT('\t')),
-                        hasDialog,
-                        label.AfterFirst(wxT('\t')),
-                        menu,
-                        finder,
-                        callback,
-                        nameSuffix,
-                        index,
-                        count,
-                        bIsEffect,
-                        {});
-}
-
 CommandListEntry *CommandManager::NewIdentifier(const CommandID & nameIn,
-   const wxString & label,
-   const wxString & longLabel,
-   bool hasDialog,
-   const wxString & accel,
+   const wxString & labelIn,
    wxMenu *menu,
    CommandHandlerFinder finder,
    CommandFunctorPointer callback,
    const CommandID &nameSuffix,
    int index,
    int count,
-   bool bIsEffect,
-   const CommandParameter &parameter)
+   const Options &options)
 {
+   const auto &longLabelIn = options.longName;
+   bool hasDialog =
+      options.interactive || (!options.translated && labelIn.Contains("..."));
+   const wxString & accel = options.accel;
+   bool bIsEffect = options.bIsEffect;
+   wxString cookedParameter;
+   const auto &parameter = options.parameter;
+   if( parameter == "" )
+      cookedParameter = nameIn;
+   else
+      cookedParameter = parameter;
+
+   wxString label;
+   label = options.translated ? labelIn : ::wxGetTranslation( labelIn );
+
+   wxString longLabel;
+   if ( !longLabelIn.empty() )
+      longLabel = options.translated
+         ? longLabelIn : ::wxGetTranslation( longLabelIn );
+
    const bool multi = !nameSuffix.empty();
    auto name = nameIn;
 

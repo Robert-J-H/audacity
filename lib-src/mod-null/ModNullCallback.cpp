@@ -112,7 +112,7 @@ void ModNullCallback::OnFuncSecond(const CommandContext &)
 }
 ModNullCallback * pModNullCallback=NULL;
 
-#define ModNullFN(X) ident, static_cast<CommandFunctorPointer>(&ModNullCallback:: X)
+#define ModNullFN(X) (&ModNullCallback:: X)
 
 extern "C" {
 
@@ -161,15 +161,13 @@ int ModuleDispatch(ModuleDispatchTypes type)
          // We add two new commands into the Analyze menu.
          c->AddItem( 
             _T("A New Command"), // internal name
-            _T("1st Experimental Command"), //displayed name
-            true, // has dialog
-            ModNullFN( OnFuncFirst ),
+            _T("1st Experimental Command..."), //displayed name
+            ident, ModNullFN( OnFuncFirst ),
             AudioIONotBusyFlag );
          c->AddItem( 
             _T("Another New Command"), 
             _T("2nd Experimental Command"),
-            false, // no dialog
-            ModNullFN( OnFuncSecond ),
+            ident, ModNullFN( OnFuncSecond ),
             AudioIONotBusyFlag );
          c->ClearCurrentMenu();
    }

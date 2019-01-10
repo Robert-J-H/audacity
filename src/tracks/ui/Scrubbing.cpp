@@ -1173,20 +1173,18 @@ bool Scrubber::CanScrub() const
    return cm.GetEnabled(menuItems[ 0 ].name);
 }
 
-// To supply the "finder" argument
-static CommandHandlerObject &findme(AudacityProject &project)
-{ return Scrubber::Get( project ); }
-
 MenuTable::BaseItemPtr Scrubber::Menu()
 {
    using Options = CommandManager::Options;
 
+   auto scope = MenuTable::FinderScope(
+      [](AudacityProject &project) -> CommandHandlerObject&
+         { return Scrubber::Get( project ); } );
+
    MenuTable::BaseItemPtrs ptrs;
    for (const auto &item : menuItems) {
-      ptrs.push_back( MenuTable::Command( item.name, wxGetTranslation(item.label),
-          // No menu items yet have dialogs
-          false,
-          findme, static_cast<CommandFunctorPointer>(item.memFn),
+      ptrs.push_back( MenuTable::Command( item.name, item.label,
+          item.memFn,
           item.flags,
           item.StatusTest
              ? // a checkmark item
@@ -1196,7 +1194,7 @@ MenuTable::BaseItemPtr Scrubber::Menu()
       ) );
    }
 
-   return MenuTable::Menu( _("Scru&bbing"), std::move( ptrs ) );
+   return MenuTable::Menu( XO("Scru&bbing"), std::move( ptrs ) );
 }
 
 void Scrubber::PopulatePopupMenu(wxMenu &menu)
