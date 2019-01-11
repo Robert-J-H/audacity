@@ -552,7 +552,7 @@ public:
    static std::shared_ptr<PlayheadHandle>
    HitTest( const AudacityProject *pProject, wxCoord xx )
    {
-      if( ControlToolBar::IsTransportingPinned() &&
+      if( TransportState::IsTransportingPinned() &&
           pProject->IsAudioActive() )
       {
          const auto targetX = GetPlayHeadX( pProject );
@@ -1576,8 +1576,7 @@ void AdornedRulerPanel::StartQPPlay(bool looped, bool cutPreview)
    bool startPlaying = (playRegion.GetStart() >= 0);
 
    if (startPlaying) {
-      ControlToolBar* ctb = mProject->GetControlToolBar();
-      ctb->StopPlaying();
+      TransportState::StopPlaying();
 
       bool loopEnabled = true;
       double start, end;
@@ -1618,7 +1617,7 @@ void AdornedRulerPanel::StartQPPlay(bool looped, bool cutPreview)
       playRegion.SetTimes( start, end );
       Refresh();
 
-      ctb->PlayPlayRegion((SelectedRegion(start, end)),
+      TransportState::PlayPlayRegion((SelectedRegion(start, end)),
                           options, mode,
                           false,
                           true);
@@ -2060,7 +2059,7 @@ void AdornedRulerPanel::DoDrawIndicator
       dc->DrawPolygon( 3, tri );
    }
    else {
-      bool pinned = ControlToolBar::IsTransportingPinned();
+      bool pinned = TransportState::IsTransportingPinned();
       wxBitmap & bmp = theTheme.Bitmap( pinned ? 
          (playing ? bmpPlayPointerPinned : bmpRecordPointerPinned) :
          (playing ? bmpPlayPointer : bmpRecordPointer) 
@@ -2101,8 +2100,7 @@ void AdornedRulerPanel::SetPlayRegion(double playRegionStart,
 
 void AdornedRulerPanel::ClearPlayRegion()
 {
-   ControlToolBar* ctb = mProject->GetControlToolBar();
-   ctb->StopPlaying();
+   TransportState::StopPlaying();
 
    auto &viewInfo = ViewInfo::Get( *GetProject() );
    auto &playRegion = viewInfo.playRegion;

@@ -433,7 +433,7 @@ void TrackPanel::OnTimer(wxTimerEvent& )
    {
       //the stream may have been started up after this one finished (by some other project)
       //in that case reset the buttons don't stop the stream
-      p->GetControlToolBar()->StopPlaying(!gAudioIO->IsStreamActive());
+      TransportState::StopPlaying(!gAudioIO->IsStreamActive());
    }
 
    // Next, check to see if we were playing or recording

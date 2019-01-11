@@ -177,8 +177,8 @@ void PlayIndicatorOverlay::OnTimer(wxCommandEvent &event)
          // msmeyer: But only if not playing looped or in one-second mode
          // PRL: and not scrolling with play/record head fixed
          if (!pinned &&
-             ControlToolBar::sLastPlayMode != PlayMode::loopedPlay &&
-             ControlToolBar::sLastPlayMode != PlayMode::oneSecondPlay &&
+             TransportState::sLastPlayMode != PlayMode::loopedPlay &&
+             TransportState::sLastPlayMode != PlayMode::oneSecondPlay &&
              !gAudioIO->IsPaused())
          {
             auto newPos = playPos;

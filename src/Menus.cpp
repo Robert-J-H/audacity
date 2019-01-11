@@ -1187,8 +1187,7 @@ CommandFlag MenuManager::GetUpdateFlags
       if (!window.IsCapturing())
       flags |= CaptureNotBusyFlag;
 
-   ControlToolBar *bar = project.GetControlToolBar();
-   if (bar->ControlToolBar::CanStopAudioStream())
+   if (TransportState::CanStopAudioStream())
       flags |= CanStopAudioStreamFlag;
 
    lastFlags = flags;

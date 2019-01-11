@@ -84,8 +84,8 @@
 
 IMPLEMENT_CLASS(ControlToolBar, ToolBar);
 
-//static
-AudacityProject *ControlToolBar::mBusyProject = NULL;
+AudacityProject *TransportState::mBusyProject = NULL;
+std::shared_ptr<TrackList> TransportState::mCutPreviewTracks;
 
 ////////////////////////////////////////////////////////////
 /// Methods for ControlToolBar
@@ -470,21 +470,25 @@ void ControlToolBar::EnableDisableButtons()
    if (p) {
       TranscriptionToolBar *const playAtSpeedTB = p->GetTranscriptionToolBar();
       if (playAtSpeedTB)
-         playAtSpeedTB->SetEnabled(CanStopAudioStream() && tracks && !recording);
+         playAtSpeedTB->SetEnabled(
+            TransportState::CanStopAudioStream() && tracks && !recording);
    }
 
-   mPlay->SetEnabled(CanStopAudioStream() && tracks && !recording);
+   mPlay->SetEnabled(
+      TransportState::CanStopAudioStream() && tracks && !recording);
    mRecord->SetEnabled(
-      CanStopAudioStream() &&
+      TransportState::CanStopAudioStream() &&
       !(busy && !recording && !paused) &&
       !(playing && !paused)
    );
-   mStop->SetEnabled(CanStopAudioStream() && (playing || recording));
+   mStop->SetEnabled(
+      TransportState::CanStopAudioStream() && (playing || recording));
    mRewind->SetEnabled(IsPauseDown() || (!playing && !recording));
    mFF->SetEnabled(tracks && (IsPauseDown() || (!playing && !recording)));
 
    //auto pProject = GetActiveProject();
-   mPause->SetEnabled(CanStopAudioStream());
+   mPause->SetEnabled(
+      TransportState::CanStopAudioStream());
 }
 
 void ControlToolBar::SetPlay(bool down, PlayAppearance appearance)
@@ -540,7 +544,7 @@ bool ControlToolBar::IsRecordDown() const
    return mRecord->IsDown();
 }
 
-int ControlToolBar::PlayPlayRegion(const SelectedRegion &selectedRegion,
+int TransportState::PlayPlayRegion(const SelectedRegion &selectedRegion,
                                    const AudioIOStartStreamOptions &options,
                                    PlayMode mode,
                                    bool backwards, /* = false */
@@ -568,6 +572,7 @@ int ControlToolBar::PlayPlayRegion(const SelectedRegion &selectedRegion,
    if (backwards)
       std::swap(t0, t1);
 
+#if 0
    {
       PlayAppearance appearance;
       switch( mode ) {
@@ -580,13 +585,14 @@ int ControlToolBar::PlayPlayRegion(const SelectedRegion &selectedRegion,
       }
       SetPlay(true, appearance);
    }
+#endif
 
    bool success = false;
    auto cleanup = finally( [&] {
       if (!success) {
-         SetPlay(false);
-         SetStop(false);
-         SetRecord(false);
+//         SetPlay(false);
+//         SetStop(false);
+//         SetRecord(false);
       }
    } );
 
@@ -719,9 +725,9 @@ int ControlToolBar::PlayPlayRegion(const SelectedRegion &selectedRegion,
          // Problem was that the error dialog yields to events,
          // causing recursion to this function in the scrub timer
          // handler!  Easy fix, just delay the user alert instead.
-         CallAfter( [=]{
+         wxTheApp->CallAfter( []{
          // Show error message if stream could not be opened
-         ShowErrorDialog(this, _("Error"),
+         ShowErrorDialog(::GetActiveProject(), _("Error"),
                          _("Error opening sound device.\nTry changing the audio host, playback device and the project sample rate."),
                          wxT("Error_opening_sound_device"));
          });
@@ -740,7 +746,7 @@ int ControlToolBar::PlayPlayRegion(const SelectedRegion &selectedRegion,
    return token;
 }
 
-void ControlToolBar::PlayCurrentRegion(bool looped /* = false */,
+void TransportState::PlayCurrentRegion(bool looped /* = false */,
                                        bool cutpreview /* = false */)
 {
    if (!CanStopAudioStream())
@@ -779,12 +785,12 @@ void ControlToolBar::OnKeyEvent(wxKeyEvent & event)
       if (gAudioIO->IsStreamActive(GetActiveProject()->GetAudioIOToken())) {
          SetPlay(false);
          SetStop(true);
-         StopPlaying();
+         TransportState::StopPlaying();
       }
       else if (!gAudioIO->IsBusy()) {
          //SetPlay(true);// Not needed as done in PlayPlayRegion
          SetStop(false);
-         PlayCurrentRegion();
+         TransportState::PlayCurrentRegion();
       }
       return;
    }
@@ -795,10 +801,10 @@ void ControlToolBar::OnPlay(wxCommandEvent & WXUNUSED(evt))
 {
    auto p = GetActiveProject();
 
-   if (!CanStopAudioStream())
+   if (!TransportState::CanStopAudioStream())
       return;
 
-   StopPlaying();
+   TransportState::StopPlaying();
 
    if (p)
       ProjectWindow::Get( *p ).TP_DisplaySelection();
@@ -809,13 +815,13 @@ void ControlToolBar::OnPlay(wxCommandEvent & WXUNUSED(evt))
 
 void ControlToolBar::OnStop(wxCommandEvent & WXUNUSED(evt))
 {
-   if (CanStopAudioStream()) {
-      StopPlaying();
+   if (TransportState::CanStopAudioStream()) {
+      TransportState::StopPlaying();
       UpdateStatusBar(GetActiveProject());
    }
 }
 
-bool ControlToolBar::CanStopAudioStream()
+bool TransportState::CanStopAudioStream()
 {
    return (!gAudioIO->IsStreamActive() ||
            gAudioIO->IsMonitoring() ||
@@ -828,10 +834,10 @@ void ControlToolBar::PlayDefault()
    const bool cutPreview = mPlay->WasControlDown();
    const bool looped = !cutPreview &&
       mPlay->WasShiftDown();
-   PlayCurrentRegion(looped, cutPreview);
+   TransportState::PlayCurrentRegion(looped, cutPreview);
 }
 
-void ControlToolBar::StopPlaying(bool stopStream /* = true*/)
+void TransportState::StopPlaying(bool stopStream /* = true*/)
 {
    StopScrolling();
 
@@ -846,22 +852,22 @@ void ControlToolBar::StopPlaying(bool stopStream /* = true*/)
    if (!CanStopAudioStream())
       return;
 
-   mStop->PushDown();
+//   mStop->PushDown();
 
-   SetStop(false);
+//   SetStop(false);
    if(stopStream)
       gAudioIO->StopStream();
-   SetPlay(false);
-   SetRecord(false);
+//   SetPlay(false);
+//   SetRecord(false);
 
    #ifdef EXPERIMENTAL_AUTOMATED_INPUT_LEVEL_ADJUSTMENT
       gAudioIO->AILADisable();
    #endif
 
-   mPause->PopUp();
-   mPaused=false;
+//   mPause->PopUp();
+//   mPaused=false;
    //Make sure you tell gAudioIO to unpause
-   gAudioIO->SetPaused(mPaused);
+//   gAudioIO->SetPaused(mPaused);
 
    ClearCutPreviewTracks();
 
@@ -886,17 +892,17 @@ void ControlToolBar::StopPlaying(bool stopStream /* = true*/)
    toolbar->EnableDisableButtons();
 }
 
-void ControlToolBar::Pause()
+void TransportState::Pause()
 {
    if (!CanStopAudioStream())
       gAudioIO->SetPaused(!gAudioIO->IsPaused());
    else {
       wxCommandEvent dummy;
-      OnPause(dummy);
+//      OnPause(dummy);
    }
 }
 
-WaveTrackArray ControlToolBar::ChooseExistingRecordingTracks(
+WaveTrackArray TransportState::ChooseExistingRecordingTracks(
    AudacityProject &proj, bool selectedOnly)
 {
    auto p = &proj;
@@ -1007,12 +1013,14 @@ void ControlToolBar::OnRecord(wxCommandEvent &evt)
 
          // Try to find wave tracks to record into.  (If any are selected,
          // try to choose only from them; else if wave tracks exist, may record into any.)
-         existingTracks = ChooseExistingRecordingTracks(*p, true);
+         existingTracks =
+            TransportState::ChooseExistingRecordingTracks(*p, true);
          if ( !existingTracks.empty() )
             t0 = std::max( t0,
                ( trackRange + &Track::IsSelected ).max( &Track::GetEndTime ) );
          else {
-            existingTracks = ChooseExistingRecordingTracks(*p, false);
+            existingTracks =
+               TransportState::ChooseExistingRecordingTracks(*p, false);
             t0 = std::max( t0, trackRange.max( &Track::GetEndTime ) );
             // If suitable tracks still not found, will record into NEW ones,
             // but the choice of t0 does not depend on that.
@@ -1044,7 +1052,7 @@ void ControlToolBar::OnRecord(wxCommandEvent &evt)
 
       transportTracks.captureTracks = existingTracks;
       auto options = AudioIOStartStreamOptions::PlayDefaults( *p );
-      DoRecord(*p, transportTracks, t0, t1, altAppearance, options);
+      TransportState::DoRecord(*p, transportTracks, t0, t1, altAppearance, options);
    }
 }
 
@@ -1061,7 +1069,7 @@ bool ControlToolBar::UseDuplex()
    return duplex;
 }
 
-bool ControlToolBar::DoRecord(AudacityProject &project,
+bool TransportState::DoRecord(AudacityProject &project,
    const TransportTracks &tracks,
    double t0, double t1,
    bool altAppearance,
@@ -1081,25 +1089,28 @@ bool ControlToolBar::DoRecord(AudacityProject &project,
    // ...end of code from CommandHandler.
 
    if (gAudioIO->IsBusy()) {
-      if (!CanStopAudioStream() || 0 == gAudioIO->GetNumCaptureChannels())
-         mRecord->PopUp();
+      if (!TransportState::CanStopAudioStream() ||
+          0 == gAudioIO->GetNumCaptureChannels())
+//         mRecord->PopUp()
+         ;
       else
-         mRecord->PushDown();
+//         mRecord->PushDown()
+         ;
       return false;
    }
 
-   SetRecord(true, altAppearance);
+//   SetRecord(true, altAppearance);
 
    bool success = false;
    auto cleanup = finally([&] {
       if (!success) {
-         SetPlay(false);
-         SetStop(false);
-         SetRecord(false);
+//         SetPlay(false);
+  //       SetStop(false);
+    //     SetRecord(false);
       }
 
       // Success or not:
-      UpdateStatusBar(GetActiveProject());
+//      UpdateStatusBar(GetActiveProject());
    });
 
    auto transportTracks = tracks;
@@ -1259,7 +1270,7 @@ bool ControlToolBar::DoRecord(AudacityProject &project,
 
          // Show error message if stream could not be opened
          wxString msg = wxString::Format(_("Error opening recording device.\nError code: %s"), gAudioIO->LastPaErrorString());
-         ShowErrorDialog(this, _("Error"), msg, wxT("Error_opening_sound_device"));
+         ShowErrorDialog(::GetActiveProject(), _("Error"), msg, wxT("Error_opening_sound_device"));
       }
    }
 
@@ -1269,7 +1280,7 @@ bool ControlToolBar::DoRecord(AudacityProject &project,
 
 void ControlToolBar::OnPause(wxCommandEvent & WXUNUSED(evt))
 {
-   if (!CanStopAudioStream()) {
+   if (!TransportState::CanStopAudioStream()) {
       return;
    }
 
@@ -1338,7 +1349,7 @@ void ControlToolBar::OnFF(wxCommandEvent & WXUNUSED(evt))
    }
 }
 
-void ControlToolBar::SetupCutPreviewTracks(double WXUNUSED(playStart), double cutStart,
+void TransportState::SetupCutPreviewTracks(double WXUNUSED(playStart), double cutStart,
                                            double cutEnd, double  WXUNUSED(playEnd))
 
 // STRONG-GUARANTEE (for state of mCutPreviewTracks)
@@ -1363,7 +1374,7 @@ void ControlToolBar::SetupCutPreviewTracks(double WXUNUSED(playStart), double cu
    }
 }
 
-void ControlToolBar::ClearCutPreviewTracks()
+void TransportState::ClearCutPreviewTracks()
 {
    if (mCutPreviewTracks)
       mCutPreviewTracks->Clear();
@@ -1430,7 +1441,7 @@ void ControlToolBar::UpdateStatusBar(AudacityProject *pProject)
       .GetStatusBar()->SetStatusText(StateForStatusBar(), stateStatusBarField);
 }
 
-bool ControlToolBar::IsTransportingPinned()
+bool TransportState::IsTransportingPinned()
 {
    if (!TracksPrefs::GetPinnedHeadPreference())
       return false;
@@ -1441,7 +1452,7 @@ bool ControlToolBar::IsTransportingPinned()
        !Scrubber::ShouldScrubPinned());
 }
 
-void ControlToolBar::StartScrollingIfPreferred()
+void TransportState::StartScrollingIfPreferred()
 {
    if (IsTransportingPinned())
       StartScrolling();
@@ -1459,7 +1470,7 @@ void ControlToolBar::StartScrollingIfPreferred()
       StopScrolling();
 }
 
-void ControlToolBar::StartScrolling()
+void TransportState::StartScrolling()
 {
    using Mode = ProjectWindow::PlaybackScroller::Mode;
    const auto project = GetActiveProject();
@@ -1497,7 +1508,7 @@ void ControlToolBar::StartScrolling()
    }
 }
 
-void ControlToolBar::StopScrolling()
+void TransportState::StopScrolling()
 {
    const auto project = GetActiveProject();
    if(project)
@@ -1505,16 +1516,16 @@ void ControlToolBar::StopScrolling()
          (ProjectWindow::PlaybackScroller::Mode::Off);
 }
 
-void ControlToolBar::CommitRecording()
+void TransportState::CommitRecording()
 {
    const auto project = GetActiveProject();
    TrackList::Get( *project ).ApplyPendingTracks();
 }
 
-void ControlToolBar::CancelRecording()
+void TransportState::CancelRecording()
 {
    const auto project = GetActiveProject();
    TrackList::Get( *project ).ClearPendingTracks();
 }
 
-PlayMode ControlToolBar::sLastPlayMode{ PlayMode::normalPlay };
+PlayMode TransportState::sLastPlayMode{ PlayMode::normalPlay };

@@ -480,7 +480,7 @@ void TranscriptionToolBar::PlayAtSpeed(bool looped, bool cutPreview)
 
    // If IO is busy, abort immediately
    if (gAudioIO->IsBusy()) {
-      p->GetControlToolBar()->StopPlaying();
+      TransportState::StopPlaying();
    }
 
    // Get the current play region
@@ -500,7 +500,7 @@ void TranscriptionToolBar::PlayAtSpeed(bool looped, bool cutPreview)
          cutPreview ? PlayMode::cutPreviewPlay
          : options.playLooped ? PlayMode::loopedPlay
          : PlayMode::normalPlay;
-      p->GetControlToolBar()->PlayPlayRegion(
+      TransportState::PlayPlayRegion(
          SelectedRegion(playRegion.GetStart(), playRegion.GetEnd()),
             options, mode);
    }
