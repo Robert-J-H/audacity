@@ -44,8 +44,6 @@ class Ruler;
 class SnapManager;
 class AdornedRulerPanel;
 class LWSlider;
-class ControlToolBar; //Needed because state of controls can affect what gets drawn.
-class ToolsToolBar; //Needed because state of controls can affect what gets drawn.
 
 class TrackPanelAx;
 
