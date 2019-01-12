@@ -416,7 +416,7 @@ private:
 
 // Define classes and functions that associate parts of the user interface
 // with path names
-namespace MenuTable {
+namespace Registry {
    // TODO C++17: maybe use std::variant (discriminated unions) to achieve
    // polymorphism by other means, not needing unique_ptr and dynamic_cast
    // and using less heap.
@@ -521,8 +521,11 @@ namespace MenuTable {
       using GroupItem::GroupItem;
       ~GroupingItem() override;
    };
+}
 
 // Define items that populate tables that specifically describe menu trees
+namespace MenuTable {
+   using namespace Registry;
 
    // Describes a main menu in the toolbar, or a sub-menu
    struct MenuItem final : GroupItem {
