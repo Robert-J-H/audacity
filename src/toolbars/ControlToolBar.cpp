@@ -74,6 +74,7 @@
 
 #include "../tracks/ui/Scrubbing.h"
 #include "../tracks/ui/TrackView.h"
+#include "../toolbars/ToolManager.h"
 #include "../TransportState.h"
 
 IMPLEMENT_CLASS(ControlToolBar, ToolBar);
@@ -119,6 +120,27 @@ ControlToolBar::~ControlToolBar()
 {
 }
 
+
+ControlToolBar *ControlToolBar::Find( AudacityProject &project )
+{
+   auto *pToolManager = ToolManager::Find( project );
+   if (!pToolManager)
+      return nullptr;
+   return static_cast<ControlToolBar*>(
+      pToolManager->GetToolBar(TransportBarID) );
+}
+
+ControlToolBar &ControlToolBar::Get( AudacityProject &project )
+{
+   auto &toolManager = ToolManager::Get( project );
+   return *static_cast<ControlToolBar*>(
+      toolManager.GetToolBar(TransportBarID) );
+}
+
+const ControlToolBar &ControlToolBar::Get( const AudacityProject &project )
+{
+   return Get( const_cast<AudacityProject&>( project )) ;
+}
 
 void ControlToolBar::Create(wxWindow * parent)
 {
@@ -459,7 +481,7 @@ void ControlToolBar::EnableDisableButtons()
    bool tracks = p && TrackList::Get( *p ).Any<AudioTrack>(); // PRL:  PlayableTrack ?
 
    if (p) {
-      TranscriptionToolBar *const playAtSpeedTB = p->GetTranscriptionToolBar();
+      const auto playAtSpeedTB = &TranscriptionToolBar::Get( *p );
       if (playAtSpeedTB)
          playAtSpeedTB->SetEnabled(
             TransportState::CanStopAudioStream() && tracks && !recording);

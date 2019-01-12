@@ -15,7 +15,7 @@ namespace {
 /// Called by handlers that set tools.
 void SetTool(AudacityProject &project, int tool)
 {
-   ToolsToolBar *toolbar = project.GetToolsToolBar();
+   auto toolbar = &ToolsToolBar::Get( project );
    if (toolbar) {
       toolbar->SetCurrentTool(tool);
       TrackPanel::Get( project ).Refresh(false);
@@ -206,29 +206,25 @@ void OnMultiTool(const CommandContext &context)
 void OnPrevTool(const CommandContext &context)
 {
    auto &project = context.project;
-   auto toolbar = project.GetToolsToolBar();
+   auto &toolbar = ToolsToolBar::Get( project );
    auto &trackPanel = TrackPanel::Get( project );
 
-   if (toolbar) {
-      // Use GetDownTool() here since GetCurrentTool() can return a value that
-      // doesn't represent the real tool if the Multi-tool is being used.
-      toolbar->SetCurrentTool((toolbar->GetDownTool()+(numTools-1))%numTools);
-      trackPanel.Refresh(false);
-   }
+   // Use GetDownTool() here since GetCurrentTool() can return a value that
+   // doesn't represent the real tool if the Multi-tool is being used.
+   toolbar.SetCurrentTool((toolbar.GetDownTool()+(numTools-1))%numTools);
+   trackPanel.Refresh(false);
 }
 
 void OnNextTool(const CommandContext &context)
 {
    auto &project = context.project;
-   auto toolbar = project.GetToolsToolBar();
+   auto &toolbar = ToolsToolBar::Get( project );
    auto &trackPanel = TrackPanel::Get( project );
 
-   if (toolbar) {
-      // Use GetDownTool() here since GetCurrentTool() can return a value that
-      // doesn't represent the real tool if the Multi-tool is being used.
-      toolbar->SetCurrentTool((toolbar->GetDownTool()+1)%numTools);
-      trackPanel.Refresh(false);
-   }
+   // Use GetDownTool() here since GetCurrentTool() can return a value that
+   // doesn't represent the real tool if the Multi-tool is being used.
+   toolbar.SetCurrentTool((toolbar.GetDownTool()+1)%numTools);
+   trackPanel.Refresh(false);
 }
 
 }; // struct Handler

@@ -34,6 +34,7 @@ class wxPen;
 
 class AButton;
 class ASlider;
+class AudacityProject;
 class TimeTrack;
 class WaveTrack;
 
@@ -72,6 +73,9 @@ class TranscriptionToolBar final : public ToolBar {
 
    TranscriptionToolBar();
    virtual ~TranscriptionToolBar();
+
+   static TranscriptionToolBar &Get( AudacityProject &project );
+   static const TranscriptionToolBar &Get( const AudacityProject &project );
 
    void Create(wxWindow *parent) override;
 

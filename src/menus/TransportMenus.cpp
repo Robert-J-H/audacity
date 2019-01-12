@@ -38,14 +38,14 @@ namespace {
 bool MakeReadyToPlay(AudacityProject &project,
    bool loop = false, bool cutpreview = false)
 {
-   ControlToolBar *toolbar = project.GetControlToolBar();
+   auto &toolbar = ControlToolBar::Get( project );
    wxCommandEvent evt;
 
    // If this project is playing, stop playing
    if (gAudioIO->IsStreamActive(project.GetAudioIOToken())) {
-      toolbar->SetPlay(false);        //Pops
-      toolbar->SetStop(true);         //Pushes stop down
-      toolbar->OnStop(evt);
+      toolbar.SetPlay(false);        //Pops
+      toolbar.SetStop(true);         //Pushes stop down
+      toolbar.OnStop(evt);
 
       ::wxMilliSleep(100);
    }
@@ -59,8 +59,8 @@ bool MakeReadyToPlay(AudacityProject &project,
       cutpreview ? ControlToolBar::PlayAppearance::CutPreview
       : loop ? ControlToolBar::PlayAppearance::Looped
       : ControlToolBar::PlayAppearance::Straight;
-   toolbar->SetPlay(true, appearance);
-   toolbar->SetStop(false);
+   toolbar.SetPlay(true, appearance);
+   toolbar.SetStop(false);
 
    return true;
 }
@@ -81,13 +81,13 @@ void DoPlayStop(const CommandContext &context)
 {
    auto &project = context.project;
    auto &window = ProjectWindow::Get( project );
-   auto toolbar = project.GetControlToolBar();
+   auto &toolbar = ControlToolBar::Get( project );
    auto token = project.GetAudioIOToken();
 
    //If this project is playing, stop playing, make sure everything is unpaused.
    if (gAudioIO->IsStreamActive(token)) {
-      toolbar->SetPlay(false);        //Pops
-      toolbar->SetStop(true);         //Pushes stop down
+      toolbar.SetPlay(false);        //Pops
+      toolbar.SetStop(true);         //Pushes stop down
       TransportState::StopPlaying();
    }
    else if (gAudioIO->IsStreamActive()) {
@@ -105,9 +105,9 @@ void DoPlayStop(const CommandContext &context)
 
       //stop playing the other project
       if(otherProject) {
-         ControlToolBar *otherToolbar = otherProject->GetControlToolBar();
-         otherToolbar->SetPlay(false);        //Pops
-         otherToolbar->SetStop(true);         //Pushes stop down
+         auto &otherToolbar = ControlToolBar::Get( *otherProject );
+         otherToolbar.SetPlay(false);        //Pops
+         otherToolbar.SetStop(true);         //Pushes stop down
          TransportState::StopPlaying();
       }
 
@@ -117,7 +117,7 @@ void DoPlayStop(const CommandContext &context)
          window.TP_DisplaySelection();
          //Otherwise, start playing (assuming audio I/O isn't busy)
          //toolbar->SetPlay(true); // Not needed as done in PlayPlayRegion.
-         toolbar->SetStop(false);
+         toolbar.SetStop(false);
 
          // Will automatically set sLastPlayMode
          TransportState::PlayCurrentRegion(false);
@@ -126,7 +126,7 @@ void DoPlayStop(const CommandContext &context)
    else if (!gAudioIO->IsBusy()) {
       //Otherwise, start playing (assuming audio I/O isn't busy)
       //toolbar->SetPlay(true); // Not needed as done in PlayPlayRegion.
-      toolbar->SetStop(false);
+      toolbar.SetStop(false);
 
       // Will automatically set sLastPlayMode
       TransportState::PlayCurrentRegion(false);
@@ -200,7 +200,7 @@ namespace TransportActions {
 bool DoPlayStopSelect
 (AudacityProject &project, bool click, bool shift)
 {
-   auto toolbar = project.GetControlToolBar();
+   auto &toolbar = ControlToolBar::Get( project );
    auto &scrubber = Scrubber::Get( project );
    auto token = project.GetAudioIOToken();
    auto &viewInfo = ViewInfo::Get( project );
@@ -209,8 +209,8 @@ bool DoPlayStopSelect
    //If busy, stop playing, make sure everything is unpaused.
    if (scrubber.HasMark() ||
        gAudioIO->IsStreamActive(token)) {
-      toolbar->SetPlay(false);        //Pops
-      toolbar->SetStop(true);         //Pushes stop down
+      toolbar.SetPlay(false);        //Pops
+      toolbar.SetStop(true);         //Pushes stop down
 
       // change the selection
       auto time = gAudioIO->GetStreamTime();
@@ -258,14 +258,14 @@ bool DoPlayStopSelect
 // "OnStopSelect" merged.
 void DoPlayStopSelect(AudacityProject &project)
 {
-   auto toolbar = project.GetControlToolBar();
+   auto &toolbar = ControlToolBar::Get( project );
    wxCommandEvent evt;
    if (DoPlayStopSelect(project, false, false))
-      toolbar->OnStop(evt);
+      toolbar.OnStop(evt);
    else if (!gAudioIO->IsBusy()) {
       //Otherwise, start playing (assuming audio I/O isn't busy)
       //toolbar->SetPlay(true); // Not needed as set in PlayPlayRegion()
-      toolbar->SetStop(false);
+      toolbar.SetStop(false);
 
       // Will automatically set sLastPlayMode
       TransportState::PlayCurrentRegion(false);
@@ -276,8 +276,8 @@ void DoPause( AudacityProject &project )
 {
    wxCommandEvent evt;
 
-   auto controlToolBar = project.GetControlToolBar();
-   controlToolBar->OnPause(evt);
+   auto &controlToolBar = ControlToolBar::Get( project );
+   controlToolBar.OnPause(evt);
 }
 
 void DoRecord( AudacityProject &project )
@@ -285,8 +285,8 @@ void DoRecord( AudacityProject &project )
    wxCommandEvent evt;
    evt.SetInt(2); // 0 is default, use 1 to set shift on, 2 to clear it
 
-   auto controlToolBar = project.GetControlToolBar();
-   controlToolBar->OnRecord(evt);
+   auto &controlToolBar = ControlToolBar::Get( project );
+   controlToolBar.OnRecord(evt);
 }
 
 void DoLockPlayRegion( AudacityProject &project )
@@ -337,8 +337,8 @@ void DoStop( AudacityProject &project )
 {
    wxCommandEvent evt;
 
-   auto controlToolBar = project.GetControlToolBar();
-   controlToolBar->OnStop(evt);
+   auto &controlToolBar = ControlToolBar::Get( project );
+   controlToolBar.OnStop(evt);
 }
 
 // Menu handler functions
@@ -385,8 +385,8 @@ void OnRecord2ndChoice(const CommandContext &context)
    wxCommandEvent evt;
    evt.SetInt(1); // 0 is default, use 1 to set shift on, 2 to clear it
 
-   auto controlToolBar = project.GetControlToolBar();
-   controlToolBar->OnRecord(evt);
+   auto &controlToolBar = ControlToolBar::Get( project );
+   controlToolBar.OnRecord(evt);
 }
 
 void OnTimerRecord(const CommandContext &context)
@@ -923,7 +923,7 @@ void OnPlayCutPreview(const CommandContext &context)
 void OnPlayAtSpeed(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tb = project.GetTranscriptionToolBar();
+   auto tb = &TranscriptionToolBar::Get( project );
 
    if (tb) {
       tb->PlayAtSpeed(false, false);
@@ -933,7 +933,7 @@ void OnPlayAtSpeed(const CommandContext &context)
 void OnPlayAtSpeedLooped(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tb = project.GetTranscriptionToolBar();
+   auto tb = &TranscriptionToolBar::Get( project );
 
    if (tb) {
       tb->PlayAtSpeed(true, false);
@@ -943,7 +943,7 @@ void OnPlayAtSpeedLooped(const CommandContext &context)
 void OnPlayAtSpeedCutPreview(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tb = project.GetTranscriptionToolBar();
+   auto tb = &TranscriptionToolBar::Get( project );
 
    if (tb) {
       tb->PlayAtSpeed(false, true);
@@ -953,7 +953,7 @@ void OnPlayAtSpeedCutPreview(const CommandContext &context)
 void OnSetPlaySpeed(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tb = project.GetTranscriptionToolBar();
+   auto tb = &TranscriptionToolBar::Get( project );
 
    if (tb) {
       tb->ShowPlaySpeedDialog();
@@ -963,7 +963,7 @@ void OnSetPlaySpeed(const CommandContext &context)
 void OnPlaySpeedInc(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tb = project.GetTranscriptionToolBar();
+   auto tb = &TranscriptionToolBar::Get( project );
 
    if (tb) {
       tb->AdjustPlaySpeed(0.1f);
@@ -973,7 +973,7 @@ void OnPlaySpeedInc(const CommandContext &context)
 void OnPlaySpeedDec(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tb = project.GetTranscriptionToolBar();
+   auto tb = &TranscriptionToolBar::Get( project );
 
    if (tb) {
       tb->AdjustPlaySpeed(-0.1f);
@@ -1002,9 +1002,9 @@ void OnStopSelect(const CommandContext &context)
    wxCommandEvent evt;
 
    if (gAudioIO->IsStreamActive()) {
-      auto controlToolBar = project.GetControlToolBar();
+      auto &conrolToolbar = ControlToolBar::Get( project );
       selectedRegion.setT0(gAudioIO->GetStreamTime(), false);
-      controlToolBar->OnStop(evt);
+      controlToolBar.OnStop(evt);
       project.ModifyState(false);           // without bWantsAutoSave
    }
 }

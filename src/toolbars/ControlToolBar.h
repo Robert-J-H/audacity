@@ -42,6 +42,10 @@ class ControlToolBar final : public ToolBar {
    ControlToolBar();
    virtual ~ControlToolBar();
 
+   static ControlToolBar *Find( AudacityProject &project );
+   static ControlToolBar &Get( AudacityProject &project );
+   static const ControlToolBar &Get( const AudacityProject &project );
+
    void Create(wxWindow *parent) override;
 
    void UpdatePrefs() override;

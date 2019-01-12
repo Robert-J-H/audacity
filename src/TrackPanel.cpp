@@ -892,7 +892,7 @@ void TrackPanel::DrawTracks(wxDC * dc)
 
    // Don't draw a bottom margin here.
 
-   ToolsToolBar *pTtb = GetProject()->GetToolsToolBar();
+   auto pTtb = &ToolsToolBar::Get( *GetProject() );
    bool bMultiToolDown = pTtb->IsDown(multiTool);
    bool envelopeFlag   = pTtb->IsDown(envelopeTool) || bMultiToolDown;
    bool bigPointsFlag  = pTtb->IsDown(drawTool) || bMultiToolDown;

@@ -16,6 +16,7 @@
 
 #include "../Audacity.h"
 #include "TranscriptionToolBar.h"
+#include "ToolManager.h"
 
 #include "../Experimental.h"
 
@@ -102,6 +103,17 @@ TranscriptionToolBar::TranscriptionToolBar()
 
 TranscriptionToolBar::~TranscriptionToolBar()
 {
+}
+
+TranscriptionToolBar &TranscriptionToolBar::Get( AudacityProject &project )
+{
+   auto &toolManager = ToolManager::Get( project );
+   return *static_cast<TranscriptionToolBar*>( toolManager.GetToolBar(TranscriptionBarID) );
+}
+
+const TranscriptionToolBar &TranscriptionToolBar::Get( const AudacityProject &project )
+{
+   return Get( const_cast<AudacityProject&>( project )) ;
 }
 
 void TranscriptionToolBar::Create(wxWindow * parent)

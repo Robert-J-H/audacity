@@ -71,7 +71,7 @@ std::vector<UIHandlePtr> TrackView::HitTest
 {
    UIHandlePtr result;
    std::vector<UIHandlePtr> results;
-   const ToolsToolBar * pTtb = pProject->GetToolsToolBar();
+   auto pTtb = &ToolsToolBar::Get( *pProject );
    const bool isMultiTool = pTtb->IsDown(multiTool);
    const auto currentTool = pTtb->GetCurrentTool();
 

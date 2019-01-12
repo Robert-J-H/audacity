@@ -79,10 +79,8 @@ bool SetProjectCommand::Apply(const CommandContext & context)
 
    if( bHasRate && mRate >= 1 && mRate <= 1000000 )
    {
-      auto *bar = context.project.GetSelectionBar();
-      if( bar ){
-         bar->SetRate( mRate );
-      }
+      auto &bar = SelectionBar::Get( context.project );
+      bar.SetRate( mRate );
    }
 
    if( bHasSizing )
