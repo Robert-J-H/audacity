@@ -819,8 +819,12 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 #define FN(X) (& ClipActions::Handler :: X)
 
-// Under /MenuBar/Select
-MenuTable::BaseItemSharedPtr ClipSelectMenu()
+namespace {
+using namespace MenuTable;
+
+// Register menu items
+
+BaseItemSharedPtr ClipSelectMenu()
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
@@ -845,9 +849,13 @@ MenuTable::BaseItemSharedPtr ClipSelectMenu()
    ) ) };
    return menu;
 }
+AttachedItem sAttachment1{
+   { wxT("Select"),
+     { OrderingHint::After, wxT("Spectral") } },
+   Shared( ClipSelectMenu() )
+};
 
-// Under /MenuBar/Transport/Cursor
-MenuTable::BaseItemSharedPtr ClipCursorItems()
+BaseItemSharedPtr ClipCursorItems()
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
@@ -866,9 +874,13 @@ MenuTable::BaseItemSharedPtr ClipCursorItems()
    ) ) };
    return items;
 }
+AttachedItem sAttachment2{
+   { wxT("Transport/Cursor"),
+     { OrderingHint::Before, wxT("CursProjectStart") } },
+   Shared( ClipCursorItems() )
+};
 
-// Under /MenuBar/Optional/Extra/Part2/Cursor
-MenuTable::BaseItemSharedPtr ExtraClipCursorItems()
+BaseItemSharedPtr ExtraClipCursorItems()
 {
    using namespace MenuTable;
 
@@ -881,6 +893,12 @@ MenuTable::BaseItemSharedPtr ExtraClipCursorItems()
          TracksExistFlag | TrackPanelHasFocus, wxT("\twantKeyup") )
    ) ) };
    return items;
+}
+AttachedItem sAttachment3{
+  { wxT("Optional/Extra/Part2/Cursor"), { OrderingHint::End, {} } },
+  Shared( ExtraClipCursorItems() )
+};
+
 }
 
 #undef FN
