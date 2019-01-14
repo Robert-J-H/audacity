@@ -148,12 +148,15 @@ MenuTable::BaseItemSharedPtr ExtraScriptablesIIMenu();
 MenuTable::BaseItemSharedPtr ExtraWindowItems();
 MenuTable::BaseItemSharedPtr ExtraGlobalCommands();
 MenuTable::BaseItemSharedPtr ExtraFocusMenu();
-MenuTable::BaseItemSharedPtr ExtraMenu();
-MenuTable::BaseItemSharedPtr ExtraMixerMenu();
-MenuTable::BaseItemSharedPtr ExtraDeviceMenu();
-MenuTable::BaseItemPtr ExtraMiscItems( void * );
 
-MenuTable::BaseItemSharedPtr ExtraMenu()
+namespace {
+using namespace MenuTable;
+
+BaseItemSharedPtr ExtraMixerMenu();
+BaseItemSharedPtr ExtraDeviceMenu();
+BaseItemPtr ExtraMiscItems( void* );
+
+BaseItemSharedPtr ExtraMenu()
 {
    using namespace MenuTable;
 
@@ -191,8 +194,13 @@ MenuTable::BaseItemSharedPtr ExtraMenu()
    return menu;
 }
 
+AttachedItem sAttachment1{
+   wxT(""),
+   Shared( ExtraMenu() )
+};
+
 // Under /MenuBar/Optional/Extra
-MenuTable::BaseItemSharedPtr ExtraMixerMenu()
+BaseItemSharedPtr ExtraMixerMenu()
 {
    using namespace MenuTable;
    static BaseItemSharedPtr menu{
@@ -215,7 +223,7 @@ MenuTable::BaseItemSharedPtr ExtraMixerMenu()
 }
 
 // Under /MenuBar/Optional/Extra
-MenuTable::BaseItemSharedPtr ExtraDeviceMenu()
+BaseItemSharedPtr ExtraDeviceMenu()
 {
    using namespace MenuTable;
    static BaseItemSharedPtr menu{
@@ -237,7 +245,7 @@ MenuTable::BaseItemSharedPtr ExtraDeviceMenu()
 }
 
 // Under /MenuBar/Optional/Extra
-MenuTable::BaseItemPtr ExtraMiscItems( void *pContext )
+BaseItemPtr ExtraMiscItems( void *pContext )
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
@@ -263,6 +271,8 @@ MenuTable::BaseItemPtr ExtraMiscItems( void *pContext )
 
       ExtraWindowItems()
    ) );
+}
+
 }
 
 #undef FN

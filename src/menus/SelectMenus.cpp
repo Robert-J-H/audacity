@@ -1109,8 +1109,9 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &project) {
 
 MenuTable::BaseItemSharedPtr ClipSelectMenu();
 
-// Under /MenuBar
-MenuTable::BaseItemSharedPtr SelectMenu()
+namespace {
+using namespace MenuTable;
+BaseItemSharedPtr SelectMenu()
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
@@ -1217,6 +1218,12 @@ MenuTable::BaseItemSharedPtr SelectMenu()
          Options{ wxT("Z"), XO("Select Zero Crossing") } )
    ) ) };
    return menu;
+}
+
+AttachedItem sAttachment1{
+   wxT(""),
+   Shared( SelectMenu() )
+};
 }
 
 // Under /MenuBar/Optional/Extra

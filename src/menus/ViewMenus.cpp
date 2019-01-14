@@ -392,7 +392,9 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 MenuTable::BaseItemSharedPtr ToolbarsMenu();
 
 // Under /MenuBar
-MenuTable::BaseItemSharedPtr ViewMenu()
+namespace {
+using namespace MenuTable;
+BaseItemSharedPtr ViewMenu()
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
@@ -466,6 +468,12 @@ MenuTable::BaseItemSharedPtr ViewMenu()
    ) ) };
    return menu;
    
+}
+
+AttachedItem sAttachment1{
+   wxT(""),
+   Shared( ViewMenu() )
+};
 }
 
 #undef FN

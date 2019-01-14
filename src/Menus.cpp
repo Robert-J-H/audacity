@@ -724,29 +724,6 @@ void Visit(
 /// changes in configured preferences - for example changes in key-bindings
 /// affect the short-cut key legend that appears beside each command,
 
-MenuTable::BaseItemSharedPtr FileMenu();
-
-MenuTable::BaseItemSharedPtr EditMenu();
-
-MenuTable::BaseItemSharedPtr SelectMenu();
-
-MenuTable::BaseItemSharedPtr ViewMenu();
-
-MenuTable::BaseItemSharedPtr TransportMenu();
-
-MenuTable::BaseItemSharedPtr TracksMenu();
-
-MenuTable::BaseItemSharedPtr GenerateMenu();
-MenuTable::BaseItemSharedPtr EffectMenu();
-MenuTable::BaseItemSharedPtr AnalyzeMenu();
-MenuTable::BaseItemSharedPtr ToolsMenu();
-
-MenuTable::BaseItemSharedPtr WindowMenu();
-
-MenuTable::BaseItemSharedPtr ExtraMenu();
-
-MenuTable::BaseItemSharedPtr HelpMenu();
-
 namespace {
 static Registry::GroupItem &sRegistry()
 {
@@ -761,24 +738,6 @@ MenuTable::AttachedItem::AttachedItem(
    Registry::RegisterItems( sRegistry(), placement, std::move( pItem ) );
 }
 
-// Table of menu factories.
-// TODO:  devise a registration system instead.
-static const auto menuTree = MenuTable::Items( MenuPathStart
-   , FileMenu()
-   , EditMenu()
-   , SelectMenu()
-   , ViewMenu()
-   , TransportMenu()
-   , TracksMenu()
-   , GenerateMenu()
-   , EffectMenu()
-   , AnalyzeMenu()
-   , ToolsMenu()
-   , WindowMenu()
-   , ExtraMenu()
-   , HelpMenu()
-);
-
 namespace {
 // Once only, cause initial population of preferences for the ordering
 // of some menu items that used to be given in tables but are now separately
@@ -792,6 +751,9 @@ void InitializeMenuOrdering()
 {
    using Pair = std::pair<const wxChar *, const wxChar *>;
    static const Pair pairs [] = {
+      {wxT(""), wxT(
+"File,Edit,Select,View,Transport,Tracks,Generate,Effect,Analyze,Tools,Window,Optional,Help"
+       )},
       {wxT("/View/Windows"), wxT("UndoHistory,Karaoke,MixerBoard")},
       {wxT("/Analyze/Windows"), wxT("ContrastAnalyser,PlotSpectrum")},
    };
@@ -932,6 +894,7 @@ void MenuCreator::CreateMenusAndCommands(AudacityProject &project)
 
 void MenuManager::Visit( Registry::Visitor &visitor, AudacityProject &project )
 {
+   static const auto menuTree = MenuTable::Items( MenuPathStart );
    Registry::Visit( visitor, menuTree.get(), &sRegistry(), &project );
 }
 

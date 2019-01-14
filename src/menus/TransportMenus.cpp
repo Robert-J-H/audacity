@@ -1028,7 +1028,9 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 MenuTable::BaseItemSharedPtr CursorMenu();
 
 // Under /MenuBar
-MenuTable::BaseItemSharedPtr TransportMenu()
+namespace {
+using namespace MenuTable;
+BaseItemSharedPtr TransportMenu()
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
@@ -1154,6 +1156,12 @@ MenuTable::BaseItemSharedPtr TransportMenu()
       )
    ) ) };
    return menu;
+}
+
+AttachedItem sAttachment1{
+   wxT(""),
+   Shared( TransportMenu() )
+};
 }
 
 // Under /MenuBar/Optional/Extra

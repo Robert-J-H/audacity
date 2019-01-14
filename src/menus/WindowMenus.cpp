@@ -116,8 +116,9 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 #define FN(X) (& WindowActions::Handler :: X)
 
-// Under /MenuBar
-MenuTable::BaseItemSharedPtr WindowMenu()
+namespace {
+using namespace MenuTable;
+BaseItemSharedPtr WindowMenu()
 {
       //////////////////////////////////////////////////////////////////////////
       // poor imitation of the Mac Windows Menu
@@ -143,6 +144,13 @@ MenuTable::BaseItemSharedPtr WindowMenu()
          FN(OnMacBringAllToFront), AlwaysEnabledFlag )
    ) ) };
    return menu;
+}
+
+AttachedItem sAttachment1{
+   wxT(""),
+   Shared( WindowMenu() )
+};
+
 }
 
 // Under /MenuBar/Optional/Extra/Misc
@@ -175,11 +183,6 @@ void AudacityApp::MacActivateApp()
 #else
 
 // Not WXMAC.  Stub functions.
-MenuTable::BaseItemSharedPtr WindowMenu()
-{
-   return nullptr;
-}
-
 MenuTable::BaseItemSharedPtr ExtraWindowItems()
 {
    return nullptr;

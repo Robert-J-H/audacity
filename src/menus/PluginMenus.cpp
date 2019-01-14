@@ -851,7 +851,9 @@ MenuTable::BaseItemPtrs PopulateMacrosMenu( CommandFlag flags  )
 // Menu definitions
 
 // Under /MenuBar
-MenuTable::BaseItemSharedPtr GenerateMenu()
+namespace {
+using namespace MenuTable;
+BaseItemSharedPtr GenerateMenu()
 {
    using namespace MenuTable;
    // All of this is a bit hacky until we can get more things connected into
@@ -879,8 +881,12 @@ MenuTable::BaseItemSharedPtr GenerateMenu()
    return menu;
 }
 
-// Under /MenuBar
-MenuTable::BaseItemSharedPtr EffectMenu()
+AttachedItem sAttachment1{
+   wxT(""),
+   Shared( GenerateMenu() )
+};
+
+BaseItemSharedPtr EffectMenu()
 {
    using namespace MenuTable;
    // All of this is a bit hacky until we can get more things connected into
@@ -933,8 +939,12 @@ MenuTable::BaseItemSharedPtr EffectMenu()
    return menu;
 }
 
-// Under /MenuBar
-MenuTable::BaseItemSharedPtr AnalyzeMenu()
+AttachedItem sAttachment2{
+   wxT(""),
+   Shared( EffectMenu() )
+};
+
+BaseItemSharedPtr AnalyzeMenu()
 {
    using namespace MenuTable;
    // All of this is a bit hacky until we can get more things connected into
@@ -964,8 +974,12 @@ MenuTable::BaseItemSharedPtr AnalyzeMenu()
    return menu;
 }
 
-// Under /MenuBar
-MenuTable::BaseItemSharedPtr ToolsMenu()
+AttachedItem sAttachment3{
+   wxT(""),
+   Shared( AnalyzeMenu() )
+};
+
+BaseItemSharedPtr ToolsMenu()
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
@@ -1042,6 +1056,12 @@ MenuTable::BaseItemSharedPtr ToolsMenu()
 #endif
    ) ) };
    return menu;
+}
+
+AttachedItem sAttachment4{
+   wxT(""),
+   Shared( ToolsMenu() )
+};
 }
 
 // Under /MenuBar/Optional/Extra
