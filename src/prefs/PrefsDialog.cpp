@@ -38,6 +38,7 @@
 #include "../Project.h"
 #include "../Prefs.h"
 #include "../ShuttleGui.h"
+#include "../commands/CommandManager.h"
 
 #include "PrefsPanel.h"
 
@@ -152,6 +153,53 @@ int wxTreebookExt::SetSelection(size_t n)
 }
 
 
+
+namespace {
+
+struct PrefsItem final : Registry::GroupItem {
+   PrefsPanel::Factory factory;
+   bool expanded{ false };
+
+   PrefsItem( const wxString &name,
+      const PrefsPanel::Factory &factory_, bool expanded_ )
+         : GroupItem{ name }
+         , factory{ factory_ }, expanded{ expanded_ }
+   {}
+};
+
+// Collects registry tree nodes into a vector, in preorder.
+struct PrefsItemVisitor final : Registry::Visitor {
+   PrefsItemVisitor( PrefsDialog::Factories &factories_ )
+      : factories{ factories_ }
+   {
+      childCounts.push_back( 0 );
+   }
+   void BeginGroup( Registry::GroupItem &item, const wxArrayString & ) override
+   {
+      auto pItem = dynamic_cast<PrefsItem*>( &item );
+      if (!pItem)
+         return;
+      indices.push_back( factories.size() );
+      factories.emplace_back( pItem->factory, 0, pItem->expanded );
+      ++childCounts.back();
+      childCounts.push_back( 0 );
+   }
+   void EndGroup( Registry::GroupItem &item, const wxArrayString & ) override
+   {
+      auto pItem = dynamic_cast<PrefsItem*>( &item );
+      if (!pItem)
+         return;
+      auto &factory = factories[ indices.back() ];
+      factory.nChildren = childCounts.back();
+      childCounts.pop_back();
+      indices.pop_back();
+   }
+
+   PrefsDialog::Factories &factories;
+   std::vector<size_t> childCounts;
+   std::vector<size_t> indices;
+};
+}
 
 PrefsDialog::Factories
 &PrefsDialog::DefaultFactories()

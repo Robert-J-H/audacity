@@ -36,8 +36,8 @@ class PrefsDialog /* not final */ : public wxDialogWrapper
        using Factory =
          std::function< PrefsPanel * (wxWindow *parent, wxWindowID winid) >;
        Factory factory;
-       CONST int nChildren;
-       bool expanded;
+       size_t nChildren{ 0 };
+       bool expanded{ false };
 
        PrefsNode(const Factory &factory_,
           int nChildren_ = 0,
