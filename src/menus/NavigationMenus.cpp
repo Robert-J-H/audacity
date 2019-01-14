@@ -555,8 +555,9 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &project) {
 
 #define FN(X) (& NavigationActions::Handler :: X)
 
-// Under /MenuBar/Optional/Extra
-MenuTable::BaseItemSharedPtr ExtraGlobalCommands()
+namespace {
+using namespace MenuTable;
+BaseItemSharedPtr ExtraGlobalCommands()
 {
    // Ceci n'est pas un menu
    using namespace MenuTable;
@@ -575,8 +576,12 @@ MenuTable::BaseItemSharedPtr ExtraGlobalCommands()
    return items;
 }
 
-// Under /MenuBar/Optional/Extra
-MenuTable::BaseItemSharedPtr ExtraFocusMenu()
+AttachedItem sAttachment2{
+   wxT("Optional/Extra/Part2"),
+   Shared( ExtraGlobalCommands() )
+};
+
+BaseItemSharedPtr ExtraFocusMenu()
 {
    using namespace MenuTable;
    constexpr auto FocusedTracksFlags = TracksExistFlag | TrackPanelHasFocus;
@@ -607,6 +612,13 @@ MenuTable::BaseItemSharedPtr ExtraFocusMenu()
          FocusedTracksFlags, wxT("NUMPAD_ENTER") )
    ) ) };
    return menu;
+}
+
+AttachedItem sAttachment3{
+   wxT("Optional/Extra/Part2"),
+   Shared( ExtraFocusMenu() )
+};
+
 }
 
 #undef FN

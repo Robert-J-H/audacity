@@ -1224,10 +1224,8 @@ AttachedItem sAttachment1{
    wxT(""),
    Shared( SelectMenu() )
 };
-}
 
-// Under /MenuBar/Optional/Extra
-MenuTable::BaseItemSharedPtr ExtraSelectionMenu()
+BaseItemSharedPtr ExtraSelectionMenu()
 {
    using namespace MenuTable;
    static BaseItemSharedPtr menu{
@@ -1267,6 +1265,12 @@ MenuTable::BaseItemSharedPtr ExtraSelectionMenu()
          wxT("Ctrl+Shift+Left\twantKeyup") )
    ) ) };
    return menu;
+}
+
+AttachedItem sAttachment2{
+   wxT("Optional/Extra/Part1"),
+   Shared( ExtraSelectionMenu() )
+};
 }
 
 MenuTable::BaseItemSharedPtr ClipCursorItems();
@@ -1319,8 +1323,9 @@ MenuTable::BaseItemSharedPtr CursorMenu()
 
 MenuTable::BaseItemSharedPtr ExtraClipCursorItems();
 
-// Under /MenuBar/Optional/Extra
-MenuTable::BaseItemSharedPtr ExtraCursorMenu()
+namespace {
+using namespace MenuTable;
+BaseItemSharedPtr ExtraCursorMenu()
 {
    using namespace MenuTable;
 
@@ -1351,8 +1356,12 @@ MenuTable::BaseItemSharedPtr ExtraCursorMenu()
    return menu;
 }
 
-// Under /MenuBar/Optional/Extra
-MenuTable::BaseItemSharedPtr ExtraSeekMenu()
+AttachedItem sAttachment4{
+   wxT("Optional/Extra/Part2"),
+   Shared( ExtraCursorMenu() )
+};
+
+BaseItemSharedPtr ExtraSeekMenu()
 {
    using namespace MenuTable;
    static BaseItemSharedPtr menu{
@@ -1369,6 +1378,13 @@ MenuTable::BaseItemSharedPtr ExtraSeekMenu()
          FN(OnSeekRightLong), AudioIOBusyFlag, wxT("Shift+Right\tallowDup") )
    ) ) };
    return menu;
+}
+
+AttachedItem sAttachment5{
+   wxT("Optional/Extra/Part1"),
+   Shared( ExtraSeekMenu() )
+};
+
 }
 
 #undef FN

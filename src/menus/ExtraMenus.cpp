@@ -133,22 +133,6 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 #define FN(X) (& ExtraActions::Handler :: X)
 
-// Imported menu item definitions
-
-MenuTable::BaseItemSharedPtr ExtraEditMenu();
-MenuTable::BaseItemSharedPtr ExtraSelectionMenu();
-MenuTable::BaseItemSharedPtr ExtraCursorMenu();
-MenuTable::BaseItemSharedPtr ExtraSeekMenu();
-MenuTable::BaseItemSharedPtr ExtraToolsMenu();
-MenuTable::BaseItemSharedPtr ExtraTransportMenu();
-MenuTable::BaseItemSharedPtr ExtraPlayAtSpeedMenu();
-MenuTable::BaseItemSharedPtr ExtraTrackMenu();
-MenuTable::BaseItemSharedPtr ExtraScriptablesIMenu();
-MenuTable::BaseItemSharedPtr ExtraScriptablesIIMenu();
-MenuTable::BaseItemSharedPtr ExtraWindowItems();
-MenuTable::BaseItemSharedPtr ExtraGlobalCommands();
-MenuTable::BaseItemSharedPtr ExtraFocusMenu();
-
 namespace {
 using namespace MenuTable;
 
@@ -163,26 +147,17 @@ BaseItemSharedPtr ExtraMenu()
    // Table of menu factories.
    // TODO:  devise a registration system instead.
    static BaseItemSharedPtr extraItems{ Items( wxEmptyString
-      , ExtraTransportMenu()
-      , ExtraToolsMenu()
-      , ExtraMixerMenu()
-      , ExtraEditMenu()
-      , ExtraPlayAtSpeedMenu()
-      , ExtraSeekMenu()
-      , ExtraDeviceMenu()
-      , ExtraSelectionMenu()
+      , Items( wxT("Part1")
+         , ExtraMixerMenu()
+         , ExtraDeviceMenu()
+      )
 
       , MenuTable::Separator()
 
-      , ExtraGlobalCommands()
-      , ExtraFocusMenu()
-      , ExtraCursorMenu()
-      , ExtraTrackMenu()
-      , ExtraScriptablesIMenu()
-      , ExtraScriptablesIIMenu()
-
-      // Delayed evaluation:
-      , ExtraMiscItems
+      , Items( wxT("Part2")
+         // Delayed evaluation:
+         , ExtraMiscItems
+      )
    ) };
 
    static const auto pred =
@@ -199,7 +174,7 @@ AttachedItem sAttachment1{
    Shared( ExtraMenu() )
 };
 
-// Under /MenuBar/Optional/Extra
+// Under /MenuBar/Optional/Extra/Part1
 BaseItemSharedPtr ExtraMixerMenu()
 {
    using namespace MenuTable;
@@ -222,7 +197,7 @@ BaseItemSharedPtr ExtraMixerMenu()
    return menu;
 }
 
-// Under /MenuBar/Optional/Extra
+// Under /MenuBar/Optional/Extra/Part1
 BaseItemSharedPtr ExtraDeviceMenu()
 {
    using namespace MenuTable;
@@ -244,7 +219,7 @@ BaseItemSharedPtr ExtraDeviceMenu()
    return menu;
 }
 
-// Under /MenuBar/Optional/Extra
+// Under /MenuBar/Optional/Extra/Part2
 BaseItemPtr ExtraMiscItems( void *pContext )
 {
    using namespace MenuTable;
@@ -267,9 +242,7 @@ BaseItemPtr ExtraMiscItems( void *pContext )
          FN(OnFullScreen),
          AlwaysEnabledFlag,
          Options{ key }.CheckState(
-            ProjectWindow::Get( project ).wxTopLevelWindow::IsFullScreen() ) ),
-
-      ExtraWindowItems()
+            ProjectWindow::Get( project ).wxTopLevelWindow::IsFullScreen() ) )
    ) );
 }
 

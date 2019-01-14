@@ -151,9 +151,6 @@ AttachedItem sAttachment1{
    Shared( WindowMenu() )
 };
 
-}
-
-// Under /MenuBar/Optional/Extra/Misc
 MenuTable::BaseItemSharedPtr ExtraWindowItems()
 {
    using namespace MenuTable;
@@ -169,6 +166,13 @@ MenuTable::BaseItemSharedPtr ExtraWindowItems()
    return items;
 }
 
+AttachedItem sAttachment2{
+   wxT("Optional/Extra/Part2/Misc"),
+   Shared( ExtraWindowItems() )
+};
+
+}
+
 #undef FN
 
 // One more Objective C++ function for another class scope, kept in this file
@@ -178,14 +182,6 @@ void AudacityApp::MacActivateApp()
    id app = [NSApplication sharedApplication];
    if ( [app respondsToSelector:@selector(activateIgnoringOtherApps:)] )
       [app activateIgnoringOtherApps:YES];
-}
-
-#else
-
-// Not WXMAC.  Stub functions.
-MenuTable::BaseItemSharedPtr ExtraWindowItems()
-{
-   return nullptr;
 }
 
 #endif

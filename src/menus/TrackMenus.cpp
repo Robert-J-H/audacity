@@ -1624,10 +1624,8 @@ AttachedItem sAttachment1{
    wxT(""),
    Shared( TracksMenu() )
 };
-}
 
-// Under /MenuBar/Optional/Extra
-MenuTable::BaseItemSharedPtr ExtraTrackMenu()
+BaseItemSharedPtr ExtraTrackMenu()
 {
    using namespace MenuTable;
    static BaseItemSharedPtr menu{
@@ -1678,6 +1676,13 @@ MenuTable::BaseItemSharedPtr ExtraTrackMenu()
          AudioIONotBusyFlag | TrackPanelHasFocus | TracksExistFlag )
    ) ) };
    return menu;
+}
+
+AttachedItem sAttachment2{
+   wxT("Optional/Extra/Part2"),
+   Shared( ExtraTrackMenu() )
+};
+
 }
 
 #undef FN
