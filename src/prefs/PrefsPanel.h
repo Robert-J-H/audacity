@@ -22,17 +22,12 @@ MousePrefs, QualityPrefs, SpectrumPrefs and ThemePrefs.
   To actually add the new panel, edit the PrefsDialog constructor
   to append the panel to its list of panels.
 
-*******************************************************************//**
-
-\class PrefsPanelFactory
-\brief Base class for factories such as GUIPrefsFactory that produce a
-PrefsPanel.
-
 *//*******************************************************************/
 
 #ifndef __AUDACITY_PREFS_PANEL__
 #define __AUDACITY_PREFS_PANEL__
 
+#include <functional>
 #include "../widgets/wxPanelWrapper.h"
 
 /* A few constants for an attempt at semi-uniformity */
@@ -49,6 +44,11 @@ class ShuttleGui;
 class PrefsPanel /* not final */ : public wxPanelWrapper
 {
  public:
+   // \brief Type alias for factories such as GUIPrefsFactory that produce a
+   // PrefsPanel.
+   using Factory =
+      std::function< PrefsPanel * (wxWindow *parent, wxWindowID winid) >;
+
    PrefsPanel(wxWindow * parent, wxWindowID winid, const wxString &title)
    :  wxPanelWrapper(parent, winid)
    {
@@ -72,13 +72,6 @@ class PrefsPanel /* not final */ : public wxPanelWrapper
    virtual wxString HelpPageName();
 
    virtual void Cancel();
-};
-
-class PrefsPanelFactory /* not final */
-{
-public:
-   // Precondition: parent != NULL
-   virtual PrefsPanel *operator () (wxWindow *parent, wxWindowID winid) = 0;
 };
 
 #endif

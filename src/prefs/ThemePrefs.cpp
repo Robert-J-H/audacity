@@ -201,8 +201,9 @@ bool ThemePrefs::Commit()
    return true;
 }
 
-PrefsPanel *ThemePrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+PrefsPanel::Factory
+ThemePrefsFactory = [](wxWindow *parent, wxWindowID winid)
 {
    wxASSERT(parent); // to justify safenew
    return safenew ThemePrefs(parent, winid);
-}
+};

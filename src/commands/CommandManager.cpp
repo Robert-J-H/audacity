@@ -1553,9 +1553,8 @@ bool CommandManager::HandleMenuID(int id, CommandFlag flags, CommandMask mask)
 #ifdef EXPERIMENTAL_EASY_CHANGE_KEY_BINDINGS
    if (::wxGetMouseState().ShiftDown()) {
       // Only want one page of the preferences
-      KeyConfigPrefsFactory keyConfigPrefsFactory{ entry->name };
       PrefsDialog::Factories factories;
-      factories.push_back(&keyConfigPrefsFactory);
+      factories.push_back(KeyConfigPrefsFactory( entry->name ));
       GlobalPrefsDialog dialog(
          &ProjectWindow::Get( *GetActiveProject() ), factories);
       dialog.ShowModal();

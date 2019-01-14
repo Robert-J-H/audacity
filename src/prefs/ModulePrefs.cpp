@@ -172,8 +172,9 @@ wxString ModulePrefs::HelpPageName()
    return "Modules_Preferences";
 }
 
-PrefsPanel *ModulePrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+PrefsPanel::Factory
+ModulePrefsFactory = [](wxWindow *parent, wxWindowID winid)
 {
    wxASSERT(parent); // to justify safenew
    return safenew ModulePrefs(parent, winid);
-}
+};

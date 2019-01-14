@@ -124,12 +124,9 @@ wxString TracksBehaviorsPrefs::HelpPageName()
    return "Tracks_Behaviors_Preferences";
 }
 
-TracksBehaviorsPrefsFactory::TracksBehaviorsPrefsFactory()
-{
-}
-
-PrefsPanel *TracksBehaviorsPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+PrefsPanel::Factory
+TracksBehaviorsPrefsFactory = [](wxWindow *parent, wxWindowID winid)
 {
    wxASSERT(parent); // to justify safenew
    return safenew TracksBehaviorsPrefs(parent, winid);
-}
+};

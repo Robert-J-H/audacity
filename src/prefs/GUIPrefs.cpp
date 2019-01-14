@@ -258,8 +258,9 @@ wxString GUIPrefs::HelpPageName()
    return "Interface_Preferences";
 }
 
-PrefsPanel *GUIPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+PrefsPanel::Factory
+GUIPrefsFactory = [](wxWindow *parent, wxWindowID winid)
 {
    wxASSERT(parent); // to justify safenew
    return safenew GUIPrefs(parent, winid);
-}
+};

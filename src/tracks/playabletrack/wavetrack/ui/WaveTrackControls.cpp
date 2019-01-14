@@ -784,13 +784,10 @@ void WaveTrackMenuTable::OnSpectrogramSettings(wxCommandEvent &)
    }
 
    WaveTrack *const pTrack = static_cast<WaveTrack*>(mpData->pTrack);
-   // WaveformPrefsFactory waveformFactory(pTrack);
-   // TracksBehaviorsPrefsFactory tracksBehaviorsFactory();
-   SpectrumPrefsFactory spectrumFactory(pTrack);
 
    PrefsDialog::Factories factories;
-   // factories.push_back(&waveformFactory);
-   factories.push_back(&spectrumFactory);
+   // factories.push_back(WaveformPrefsFactory( pTrack ));
+   factories.push_back(SpectrumPrefsFactory( pTrack ));
    const int page =
       // (WaveTrackViewGroupData::Get(*pTrack).GetDisplay() ==
       //  WaveTrackViewConstants::Spectrum) ? 1 :

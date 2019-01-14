@@ -266,11 +266,12 @@ wxString QualityPrefs::HelpPageName()
    return "Quality_Preferences";
 }
 
-PrefsPanel *QualityPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+PrefsPanel::Factory
+QualityPrefsFactory = [](wxWindow *parent, wxWindowID winid)
 {
    wxASSERT(parent); // to justify safenew
    return safenew QualityPrefs(parent, winid);
-}
+};
 
 sampleFormat QualityPrefs::SampleFormatChoice()
 {

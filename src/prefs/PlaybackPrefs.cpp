@@ -173,9 +173,10 @@ wxString PlaybackPrefs::HelpPageName()
    return "Playback_Preferences";
 }
 
-PrefsPanel *PlaybackPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+PrefsPanel::Factory
+PlaybackPrefsFactory = [](wxWindow *parent, wxWindowID winid)
 {
    wxASSERT(parent); // to justify safenew
    return safenew PlaybackPrefs(parent, winid);
-}
+};
 
