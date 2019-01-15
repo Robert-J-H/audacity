@@ -581,8 +581,9 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 #define FN(X) (& LabelEditActions::Handler :: X)
 
-// Under /MenuBar/Edit
-MenuTable::BaseItemSharedPtr LabelEditMenus()
+namespace {
+using namespace MenuTable;
+BaseItemSharedPtr LabelEditMenus()
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
@@ -677,6 +678,14 @@ MenuTable::BaseItemSharedPtr LabelEditMenus()
 
    ) ) }; // two menus
    return menus;
+}
+
+AttachedItem sAttachment1{
+   { wxT("Edit"),
+     { OrderingHint::Before, wxT("EditMetaData") } },
+   Shared( LabelEditMenus() )
+};
+
 }
 
 #undef FN

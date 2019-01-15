@@ -1090,8 +1090,6 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 #define FN(X) (& EditActions::Handler :: X)
 
-MenuTable::BaseItemSharedPtr LabelEditMenus();
-
 namespace {
 using namespace MenuTable;
 BaseItemSharedPtr EditMenu()
@@ -1202,8 +1200,6 @@ BaseItemSharedPtr EditMenu()
       ),
 
       //////////////////////////////////////////////////////////////////////////
-
-      LabelEditMenus(),
 
       Command( wxT("EditMetaData"), XXO("&Metadata..."), FN(OnEditMetadata),
          AudioIONotBusyFlag ),
