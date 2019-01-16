@@ -238,6 +238,22 @@ wxT("Device,Playback,Recording,Quality,GUI,Tracks,ImportExport,Projects,Director
 
 }
 
+namespace {
+static Registry::GroupItem &sRegistry()
+{
+   static Registry::GroupingItem registry{ PathStart };
+   return registry;
+}
+}
+
+PrefsPanel::Registration::Registration( const wxString &name,
+   const Factory &factory, bool expanded,
+   const Registry::Placement &placement )
+{
+   Registry::RegisterItems( sRegistry(), placement,
+      std::make_unique< PrefsItem >( name, factory, expanded ) );
+}
+
 PrefsDialog::Factories
 &PrefsDialog::DefaultFactories()
 {

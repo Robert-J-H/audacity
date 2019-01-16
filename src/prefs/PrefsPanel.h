@@ -29,6 +29,7 @@ MousePrefs, QualityPrefs, SpectrumPrefs and ThemePrefs.
 
 #include <functional>
 #include "../widgets/wxPanelWrapper.h"
+#include "../commands/CommandManager.h"
 
 /* A few constants for an attempt at semi-uniformity */
 #define PREFS_FONT_SIZE     8
@@ -45,9 +46,18 @@ class PrefsPanel /* not final */ : public wxPanelWrapper
 {
  public:
    // \brief Type alias for factories such as GUIPrefsFactory that produce a
-   // PrefsPanel.
+   // PrefsPanel, used by the Preferences dialog in a treebook
    using Factory =
       std::function< PrefsPanel * (wxWindow *parent, wxWindowID winid) >;
+
+   // Typically you make a static object of this type in the .cpp file that
+   // also implements the PrefsPanel subclass.
+   struct Registration final
+   {
+      Registration( const wxString &name, const Factory &factory,
+         bool expanded = false,
+         const Registry::Placement &placement = { wxEmptyString, {} });
+   };
 
    PrefsPanel(wxWindow * parent, wxWindowID winid, const wxString &title)
    :  wxPanelWrapper(parent, winid)
