@@ -49,6 +49,4 @@ class TracksPrefs final : public PrefsPanel
    static int iPreferencePinned;
 };
 
-/// A PrefsPanel::Factory that creates one TracksPrefs panel.
-extern PrefsPanel::Factory TracksPrefsFactory;
 #endif

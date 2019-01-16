@@ -810,9 +810,15 @@ void ExtImportPrefsDropTarget::OnLeave()
 {
 }
 
-PrefsPanel::Factory
-ExtImportPrefsFactory = [](wxWindow *parent, wxWindowID winid)
-{
-   wxASSERT(parent); // to justify safenew
-   return safenew ExtImportPrefs(parent, winid);
+namespace{
+PrefsPanel::Registration sAttachment{ "ExtImport",
+   [](wxWindow *parent, wxWindowID winid)
+   {
+      wxASSERT(parent); // to justify safenew
+      return safenew ExtImportPrefs(parent, winid);
+   },
+   false,
+   // Place as a lower level of the tree of pages:
+   { "ImportExport" }
 };
+}

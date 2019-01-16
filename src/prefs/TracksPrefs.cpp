@@ -397,9 +397,12 @@ wxString TracksPrefs::HelpPageName()
    return "Tracks_Preferences";
 }
 
-PrefsPanel::Factory
-TracksPrefsFactory = [](wxWindow *parent, wxWindowID winid)
-{
-   wxASSERT(parent); // to justify safenew
-   return safenew TracksPrefs(parent, winid);
+namespace{
+PrefsPanel::Registration sAttachment{ "Tracks",
+   [](wxWindow *parent, wxWindowID winid)
+   {
+      wxASSERT(parent); // to justify safenew
+      return safenew TracksPrefs(parent, winid);
+   }
 };
+}

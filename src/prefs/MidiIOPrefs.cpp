@@ -291,11 +291,18 @@ wxString MidiIOPrefs::HelpPageName()
    return "MIDI_Devices_Preferences";
 }
 
-PrefsPanel::Factory
-MidiIOPrefsFactory = [](wxWindow *parent, wxWindowID winid)
-{
-   wxASSERT(parent); // to justify safenew
-   return safenew MidiIOPrefs(parent, winid);
+namespace{
+PrefsPanel::Registration sAttachment{ "MidiIO",
+   [](wxWindow *parent, wxWindowID winid)
+   {
+      wxASSERT(parent); // to justify safenew
+      return safenew MidiIOPrefs(parent, winid);
+   },
+   false,
+   // Register with an explicit ordering hint because this one is
+   // only conditionally compiled
+   { "", { Registry::OrderingHint::After, "Recording" } }
 };
+}
 
 #endif

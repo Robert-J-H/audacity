@@ -32,7 +32,4 @@ private:
    DECLARE_EVENT_TABLE()
 };
 
-
-/// A PrefsPanel::Factory that creates one BatchPrefs panel.
-extern PrefsPanel::Factory BatchPrefsFactory;
 #endif

@@ -89,9 +89,12 @@ wxString ProjectsPrefs::HelpPageName()
    return "Projects_Preferences";
 }
 
-PrefsPanel::Factory
-ProjectsPrefsFactory = [](wxWindow *parent, wxWindowID winid)
-{
-   wxASSERT(parent); // to justify safenew
-   return safenew ProjectsPrefs(parent, winid);
+namespace{
+PrefsPanel::Registration sAttachment{ "Projects",
+   [](wxWindow *parent, wxWindowID winid)
+   {
+      wxASSERT(parent); // to justify safenew
+      return safenew ProjectsPrefs(parent, winid);
+   }
 };
+}

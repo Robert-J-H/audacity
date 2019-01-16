@@ -124,9 +124,15 @@ wxString TracksBehaviorsPrefs::HelpPageName()
    return "Tracks_Behaviors_Preferences";
 }
 
-PrefsPanel::Factory
-TracksBehaviorsPrefsFactory = [](wxWindow *parent, wxWindowID winid)
-{
-   wxASSERT(parent); // to justify safenew
-   return safenew TracksBehaviorsPrefs(parent, winid);
+namespace{
+PrefsPanel::Registration sAttachment{ "TracksBehaviors",
+   [](wxWindow *parent, wxWindowID winid)
+   {
+      wxASSERT(parent); // to justify safenew
+      return safenew TracksBehaviorsPrefs(parent, winid);
+   },
+   false,
+   // Place it at a lower tree level
+   { "Tracks" }
 };
+}

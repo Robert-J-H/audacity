@@ -201,9 +201,18 @@ bool ThemePrefs::Commit()
    return true;
 }
 
-PrefsPanel::Factory
-ThemePrefsFactory = [](wxWindow *parent, wxWindowID winid)
-{
-   wxASSERT(parent); // to justify safenew
-   return safenew ThemePrefs(parent, winid);
+#ifdef EXPERIMENTAL_THEME_PREFS
+namespace{
+PrefsPanel::Registration sAttachment{ "Theme",
+   [](wxWindow *parent, wxWindowID winid)
+   {
+      wxASSERT(parent); // to justify safenew
+      return safenew ThemePrefs(parent, winid);
+   },
+   false,
+   // Register with an explicit ordering hint because this one is
+   // only conditionally compiled
+   { "", { Registry::OrderingHint::After, "Effects" } }
 };
+}
+#endif

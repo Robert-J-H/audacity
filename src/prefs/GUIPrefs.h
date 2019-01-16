@@ -48,6 +48,4 @@ class GUIPrefs final : public PrefsPanel
    wxArrayStringEx mRangeChoices;
 };
 
-/// A PrefsPanel::Factory that creates one GUIPrefs panel.
-extern PrefsPanel::Factory GUIPrefsFactory;
 #endif
