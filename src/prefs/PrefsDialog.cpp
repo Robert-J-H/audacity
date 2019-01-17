@@ -44,9 +44,6 @@
 
 #include "PrefsPanel.h"
 
-#include "SpectrogramSettings.h"
-#include "WaveformSettings.h"
-
 #include "../Theme.h"
 #include "../widgets/HelpSystem.h"
 
@@ -566,9 +563,6 @@ void PrefsDialog::OnOK(wxCommandEvent & WXUNUSED(event))
    //      not cause MenuCreator::RebuildMenuBar() to be executed.
 
    wxTheApp->AddPendingEvent(wxCommandEvent{ EVT_PREFS_UPDATE });
-
-   WaveformSettings::defaults().LoadPrefs();
-   SpectrogramSettings::defaults().LoadPrefs();
 
    if( IsModal() )
       EndModal(true);

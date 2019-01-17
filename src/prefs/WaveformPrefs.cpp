@@ -158,12 +158,12 @@ bool WaveformPrefs::Commit()
       }
    }
 
+   WaveformSettings *const pSettings = &WaveformSettings::defaults();
    if (!mWt || mDefaulted) {
-      WaveformSettings *const pSettings =
-         &WaveformSettings::defaults();
       *pSettings = mTempSettings;
       pSettings->SavePrefs();
    }
+   pSettings->LoadPrefs(); // always; in case Globals changed
 
    mTempSettings.ConvertToEnumeratedDBRange();
 
