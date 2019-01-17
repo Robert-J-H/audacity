@@ -21,6 +21,7 @@ threshold of difference in two selected tracks
 #include "../Audacity.h"
 #include "CompareAudioCommand.h"
 
+#include "LoadCommands.h"
 #include "../MemoryX.h"
 #include "../Project.h"
 #include "../ViewInfo.h"
@@ -40,6 +41,8 @@ threshold of difference in two selected tracks
 
 const ComponentInterfaceSymbol CompareAudioCommand::Symbol
 { XO("Compare Audio") };
+
+namespace{ BuiltinCommandsModule::Registration< CompareAudioCommand > reg; }
 
 extern void RegisterCompareAudio( Registrar & R){
    R.AddCommand( std::make_unique<CompareAudioCommand>() );

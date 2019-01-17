@@ -23,6 +23,7 @@ This class now lists
 #include "../Audacity.h" // for USE_* macros
 #include "GetInfoCommand.h"
 
+#include "LoadCommands.h"
 #include "../Project.h"
 #include "CommandManager.h"
 #include "../effects/EffectManager.h"
@@ -52,6 +53,7 @@ This class now lists
 const ComponentInterfaceSymbol GetInfoCommand::Symbol
 { XO("Get Info") };
 
+namespace{ BuiltinCommandsModule::Registration< GetInfoCommand > reg; }
 enum {
    kCommands,
    //kCommandsPlus,

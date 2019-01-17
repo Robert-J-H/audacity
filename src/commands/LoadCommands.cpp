@@ -39,6 +39,31 @@ modelled on BuiltinEffectsModule
 #include "../commands/SetProjectCommand.h"
 #include "../commands/DragCommand.h"
 
+namespace {
+
+const auto PathStart = "Commands";
+
+static Registry::GroupItem &sRegistry()
+{
+   static Registry::GroupingItem registry{ PathStart };
+   return registry;
+}
+
+}
+
+struct BuiltinCommandsModule::Entry : Registry::SingleItem {
+   Factory factory;
+   Entry( const ComponentInterfaceSymbol &name, Factory factory_)
+      : SingleItem( name.Internal() ), factory( factory_ ) {}
+};
+
+void BuiltinCommandsModule::DoRegistration(
+   const ComponentInterfaceSymbol &name, const Factory &factory )
+{
+   Registry::RegisterItems( sRegistry(), { "" },
+      std::make_unique< Entry >( name, factory ) );
+}
+
 //
 // Define the list of COMMANDs that will be autoregistered and how to instantiate each
 //

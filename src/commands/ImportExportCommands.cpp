@@ -17,6 +17,7 @@
 #include "../Audacity.h"
 #include "ImportExportCommands.h"
 
+#include "LoadCommands.h"
 #include "../Project.h"
 #include "../Track.h"
 #include "../ViewInfo.h"
@@ -27,6 +28,8 @@
 
 const ComponentInterfaceSymbol ImportCommand::Symbol
 { XO("Import2") };
+
+namespace{ BuiltinCommandsModule::Registration< ImportCommand > reg; }
 
 bool ImportCommand::DefineParams( ShuttleParams & S ){
    S.Define( mFileName, wxT("Filename"),  "" );
@@ -58,6 +61,8 @@ bool ExportCommand::DefineParams( ShuttleParams & S ){
 
 const ComponentInterfaceSymbol ExportCommand::Symbol
 { XO("Export2") };
+
+namespace{ BuiltinCommandsModule::Registration< ExportCommand > reg2; }
 
 void ExportCommand::PopulateOrExchange(ShuttleGui & S)
 {

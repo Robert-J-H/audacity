@@ -19,6 +19,7 @@
 #include "../Audacity.h"
 #include "DragCommand.h"
 
+#include "LoadCommands.h"
 #include "../Project.h"
 #include "../Track.h"
 #include "../TrackPanel.h"
@@ -29,6 +30,8 @@
 
 const ComponentInterfaceSymbol DragCommand::Symbol
 { XO("Drag") };
+
+namespace{ BuiltinCommandsModule::Registration< DragCommand > reg; }
 
 DragCommand::DragCommand()
 {

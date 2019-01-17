@@ -20,6 +20,7 @@ small calculations of rectangles.
 #include "../Audacity.h"
 #include "ScreenshotCommand.h"
 
+#include "LoadCommands.h"
 #include "CommandTargets.h"
 #include "../Project.h"
 #include <wx/toplevel.h>
@@ -51,6 +52,8 @@ small calculations of rectangles.
 
 const ComponentInterfaceSymbol ScreenshotCommand::Symbol
 { XO("Screenshot") };
+
+namespace{ BuiltinCommandsModule::Registration< ScreenshotCommand > reg; }
 
 
 static const EnumValueSymbol

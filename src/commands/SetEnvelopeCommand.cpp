@@ -19,6 +19,7 @@
 #include "../Audacity.h"
 #include "SetEnvelopeCommand.h"
 
+#include "LoadCommands.h"
 #include "../Project.h"
 #include "../Track.h"
 #include "../TrackPanel.h"
@@ -31,6 +32,9 @@
 
 const ComponentInterfaceSymbol SetEnvelopeCommand::Symbol
 { XO("Set Envelope") };
+
+namespace{ BuiltinCommandsModule::Registration< SetEnvelopeCommand > reg; }
+
 
 SetEnvelopeCommand::SetEnvelopeCommand()
 {

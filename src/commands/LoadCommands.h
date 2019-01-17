@@ -11,7 +11,10 @@
 
 #include "audacity/ModuleInterface.h"
 
+#include <functional>
+#include <memory>
 #include "../MemoryX.h"
+#include "CommandManager.h"
 
 class AudacityCommand;
 
@@ -26,6 +29,16 @@ class BuiltinCommandsModule final : public ModuleInterface
 public:
    BuiltinCommandsModule(ModuleManagerInterface *moduleManager, const wxString *path);
    virtual ~BuiltinCommandsModule();
+
+   using Factory = std::function< std::unique_ptr<AudacityCommand> () >;
+
+   // Typically you make a static object of this type in the .cpp file that
+   // also implements the Command subclass.
+   template< typename Subclass >
+   struct Registration final { Registration() {
+      DoRegistration(
+         Subclass::Symbol, [](){ return std::make_unique< Subclass >(); } );
+   } };
 
    // ComponentInterface implementation
 
@@ -61,6 +74,11 @@ private:
    std::unique_ptr<AudacityCommand> Instantiate(const PluginPath & path);
 
 private:
+   struct Entry;
+
+   static void DoRegistration(
+      const ComponentInterfaceSymbol &name, const Factory &factory );
+
    ModuleManagerInterface *mModMan;
    wxString mPath;
 

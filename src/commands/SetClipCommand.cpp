@@ -19,6 +19,7 @@
 #include "../Audacity.h"
 #include "SetClipCommand.h"
 
+#include "LoadCommands.h"
 #include "../Project.h"
 #include "../Track.h"
 #include "../TrackPanel.h"
@@ -30,6 +31,8 @@
 
 const ComponentInterfaceSymbol SetClipCommand::Symbol
 { XO("Set Clip") };
+
+namespace{ BuiltinCommandsModule::Registration< SetClipCommand > reg; }
 
 SetClipCommand::SetClipCommand()
 {
