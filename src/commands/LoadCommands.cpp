@@ -24,6 +24,7 @@ modelled on BuiltinEffectsModule
 #include "Demo.h"
 
 namespace {
+bool sInitialized = false;
 const auto PathStart = "Commands";
 static Registry::GroupItem &sRegistry()
 {
@@ -41,6 +42,7 @@ struct BuiltinCommandsModule::Entry : Registry::SingleItem {
 void BuiltinCommandsModule::DoRegistration(
    const ComponentInterfaceSymbol &name, const Factory &factory )
 {
+   wxASSERT( !sInitialized );
    Registry::RegisterItems( sRegistry(), { "" },
       std::make_unique< Entry >( name, factory ) );
 }
@@ -135,6 +137,7 @@ bool BuiltinCommandsModule::Initialize()
    visitor.pCommands = &mCommands;
    Registry::GroupingItem top{ PathStart };
    Registry::Visit( visitor, &top, &sRegistry() );
+   sInitialized = true;
    return true;
 }
 
