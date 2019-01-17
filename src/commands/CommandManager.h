@@ -463,7 +463,7 @@ namespace Registry {
       // Return type is a shared_ptr to let the function decide whether to
       // recycle the object or rebuild it on demand each time.
       // Return value from the factory may be null
-      using Factory = std::function< BaseItemSharedPtr( AudacityProject & ) >;
+      using Factory = std::function< BaseItemSharedPtr( void * ) >;
 
       explicit ComputedItem( const Factory &factory_ )
          : BaseItem( wxEmptyString )

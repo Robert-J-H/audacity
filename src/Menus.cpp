@@ -180,37 +180,38 @@ namespace {
 
 const auto MenuPathStart = wxT("MenuBar");
 
-void VisitItem( AudacityProject &project, MenuTable::BaseItem *pItem );
+void VisitItem( void *context, MenuTable::BaseItem *pItem );
 
 void VisitItems(
-   AudacityProject &project, const MenuTable::BaseItemPtrs &items )
+   void *context, const MenuTable::BaseItemPtrs &items )
 {
    for ( auto &pSubItem : items )
-      VisitItem( project, pSubItem.get() );
+      VisitItem( context, pSubItem.get() );
 }
 
-void VisitItem( AudacityProject &project, MenuTable::BaseItem *pItem )
+void VisitItem( void *context, MenuTable::BaseItem *pItem )
 {
    if (!pItem)
       return;
 
+   auto &project = *static_cast< AudacityProject* >( context );
    auto &manager = CommandManager::Get( project );
 
    using namespace MenuTable;
    if (const auto pShared =
        dynamic_cast<SharedItem*>( pItem )) {
       auto delegate = pShared->ptr;
-      VisitItem( project, delegate.get() );
+      VisitItem( context, delegate.get() );
    }
    else
    if (const auto pComputed =
        dynamic_cast<ComputedItem*>( pItem )) {
       // TODO maybe?  memo-ize the results of the function, but that requires
       // invalidating the memo at the right times
-      auto result = pComputed->factory( project );
+      auto result = pComputed->factory( context );
       if (result)
          // recursion
-         VisitItem( project, result.get() );
+         VisitItem( context, result.get() );
    }
    else
    if (const auto pCommand =
@@ -237,7 +238,7 @@ void VisitItem( AudacityProject &project, MenuTable::BaseItem *pItem )
          : ::wxGetTranslation( pMenu->title );
       manager.BeginMenu( title );
       // recursion
-      VisitItems( project, pMenu->items );
+      VisitItems( context, pMenu->items );
       manager.EndMenu();
    }
    else
@@ -247,7 +248,7 @@ void VisitItem( AudacityProject &project, MenuTable::BaseItem *pItem )
       if (!flag)
          manager.BeginOccultCommands();
       // recursion
-      VisitItems( project, pConditionalGroup->items );
+      VisitItems( context, pConditionalGroup->items );
       if (!flag)
          manager.EndOccultCommands();
    }
@@ -255,7 +256,7 @@ void VisitItem( AudacityProject &project, MenuTable::BaseItem *pItem )
    if (const auto pGroup =
        dynamic_cast<GroupingItem*>( pItem )) {
       // recursion
-      VisitItems( project, pGroup->items );
+      VisitItems( context, pGroup->items );
    }
    else
    if (dynamic_cast<SeparatorItem*>( pItem )) {
@@ -330,7 +331,7 @@ void MenuCreator::CreateMenusAndCommands(AudacityProject &project)
    auto menubar = commandManager.AddMenuBar(wxT("appmenu"));
    wxASSERT(menubar);
 
-   VisitItem( project, menuTree.get() );
+   VisitItem( &project, menuTree.get() );
 
    ProjectWindow::Get( project ).SetMenuBar(menubar.release());
 

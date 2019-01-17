@@ -163,7 +163,7 @@ MenuTable::BaseItemSharedPtr ExtraFocusMenu();
 MenuTable::BaseItemSharedPtr ExtraMenu();
 MenuTable::BaseItemSharedPtr ExtraMixerMenu();
 MenuTable::BaseItemSharedPtr ExtraDeviceMenu();
-MenuTable::BaseItemPtr ExtraMiscItems( AudacityProject & );
+MenuTable::BaseItemPtr ExtraMiscItems( void * );
 
 MenuTable::BaseItemSharedPtr ExtraMenu()
 {
@@ -249,10 +249,11 @@ MenuTable::BaseItemSharedPtr ExtraDeviceMenu()
 }
 
 // Under /MenuBar/Optional/Extra
-MenuTable::BaseItemPtr ExtraMiscItems( AudacityProject &project )
+MenuTable::BaseItemPtr ExtraMiscItems( void *pContext )
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
+   auto &project = *static_cast< AudacityProject * >( pContext );
 
    constexpr auto key =
 #ifdef __WXMAC__

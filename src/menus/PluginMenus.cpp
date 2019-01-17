@@ -916,7 +916,7 @@ MenuTable::BaseItemSharedPtr GenerateMenu()
 #endif
 
       // Delayed evaluation:
-      [](AudacityProject &)
+      [](void*)
       { return Items( wxEmptyString, PopulateEffectsMenu(
          EffectTypeGenerate,
          AudioIONotBusyFlag,
@@ -945,8 +945,9 @@ MenuTable::BaseItemSharedPtr EffectMenu()
 #endif
 
       // Delayed evaluation:
-      [](AudacityProject &project)
+      [](void *pContext)
       {
+         auto &project = *static_cast< AudacityProject * >( pContext );
          const auto &lastEffect = MenuManager::Get(project).mLastEffect;
          wxString buildMenuLabel;
          if (!lastEffect.empty())
@@ -968,7 +969,7 @@ MenuTable::BaseItemSharedPtr EffectMenu()
       Separator(),
 
       // Delayed evaluation:
-      [](AudacityProject &)
+      [](void*)
       { return Items( wxEmptyString, PopulateEffectsMenu(
          EffectTypeProcess,
          AudioIONotBusyFlag | TimeSelectedFlag | WaveTracksSelectedFlag,
@@ -1004,7 +1005,7 @@ MenuTable::BaseItemSharedPtr AnalyzeMenu()
          AudioIONotBusyFlag | WaveTracksSelectedFlag | TimeSelectedFlag ),
 
       // Delayed evaluation:
-      [](AudacityProject&)
+      [](void*)
       { return Items( wxEmptyString, PopulateEffectsMenu(
          EffectTypeAnalyze,
          AudioIONotBusyFlag | TimeSelectedFlag | WaveTracksSelectedFlag,
@@ -1044,7 +1045,7 @@ MenuTable::BaseItemSharedPtr ToolsMenu()
          Separator(),
 
          // Delayed evaluation:
-         [](AudacityProject&)
+         [](void*)
          { return Items( wxEmptyString, PopulateMacrosMenu( AudioIONotBusyFlag ) ); }
       ),
 
@@ -1065,7 +1066,7 @@ MenuTable::BaseItemSharedPtr ToolsMenu()
       Separator(),
 
       // Delayed evaluation:
-      [](AudacityProject&)
+      [](void*)
       { return Items( wxEmptyString, PopulateEffectsMenu(
          EffectTypeTool,
          AudioIONotBusyFlag,

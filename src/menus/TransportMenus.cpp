@@ -1075,7 +1075,7 @@ MenuTable::BaseItemSharedPtr TransportMenu()
          // it records below, if normal record records below, it records beside.
          // TODO: Do 'the right thing' with other options like TimerRecord.
          // Delayed evaluation in case gPrefs is not yet defined
-         [](const AudacityProject&)
+         [](void*)
          { return Command( wxT("Record2ndChoice"),
             // Our first choice is bound to R (by default)
             // and gets the prime position.
@@ -1107,7 +1107,10 @@ MenuTable::BaseItemSharedPtr TransportMenu()
 
       // Scrubbing sub-menu
       // Delayed evaluation:
-      [](AudacityProject &project){ return Scrubber::Get( project ).Menu(); },
+      []( void *pContext ){
+         return Scrubber::Get( *static_cast< AudacityProject* >( pContext ) )
+            .Menu();
+      },
 
       CursorMenu(),
 
