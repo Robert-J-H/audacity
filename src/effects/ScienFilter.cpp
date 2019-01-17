@@ -34,6 +34,7 @@ a graph for EffectScienFilter.
 
 #include "../Audacity.h"
 #include "ScienFilter.h"
+#include "LoadEffects.h"
 
 #include <math.h>
 #include <float.h>
@@ -148,6 +149,8 @@ static const double s_fChebyCoeffs[MAX_Order][MAX_Order + 1] =
 
 const ComponentInterfaceSymbol EffectScienFilter::Symbol
 { XO("Classic Filters") };
+
+namespace{ BuiltinEffectsModule::Registration< EffectScienFilter > reg( true ); }
 
 BEGIN_EVENT_TABLE(EffectScienFilter, wxEvtHandler)
    EVT_SIZE(EffectScienFilter::OnSize)

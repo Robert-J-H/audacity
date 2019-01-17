@@ -10,7 +10,10 @@
 
 #include "audacity/ModuleInterface.h"
 
+#include <functional>
+#include <memory>
 #include "../MemoryX.h"
+#include "../commands/CommandManager.h"
 
 class Effect;
 
@@ -25,6 +28,17 @@ class BuiltinEffectsModule final : public ModuleInterface
 public:
    BuiltinEffectsModule(ModuleManagerInterface *moduleManager, const wxString *path);
    virtual ~BuiltinEffectsModule();
+
+   using Factory = std::function< std::unique_ptr<Effect> () >;
+
+   // Typically you make a static object of this type in the .cpp file that
+   // also implements the Effect subclass.
+   template< typename Subclass >
+   struct Registration final { Registration( bool excluded = false ) {
+      DoRegistration(
+         Subclass::Symbol, [](){ return std::make_unique< Subclass >(); },
+         excluded );
+   } };
 
    // ComponentInterface implementation
 
@@ -60,6 +74,12 @@ private:
    std::unique_ptr<Effect> Instantiate(const PluginPath & path);
 
 private:
+   struct Entry;
+
+   static void DoRegistration(
+      const ComponentInterfaceSymbol &name, const Factory &factory,
+      bool excluded );
+
    ModuleManagerInterface *mModMan;
    PluginPath mPath;
 

@@ -15,6 +15,7 @@
 
 #include "../Audacity.h"
 #include "Silence.h"
+#include "LoadEffects.h"
 
 #include <wx/intl.h>
 
@@ -23,6 +24,8 @@
 
 const ComponentInterfaceSymbol EffectSilence::Symbol
 { XO("Silence") };
+
+namespace{ BuiltinEffectsModule::Registration< EffectSilence > reg; }
 
 EffectSilence::EffectSilence()
 {

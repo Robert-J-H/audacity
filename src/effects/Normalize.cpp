@@ -18,6 +18,7 @@
 
 #include "../Audacity.h" // for rint from configwin.h
 #include "Normalize.h"
+#include "LoadEffects.h"
 
 #include "../Experimental.h"
 
@@ -49,6 +50,8 @@ Param( UseLoudness, bool,    wxT("UseLoudness"),         false,   false,   true,
 
 const ComponentInterfaceSymbol EffectNormalize::Symbol
 { XO("Normalize") };
+
+namespace{ BuiltinEffectsModule::Registration< EffectNormalize > reg; }
 
 BEGIN_EVENT_TABLE(EffectNormalize, wxEvtHandler)
    EVT_CHECKBOX(wxID_ANY, EffectNormalize::OnUpdateUI)

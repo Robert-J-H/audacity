@@ -45,6 +45,8 @@
 
 #if !defined(EXPERIMENTAL_NOISE_REDUCTION)
 
+#include "LoadEffects.h"
+
 #include "../WaveTrack.h"
 #include "../Prefs.h"
 #include "../Project.h"
@@ -79,6 +81,8 @@
 
 const ComponentInterfaceSymbol EffectNoiseRemoval::Symbol
 { XO("Noise Removal") };
+
+namespace{ BuiltinEffectsModule::Registration< EffectNoiseRemoval > reg; }
 
 EffectNoiseRemoval::EffectNoiseRemoval()
 {

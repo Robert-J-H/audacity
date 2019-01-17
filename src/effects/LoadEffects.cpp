@@ -63,6 +63,35 @@
 #include "ChangeTempo.h"
 #endif
 
+namespace {
+
+const auto PathStart = "Effects";
+
+static Registry::GroupItem &sRegistry()
+{
+   static Registry::GroupingItem registry{ PathStart };
+   return registry;
+}
+
+}
+
+struct BuiltinEffectsModule::Entry : Registry::SingleItem {
+   Factory factory;
+   bool excluded;
+   Entry( const ComponentInterfaceSymbol &name,
+      BuiltinEffectsModule::Factory factory_, bool excluded_ )
+      : SingleItem( name.Internal() )
+      , factory( factory_ ), excluded( excluded_ )
+   {}
+};
+
+void BuiltinEffectsModule::DoRegistration(
+   const ComponentInterfaceSymbol &name, const Factory &factory, bool excluded )
+{
+   Registry::RegisterItems( sRegistry(), { "" },
+      std::make_unique< Entry >( name, factory, excluded ) );
+}
+
 //
 // Include the SoundTouch effects, if requested
 //
