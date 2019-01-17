@@ -38,6 +38,9 @@ threshold of difference in two selected tracks
 #include "../SampleFormat.h"
 #include "CommandContext.h"
 
+const ComponentInterfaceSymbol CompareAudioCommand::Symbol
+{ XO("Compare Audio") };
+
 extern void RegisterCompareAudio( Registrar & R){
    R.AddCommand( std::make_unique<CompareAudioCommand>() );
 // std::unique_ptr<CommandOutputTargets> &&target
@@ -165,3 +168,4 @@ bool CompareAudioCommand::Apply(const CommandContext & context)
    context.Status(wxString::Format(wxT("Finished comparison: %li samples (%.3f seconds) exceeded the error threshold of %f."), errorCount, errorSeconds, errorThreshold));
    return true;
 }
+

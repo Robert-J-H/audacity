@@ -20,14 +20,14 @@
 #include "CommandType.h"
 #include "SetTrackInfoCommand.h"
 
-#define SET_ENVELOPE_PLUGIN_SYMBOL ComponentInterfaceSymbol{ XO("Set Envelope") }
-
 class SetEnvelopeCommand : public SetTrackBase
 {
 public:
+   static const ComponentInterfaceSymbol Symbol;
+
    SetEnvelopeCommand();
    // ComponentInterface overrides
-   ComponentInterfaceSymbol GetSymbol() override {return SET_ENVELOPE_PLUGIN_SYMBOL;};
+   ComponentInterfaceSymbol GetSymbol() override {return Symbol;};
    wxString GetDescription() override {return _("Sets an envelope point position.");};
    bool DefineParams( ShuttleParams & S ) override;
    void PopulateOrExchange(ShuttleGui & S) override;

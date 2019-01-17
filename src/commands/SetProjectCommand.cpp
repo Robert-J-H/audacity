@@ -29,6 +29,9 @@
 #include "CommandContext.h"
 #include "../toolbars/SelectionBar.h"
 
+const ComponentInterfaceSymbol SetProjectCommand::Symbol
+{ XO("Set Project") };
+
 SetProjectCommand::SetProjectCommand()
 {
 }

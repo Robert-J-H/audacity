@@ -29,6 +29,9 @@
 #include "../ShuttleGui.h"
 #include "CommandContext.h"
 
+const ComponentInterfaceSymbol SetLabelCommand::Symbol
+{ XO("Set Label") };
+
 SetLabelCommand::SetLabelCommand()
 {
 }

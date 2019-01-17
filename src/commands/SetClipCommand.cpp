@@ -28,6 +28,9 @@
 #include "../ShuttleGui.h"
 #include "CommandContext.h"
 
+const ComponentInterfaceSymbol SetClipCommand::Symbol
+{ XO("Set Clip") };
+
 SetClipCommand::SetClipCommand()
 {
 }

@@ -27,6 +27,9 @@
 #include "../ShuttleGui.h"
 #include "CommandContext.h"
 
+const ComponentInterfaceSymbol DragCommand::Symbol
+{ XO("Drag") };
+
 DragCommand::DragCommand()
 {
 }

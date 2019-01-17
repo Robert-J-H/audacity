@@ -34,6 +34,9 @@ parameters.  It is for development purposes.
 #include "../commands/Command.h"
 #include "../commands/CommandContext.h"
 
+const ComponentInterfaceSymbol DemoCommand::Symbol
+{ XO("Demo") };
+
 bool DemoCommand::DefineParams( ShuttleParams & S ){
    S.Define( delay, wxT("Delay"), 1.0f, 0.001f,  FLT_MAX, 1.0f );
    S.Define( decay, wxT("Decay"), 0.5f, 0.0f,    FLT_MAX, 1.0f  );
