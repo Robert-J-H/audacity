@@ -186,6 +186,15 @@ Param( dBMax,        float,   wxT(""),                   30.0,    0.0,     60.0,
 // EffectEqualization
 //----------------------------------------------------------------------------
 
+const ComponentInterfaceSymbol EffectEqualization::Symbol
+{ XO("Equalization") };
+
+const ComponentInterfaceSymbol EffectEqualizationCurve::Symbol
+{ wxT("FilterCurve"), XO("Filter Curve") };
+
+const ComponentInterfaceSymbol EffectEqualizationGraphic::Symbol
+{ wxT("GraphicEQ"), XO("Graphic EQ") };
+
 BEGIN_EVENT_TABLE(EffectEqualization, wxEvtHandler)
    EVT_SIZE( EffectEqualization::OnSize )
 
@@ -297,10 +306,10 @@ EffectEqualization::~EffectEqualization()
 ComponentInterfaceSymbol EffectEqualization::GetSymbol()
 {
    if( mOptions == kEqOptionGraphic )
-      return GRAPHICEQ_PLUGIN_SYMBOL;
+      return EffectEqualizationGraphic::Symbol;
    if( mOptions == kEqOptionCurve )
-      return FILTERCURVE_PLUGIN_SYMBOL;
-   return EQUALIZATION_PLUGIN_SYMBOL;
+      return EffectEqualizationCurve::Symbol;
+   return EffectEqualization::Symbol;
 }
 
 wxString EffectEqualization::GetDescription()

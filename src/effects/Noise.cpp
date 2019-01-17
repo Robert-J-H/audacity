@@ -54,6 +54,9 @@ Param( Amp,    double,  wxT("Amplitude"),  0.8,     0.0,  1.0,           1  );
 // EffectNoise
 //
 
+const ComponentInterfaceSymbol EffectNoise::Symbol
+{ XO("Noise") };
+
 EffectNoise::EffectNoise()
 {
    mType = DEF_Type;
@@ -72,7 +75,7 @@ EffectNoise::~EffectNoise()
 
 ComponentInterfaceSymbol EffectNoise::GetSymbol()
 {
-   return NOISE_PLUGIN_SYMBOL;
+   return Symbol;
 }
 
 wxString EffectNoise::GetDescription()

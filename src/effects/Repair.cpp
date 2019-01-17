@@ -32,6 +32,10 @@ the audio, rather than actually finding the clicks.
 #include "../WaveTrack.h"
 #include "../widgets/ErrorDialog.h"
 
+
+const ComponentInterfaceSymbol EffectRepair::Symbol
+{ XO("Repair") };
+
 EffectRepair::EffectRepair()
 {
 }
@@ -44,7 +48,7 @@ EffectRepair::~EffectRepair()
 
 ComponentInterfaceSymbol EffectRepair::GetSymbol()
 {
-   return REPAIR_PLUGIN_SYMBOL;
+   return Symbol;
 }
 
 wxString EffectRepair::GetDescription()

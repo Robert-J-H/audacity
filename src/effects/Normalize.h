@@ -23,11 +23,11 @@ class wxStaticText;
 class wxTextCtrl;
 class ShuttleGui;
 
-#define NORMALIZE_PLUGIN_SYMBOL ComponentInterfaceSymbol{ XO("Normalize") }
-
 class EffectNormalize final : public Effect
 {
 public:
+   static const ComponentInterfaceSymbol Symbol;
+
    EffectNormalize();
    virtual ~EffectNormalize();
 

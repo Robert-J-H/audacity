@@ -22,11 +22,11 @@ class wxChoice;
 class wxTextCtrl;
 class ShuttleGui;
 
-#define CHANGESPEED_PLUGIN_SYMBOL ComponentInterfaceSymbol{ XO("Change Speed") }
-
 class EffectChangeSpeed final : public Effect
 {
 public:
+   static const ComponentInterfaceSymbol Symbol;
+
    EffectChangeSpeed();
    virtual ~EffectChangeSpeed();
 

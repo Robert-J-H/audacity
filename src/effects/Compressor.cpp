@@ -72,6 +72,9 @@ Param( UsePeak,      bool,    wxT("UsePeak"),       false,   false,   true,    1
 // EffectCompressor
 //----------------------------------------------------------------------------
 
+const ComponentInterfaceSymbol EffectCompressor::Symbol
+{ XO("Compressor") };
+
 BEGIN_EVENT_TABLE(EffectCompressor, wxEvtHandler)
    EVT_SLIDER(wxID_ANY, EffectCompressor::OnSlider)
 END_EVENT_TABLE()
@@ -102,7 +105,7 @@ EffectCompressor::~EffectCompressor()
 
 ComponentInterfaceSymbol EffectCompressor::GetSymbol()
 {
-   return COMPRESSOR_PLUGIN_SYMBOL;
+   return Symbol;
 }
 
 wxString EffectCompressor::GetDescription()

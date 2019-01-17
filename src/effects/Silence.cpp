@@ -21,6 +21,9 @@
 #include "../ShuttleGui.h"
 #include "../WaveTrack.h"
 
+const ComponentInterfaceSymbol EffectSilence::Symbol
+{ XO("Silence") };
+
 EffectSilence::EffectSilence()
 {
    SetLinearEffectFlag(true);
@@ -34,7 +37,7 @@ EffectSilence::~EffectSilence()
 
 ComponentInterfaceSymbol EffectSilence::GetSymbol()
 {
-   return SILENCE_PLUGIN_SYMBOL;
+   return Symbol;
 }
 
 wxString EffectSilence::GetDescription()

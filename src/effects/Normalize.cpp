@@ -47,6 +47,9 @@ Param( LUFSLevel,   double,  wxT("LUFSLevel"),           -23.0,   -145.0,  0.0, 
 Param( UseLoudness, bool,    wxT("UseLoudness"),         false,   false,   true, 1  );
 #endif
 
+const ComponentInterfaceSymbol EffectNormalize::Symbol
+{ XO("Normalize") };
+
 BEGIN_EVENT_TABLE(EffectNormalize, wxEvtHandler)
    EVT_CHECKBOX(wxID_ANY, EffectNormalize::OnUpdateUI)
    EVT_TEXT(wxID_ANY, EffectNormalize::OnUpdateUI)
@@ -74,7 +77,7 @@ EffectNormalize::~EffectNormalize()
 
 ComponentInterfaceSymbol EffectNormalize::GetSymbol()
 {
-   return NORMALIZE_PLUGIN_SYMBOL;
+   return Symbol;
 }
 
 wxString EffectNormalize::GetDescription()
