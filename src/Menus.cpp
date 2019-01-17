@@ -195,22 +195,35 @@ struct CollectedItems
       BaseItem *merged;
       // Corresponding item from the registry, its sub-items to be merged:
       GroupItem *merging;
+      // Ordering hint for the merged item:
+      OrderingHint hint;
    };
    std::vector< Item > items;
    std::vector< std::shared_ptr< BaseItem > > &computedItems;
 };
 
+// When a computed or shared item, or nameless grouping, specifies a hint and
+// the subordinate does not, propagate the hint.
+const OrderingHint &ChooseHint(BaseItem *delegate, const OrderingHint &hint)
+{
+   return delegate->orderingHint.type == OrderingHint::Unspecified
+      ? hint
+      : delegate->orderingHint;
+}
+
 // forward declaration for mutually recursive functions
 void CollectItem( void *context,
-   CollectedItems &collection, BaseItem *Item );
+   CollectedItems &collection, BaseItem *Item, const OrderingHint &hint );
 void CollectItems( void *context,
-   CollectedItems &collection, const BaseItemPtrs &items )
+   CollectedItems &collection, const BaseItemPtrs &items,
+   const OrderingHint &hint )
 {
    for ( auto &item : items )
-      CollectItem( context, collection, item.get() );
+      CollectItem( context, collection, item.get(),
+         ChooseHint( item.get(), hint ) );
 }
 void CollectItem( void *context,
-   CollectedItems &collection, BaseItem *pItem )
+   CollectedItems &collection, BaseItem *pItem, const OrderingHint &hint )
 {
    if (!pItem)
       return;
@@ -220,7 +233,8 @@ void CollectItem( void *context,
        dynamic_cast<SharedItem*>( pItem )) {
       auto delegate = pShared->ptr.get();
       if ( delegate )
-         CollectItem( context, collection, delegate );
+         CollectItem( context, collection, delegate,
+            ChooseHint( delegate, hint ) );
    }
    else
    if (const auto pComputed =
@@ -230,22 +244,23 @@ void CollectItem( void *context,
          // Guarantee long enough lifetime of the result
          collection.computedItems.push_back( result );
          // recursion
-         CollectItem( context, collection, result.get() );
+         CollectItem( context, collection, result.get(),
+            ChooseHint( result.get(), hint ) );
       }
    }
    else
    if (auto pGroup = dynamic_cast<GroupItem*>(pItem)) {
       if (dynamic_cast<GroupingItem*>(pItem) && pItem->name.empty())
          // nameless grouping item is transparent to path calculations
-         CollectItems( context, collection, pGroup->items );
+         CollectItems( context, collection, pGroup->items, hint );
       else
          // all other group items
-         collection.items.push_back( {pItem, nullptr} );
+         collection.items.push_back( {pItem, nullptr, hint} );
    }
    else {
       wxASSERT( dynamic_cast<SingleItem*>(pItem) );
       // common to all single items
-      collection.items.push_back( {pItem, nullptr} );
+      collection.items.push_back( {pItem, nullptr, hint} );
    }
 }
 
@@ -323,9 +338,12 @@ void MergeItems( void *context,
             [&]( const CollectedItems::Item& item ){
                return name == item.merged->name; } ); };
 
-   auto insertNewItemUsingPreferences = [&]( BaseItem *pItem ) {
+   using NewItem = std::pair< BaseItem*, OrderingHint >;
+   auto insertNewItemUsingPreferences = [&]( const NewItem &newItem ) {
       // beware changes of collection.itemPairs in previous iterations!
       begin = collection.items.begin(), end = collection.items.end();
+
+      BaseItem *pItem = newItem.first;
 
       // Note that if more than one plug-in registers items under the same
       // node, then it is not specified which plug-in is handled first,
@@ -352,20 +370,57 @@ void MergeItems( void *context,
                   break;
                }
             }
-            collection.items.insert( insertPoint, {pItem, nullptr} );
+            collection.items.insert( insertPoint, {pItem, nullptr, {}} );
             return true;
          }
       }
 
       return false;
    };
+   auto insertNewItemUsingHint = [&]( const NewItem &newItem ) {
+      // beware changes of collection.itemPairs in previous iterations!
+      begin = collection.items.begin(), end = collection.items.end();
+
+      BaseItem *pItem = newItem.first;
+      const OrderingHint &hint = newItem.second;
+
+      // pItem should have a name; if not, ignore the hint and put it at the
+      // end.
+      auto insertPoint = end;
+
+      if ( !pItem->name.empty() ) {
+         // Use the placement hint.
+         // If more than one item request the same placement, they
+         // end up in the sequence in which they were merged.
+         switch ( hint.type ) {
+            case OrderingHint::Before:
+            case OrderingHint::After:
+               // Default to the end if the name is not found.
+               insertPoint = find( hint.name );
+               if ( hint.type == OrderingHint::After &&
+                  insertPoint != end )
+                  ++insertPoint;
+               break;
+            case OrderingHint::Begin:
+               insertPoint = begin;
+               break;
+            case OrderingHint::End:
+            case OrderingHint::Unspecified:
+            default:
+               break;
+         }
+      }
+
+      // Insert the item; the hint has been used and no longer matters
+      collection.items.insert( insertPoint, {pItem, nullptr, {}} );
+   };
 
    // Make some mutually recursive lambdas using the above ones
-   std::function< void( const BaseItemPtrs & ) >
+   std::function< void( const BaseItemPtrs &, const OrderingHint & ) >
       mergeItems;
    auto mergeItem = [&](
-      BaseItem *pItem,
-      std::vector<BaseItem*> *pNewItems ){
+      BaseItem *pItem, const OrderingHint &hint,
+      std::vector<NewItem> *pNewItems ){
       // beware changes of collection.itemPairs in previous iterations!
       begin = collection.items.begin(), end = collection.items.end();
 
@@ -421,7 +476,7 @@ void MergeItems( void *context,
                // When a group item collides with a previously defined name,
                // splice the sub-items at the same level, saving the items
                // but losing the grouping.
-               mergeItems( pRegistryGroup->items );
+               mergeItems( pRegistryGroup->items, pRegistryGroup->orderingHint );
                ReportItemGroupCollision( key, name );
             }
             else
@@ -433,30 +488,30 @@ void MergeItems( void *context,
       else {
          // A name is registered that is not known in the collection.
          if (pNewItems)
-            pNewItems->push_back( pItem );
+            pNewItems->push_back( { pItem, hint } );
       }
    };
    mergeItems = [&](
-      const BaseItemPtrs &registry ){
+      const BaseItemPtrs &registry, const OrderingHint &hint ){
       // First do expansion of nameless groupings, and caching of computed
       // items, just as for the previously defined menus
       CollectedItems newCollection{ {}, collection.computedItems };
-      CollectItems( context, newCollection, registry );
-      std::vector<BaseItem*> newItems;
+      CollectItems( context, newCollection, registry, hint );
+      std::vector<NewItem> newItems;
       for ( const auto &item : newCollection.items )
-         mergeItem( item.merged, &newItems );
+         mergeItem( item.merged, item.hint, &newItems );
 
       // There may still be unresolved name collisions among the new items,
       // so treat them in sorted order
       std::sort( newItems.begin(), newItems.end(),
-         [](const BaseItem *a, const BaseItem *b) {
-            return a->name < b->name; } );
+         [](const NewItem &a, const NewItem &b){
+            return a.first->name < b.first->name; } );
 
       BaseItem *pItem;
       decltype( newItems.begin() ) iter;
       auto resolveCollisions = [&]{
-         while (iter != newItems.end() && pItem->name == (*iter)->name) {
-            mergeItem( *iter, nullptr );
+         while (iter != newItems.end() && pItem->name == iter->first->name) {
+            mergeItem( iter->first, {}, nullptr );
             iter = newItems.erase( iter );
          }
       };
@@ -465,19 +520,34 @@ void MergeItems( void *context,
       // some previously added item.
       // If such an item is a group, then we do retain the kind of grouping that
       // was registered.
+      //
+      // This is done in two passes:  first to repopulate according to ordering
+      // saved in preferences, then to handle remaining ones according to hints.
+      //
+      // The second pass might handle a plug-in loaded for the first time in
+      // this session; in later sessions, the first pass will handle it;
+      // thus if you should add plug-ins incrementally over sessions, you get
+      // some consistent ordering result, dependent on that history.
       for ( iter = newItems.begin(); iter != newItems.end(); ) {
-         pItem = *iter;
-         if ( insertNewItemUsingPreferences( pItem ) ) {
+         auto &newItem = *iter;
+         pItem = newItem.first;
+         if ( insertNewItemUsingPreferences( newItem ) ) {
             iter = newItems.erase( iter );
             resolveCollisions();
          }
          else
             ++iter;
       }
+      for ( iter = newItems.begin(); iter != newItems.end(); ) {
+         auto &newItem = *iter;
+         insertNewItemUsingHint( newItem );
+         ++iter;
+         resolveCollisions();
+      }
    };
 
    // Now invoke
-   mergeItems( registry );
+   mergeItems( registry, {} );
 
    // Remember the NEW ordering, if there was any need to use the old.
    if ( gotValue ) {
@@ -510,7 +580,7 @@ void VisitItems(
    CollectedItems newCollection{ {}, collection.computedItems };
 
    // Gather items at this level
-   CollectItems( context, newCollection, pGroup->items );
+   CollectItems( context, newCollection, pGroup->items, {} );
 
    path.push_back( pGroup->name );
 

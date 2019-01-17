@@ -418,6 +418,29 @@ private:
 // with path names
 namespace Registry {
 
+   // Items in the registry form an unordered tree, but each may also describe a
+   // desired insertion point among its peers.  The request might not be honored
+   // (as when the other name is not found, or when more than one item requests
+   // the same ordering), but this is not treated as an error.
+   struct OrderingHint
+   {
+      // The default Unspecified hint is just like End, except that in case the
+      // item is delegated to by a SharedItem or ComputedItem, the delegating
+      // item's hint will be used instead
+      enum Type : int {
+         Unspecified,
+         Begin, End, Before, After
+      } type{ Unspecified };
+
+      // name of some other BaseItem; significant only when type is Before or
+      // After:
+      wxString name;
+
+      OrderingHint() {}
+      OrderingHint( Type type_, const wxString &name_ = {} )
+         : type(type_), name(name_) {}
+   };
+
    // TODO C++17: maybe use std::variant (discriminated unions) to achieve
    // polymorphism by other means, not needing unique_ptr and dynamic_cast
    // and using less heap.
@@ -433,6 +456,8 @@ namespace Registry {
       virtual ~BaseItem();
 
       const wxString name;
+
+      OrderingHint orderingHint;
    };
    using BaseItemPtr = std::unique_ptr<BaseItem>;
    using BaseItemSharedPtr = std::shared_ptr<BaseItem>;
