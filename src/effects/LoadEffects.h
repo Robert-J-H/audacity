@@ -12,6 +12,7 @@
 
 #include <functional>
 #include <memory>
+#include <unordered_map>
 #include "../MemoryX.h"
 #include "../commands/CommandManager.h"
 
@@ -83,5 +84,6 @@ private:
    ModuleManagerInterface *mModMan;
    PluginPath mPath;
 
-   PluginPaths mNames;
+   using EffectHash = std::unordered_map< wxString, Entry* > ;
+   EffectHash mEffects;
 };
