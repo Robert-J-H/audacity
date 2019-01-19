@@ -195,9 +195,6 @@ class AUDACITY_DLL_API AudacityProject final : public wxFrame,
 
    virtual void ApplyUpdatedTheme();
 
-   AudioIOStartStreamOptions GetDefaultPlayOptions();
-   AudioIOStartStreamOptions GetSpeedPlayOptions();
-
    TrackList *GetTracks() { return mTracks.get(); }
    const TrackList *GetTracks() const { return mTracks.get(); }
    size_t GetTrackCount() const { return GetTracks()->size(); }

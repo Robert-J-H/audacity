@@ -367,7 +367,8 @@ bool Scrubber::MaybeStartScrubbing(wxCoord xx)
             }
 #endif
             mSpeedPlaying = false;
-            AudioIOStartStreamOptions options(mProject->GetDefaultPlayOptions());
+            auto options =
+               AudioIOStartStreamOptions::PlayDefaults( *mProject );
             options.pScrubbingOptions = &mOptions;
             options.timeTrack = NULL;
             mOptions.delay = (ScrubPollInterval_ms / 1000.0);
@@ -473,7 +474,7 @@ bool Scrubber::StartSpeedPlay(double speed, double time0, double time1)
    mMaxSpeed = speed;
    mDragging = false;
 
-   AudioIOStartStreamOptions options(mProject->GetSpeedPlayOptions());
+   auto options = AudioIOStartStreamOptions::SpeedPlayDefaults( *mProject );
    options.pScrubbingOptions = &mOptions;
    options.timeTrack = NULL;
    mOptions.delay = (ScrubPollInterval_ms / 1000.0);

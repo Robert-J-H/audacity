@@ -1568,7 +1568,7 @@ void AdornedRulerPanel::StartQPPlay(bool looped, bool cutPreview)
       // Looping a tiny selection may freeze, so just play it once.
       loopEnabled = ((end - start) > 0.001)? true : false;
 
-      AudioIOStartStreamOptions options(mProject->GetDefaultPlayOptions());
+      auto options = AudioIOStartStreamOptions::PlayDefaults( *mProject );
       options.playLooped = (loopEnabled && looped);
 
       auto oldStart = playRegion.GetStart();

@@ -745,7 +745,7 @@ void ControlToolBar::PlayCurrentRegion(bool looped /* = false */,
       auto &viewInfo = p->GetViewInfo();
       const auto &playRegion = viewInfo.playRegion;
 
-      AudioIOStartStreamOptions options(p->GetDefaultPlayOptions());
+      auto options = AudioIOStartStreamOptions::PlayDefaults( *p );
       options.playLooped = looped;
       if (cutpreview)
          options.timeTrack = NULL;
@@ -1035,7 +1035,7 @@ void ControlToolBar::OnRecord(wxCommandEvent &evt)
       }
 
       transportTracks.captureTracks = existingTracks;
-      AudioIOStartStreamOptions options(p->GetDefaultPlayOptions());
+      auto options = AudioIOStartStreamOptions::PlayDefaults( *p );
       DoRecord(*p, transportTracks, t0, t1, altAppearance, options);
    }
 }

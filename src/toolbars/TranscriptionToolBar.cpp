@@ -491,7 +491,7 @@ void TranscriptionToolBar::PlayAtSpeed(bool looped, bool cutPreview)
       return;
    if (bFixedSpeedPlay)
    {
-      AudioIOStartStreamOptions options(p->GetDefaultPlayOptions());
+      auto options = AudioIOStartStreamOptions::PlayDefaults( *p );
       options.playLooped = looped;
       // No need to set cutPreview options.
       // Due to a rather hacky approach, the appearance is used

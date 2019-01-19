@@ -5809,3 +5809,26 @@ bool AudioIO::IsCapturing() const
       mPlaybackSchedule.GetTrackTime() >=
          mPlaybackSchedule.mT0 + mRecordingSchedule.mPreRoll;
 }
+
+AudioIOStartStreamOptions
+AudioIOStartStreamOptions::PlayDefaults( AudacityProject &project )
+{
+   AudioIOStartStreamOptions options { project.GetRate() };
+   options.timeTrack = project.GetTracks()->GetTimeTrack();
+   options.listener = &project;
+   return options;
+}
+
+AudioIOStartStreamOptions
+AudioIOStartStreamOptions::SpeedPlayDefaults( AudacityProject &project )
+{
+   auto PlayAtSpeedRate = gAudioIO->GetBestRate(
+      false,     //not capturing
+      true,      //is playing
+      project.GetRate()  //suggested rate
+   );
+   AudioIOStartStreamOptions options{ PlayAtSpeedRate };
+   options.timeTrack = project.GetTracks()->GetTimeTrack();
+   options.listener = &project;
+   return options;
+}
