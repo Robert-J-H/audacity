@@ -35,8 +35,12 @@ class TimeTrack;
 struct AudioIOStartStreamOptions;
 class SelectedRegion;
 
-// Defined in Project.h
-enum class PlayMode : int;
+enum class PlayMode : int {
+   normalPlay,
+   oneSecondPlay, // Disables auto-scrolling
+   loopedPlay, // Disables auto-scrolling
+   cutPreviewPlay
+};
 
 class WaveTrack;
 using WaveTrackArray = std::vector < std::shared_ptr < WaveTrack > >;
@@ -47,6 +51,8 @@ struct TransportTracks;
 class ControlToolBar final : public ToolBar {
 
  public:
+
+   static PlayMode sLastPlayMode;
 
    ControlToolBar();
    virtual ~ControlToolBar();
@@ -102,7 +108,6 @@ class ControlToolBar final : public ToolBar {
    int PlayPlayRegion(const SelectedRegion &selectedRegion,
                       const AudioIOStartStreamOptions &options,
                       PlayMode playMode,
-                      PlayAppearance appearance = PlayAppearance::Straight,
                       bool backwards = false,
                       // Allow t0 and t1 to be beyond end of tracks
                       bool playWhiteSpace = false);

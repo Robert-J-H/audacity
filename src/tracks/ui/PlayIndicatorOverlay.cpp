@@ -19,6 +19,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../ViewInfo.h"
 #include "Scrubbing.h"
 #include "TrackView.h"
+#include "../../toolbars/ControlToolBar.h"
 
 #include <wx/dc.h>
 
@@ -176,8 +177,8 @@ void PlayIndicatorOverlay::OnTimer(wxCommandEvent &event)
          // msmeyer: But only if not playing looped or in one-second mode
          // PRL: and not scrolling with play/record head fixed
          if (!pinned &&
-             mProject->mLastPlayMode != PlayMode::loopedPlay &&
-             mProject->mLastPlayMode != PlayMode::oneSecondPlay &&
+             ControlToolBar::sLastPlayMode != PlayMode::loopedPlay &&
+             ControlToolBar::sLastPlayMode != PlayMode::oneSecondPlay &&
              !gAudioIO->IsPaused())
          {
             auto newPos = playPos;

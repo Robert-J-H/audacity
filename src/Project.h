@@ -109,12 +109,6 @@ using WaveTrackArray = std::vector < std::shared_ptr < WaveTrack > >;
 extern AProjectArray gAudacityProjects;
 
 
-enum class PlayMode : int {
-   normalPlay,
-   oneSecondPlay, // Disables auto-scrolling
-   loopedPlay // Disables auto-scrolling
-};
-
 enum StatusBarField {
    stateStatusBarField = 1,
    mainStatusBarField = 2,
@@ -483,8 +477,6 @@ public:
       XMLWriter &xmlFile, bool bWantSaveCopy) /* not override */;
 
    void WriteXMLHeader(XMLWriter &xmlFile) const;
-
-   PlayMode mLastPlayMode{ PlayMode::normalPlay };
 
    // Audio IO callback methods
    void OnAudioIORate(int rate) override;

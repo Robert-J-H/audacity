@@ -5362,7 +5362,7 @@ void AudioIoCallback::SendVuOutputMeterData(
       //MixerBoard* pMixerBoard = mOwningProject->GetMixerBoard();
       //if (pMixerBoard)
       //   pMixerBoard->UpdateMeters(GetStreamTime(),
-      //                              (pProj->mLastPlayMode == loopedPlay));
+      //                              (sLastPlayMode == loopedPlay));
    }
    mUpdatingMeters = false;
 }
