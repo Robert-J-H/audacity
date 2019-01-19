@@ -51,7 +51,8 @@ public:
       // AS: If the user clicked outside all tracks, make nothing
       //  selected.
       if ((event.ButtonDown() || event.ButtonDClick())) {
-         pProject->GetSelectionState().SelectNone( *pProject->GetTracks() );
+         pProject->GetSelectionState().SelectNone(
+            TrackList::Get( *pProject ) );
          result |= RefreshAll;
       }
 

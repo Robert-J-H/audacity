@@ -5814,7 +5814,7 @@ AudioIOStartStreamOptions
 AudioIOStartStreamOptions::PlayDefaults( AudacityProject &project )
 {
    AudioIOStartStreamOptions options { project.GetRate() };
-   options.timeTrack = project.GetTracks()->GetTimeTrack();
+   options.timeTrack = TrackList::Get( project ).GetTimeTrack();
    options.listener = &project;
    return options;
 }
@@ -5828,7 +5828,7 @@ AudioIOStartStreamOptions::SpeedPlayDefaults( AudacityProject &project )
       project.GetRate()  //suggested rate
    );
    AudioIOStartStreamOptions options{ PlayAtSpeedRate };
-   options.timeTrack = project.GetTracks()->GetTimeTrack();
+   options.timeTrack = TrackList::Get( project ).GetTimeTrack();
    options.listener = &project;
    return options;
 }

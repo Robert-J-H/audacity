@@ -132,11 +132,11 @@ void DoPlayStop(const CommandContext &context)
 
 void DoMoveToLabel(AudacityProject &project, bool next)
 {
-   auto tracks = project.GetTracks();
+   auto &tracks = TrackList::Get( project );
    auto trackPanel = project.GetTrackPanel();
 
    // Find the number of label tracks, and ptr to last track found
-   auto trackRange = tracks->Any<LabelTrack>();
+   auto trackRange = tracks.Any<LabelTrack>();
    auto lt = *trackRange.rbegin();
    auto nLabelTrack = trackRange.size();
 
@@ -146,7 +146,7 @@ void DoMoveToLabel(AudacityProject &project, bool next)
    else if (nLabelTrack > 1) {
       // find first label track, if any, starting at the focused track
       lt =
-         *tracks->Find(trackPanel->GetFocusedTrack()).Filter<LabelTrack>();
+         *tracks.Find(trackPanel->GetFocusedTrack()).Filter<LabelTrack>();
       if (!lt)
          trackPanel->MessageForScreenReader(
             _("no label track at or below focused track"));
@@ -287,12 +287,12 @@ void DoRecord( AudacityProject &project )
 
 void DoLockPlayRegion( AudacityProject &project )
 {
-   auto tracks = project.GetTracks();
+   auto &tracks = TrackList::Get( project );
    auto ruler = project.GetRulerPanel();
 
    auto &viewInfo = project.GetViewInfo();
    auto &playRegion = viewInfo.playRegion;
-   if (playRegion.GetStart() >= tracks->GetEndTime()) {
+   if (playRegion.GetStart() >= tracks.GetEndTime()) {
        AudacityMessageBox(_("Cannot lock region beyond\nend of project."),
                     _("Error"));
    }
@@ -410,7 +410,7 @@ void OnTimerRecord(const CommandContext &context)
    // preventing issues surrounding "dirty" projects when Automatic Save/Export
    // is used in Timer Recording.
    if ((undoManager.UnsavedChanges()) &&
-       (project.GetTracks()->Any() || project.EmptyCanBeDirty())) {
+       (TrackList::Get( project ).Any() || project.EmptyCanBeDirty())) {
       AudacityMessageBox(_("Timer Recording cannot be used while you have unsaved changes.\n\nPlease save or close this project and try again."),
                    _("Timer Recording"),
                    wxICON_INFORMATION | wxOK);
@@ -429,7 +429,7 @@ void OnTimerRecord(const CommandContext &context)
    int modalResult = dialog.ShowModal();
    if (modalResult == wxID_CANCEL)
    {
-      // Cancelled before recording - don't need to do anyting.
+      // Cancelled before recording - don't need to do anything.
    }
    else
    {
@@ -579,7 +579,8 @@ void OnPunchAndRoll(const CommandContext &context)
    const auto duplex = ControlToolBar::UseDuplex();
    if (duplex)
       // play all
-      transportTracks = GetAllPlaybackTracks(*project.GetTracks(), false, true);
+      transportTracks =
+         GetAllPlaybackTracks( TrackList::Get( project ), false, true);
    else
       // play recording tracks only
       std::copy(tracks.begin(), tracks.end(),

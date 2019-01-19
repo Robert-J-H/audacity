@@ -75,9 +75,9 @@ UIHandle::Result LabelTextHandle::Click
    auto result = LabelDefaultClickHandle::Click( evt, pProject );
 
    auto &selectionState = pProject->GetSelectionState();
-   TrackList *const tracks = pProject->GetTracks();
+   auto &tracks = TrackList::Get( *pProject );
    mChanger =
-      std::make_shared< SelectionStateChanger >( selectionState, *tracks );
+      std::make_shared< SelectionStateChanger >( selectionState, tracks );
 
    const wxMouseEvent &event = evt.event;
    ViewInfo &viewInfo = pProject->GetViewInfo();
@@ -90,13 +90,13 @@ UIHandle::Result LabelTextHandle::Click
       // IF the user clicked a label, THEN select all other tracks by Label
 
       //do nothing if at least one other track is selected
-      bool done = tracks->Selected().any_of(
+      bool done = tracks.Selected().any_of(
          [&](const Track *pTrack){ return pTrack != pLT.get(); }
       );
 
       if (!done) {
          //otherwise, select all tracks
-         for (auto t : tracks->Any())
+         for (auto t : tracks.Any())
             selectionState.SelectTrack( *t, true, true );
       }
 
@@ -120,7 +120,7 @@ UIHandle::Result LabelTextHandle::Drag
    auto result = LabelDefaultClickHandle::Drag( evt, pProject );
 
    const wxMouseEvent &event = evt.event;
-   auto pLT = pProject->GetTracks()->Lock(mpLT);
+   auto pLT = TrackList::Get( *pProject ).Lock(mpLT);
    if(pLT)
       pLT->HandleTextDragRelease(event);
 
@@ -168,7 +168,7 @@ UIHandle::Result LabelTextHandle::Release
    }
 
    const wxMouseEvent &event = evt.event;
-   auto pLT = pProject->GetTracks()->Lock(mpLT);
+   auto pLT = TrackList::Get( *pProject ).Lock(mpLT);
    if (pLT)
       pLT->HandleTextDragRelease(event);
 

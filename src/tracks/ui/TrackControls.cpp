@@ -123,12 +123,12 @@ void TrackMenuTable::InitMenu(Menu *pMenu, void *pUserData)
    mpData = static_cast<TrackControls::InitMenuData*>(pUserData);
    Track *const pTrack = mpData->pTrack;
 
-   TrackList *const tracks = GetActiveProject()->GetTracks();
+   const auto &tracks = TrackList::Get( *GetActiveProject() );
 
-   pMenu->Enable(OnMoveUpID, tracks->CanMoveUp(pTrack));
-   pMenu->Enable(OnMoveDownID, tracks->CanMoveDown(pTrack));
-   pMenu->Enable(OnMoveTopID, tracks->CanMoveUp(pTrack));
-   pMenu->Enable(OnMoveBottomID, tracks->CanMoveDown(pTrack));
+   pMenu->Enable(OnMoveUpID, tracks.CanMoveUp(pTrack));
+   pMenu->Enable(OnMoveDownID, tracks.CanMoveDown(pTrack));
+   pMenu->Enable(OnMoveTopID, tracks.CanMoveUp(pTrack));
+   pMenu->Enable(OnMoveBottomID, tracks.CanMoveDown(pTrack));
 }
 
 BEGIN_POPUP_MENU(TrackMenuTable)

@@ -504,7 +504,7 @@ bool EffectEqualization::Init()
    double rate = 0.0;
 
    auto trackRange =
-      GetActiveProject()->GetTracks()->Selected< const WaveTrack >();
+      TrackList::Get( *GetActiveProject() ).Selected< const WaveTrack >();
    if (trackRange) {
       rate = (*(trackRange.first++)) -> GetRate();
       ++selcount;

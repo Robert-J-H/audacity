@@ -93,12 +93,12 @@ TrackPanelResizeHandle::TrackPanelResizeHandle
 UIHandle::Result TrackPanelResizeHandle::Drag
 (const TrackPanelMouseEvent &evt, AudacityProject *pProject)
 {
-   auto pTrack = pProject->GetTracks()->Lock(mpTrack);
+   auto &tracks = TrackList::Get( *pProject );
+   auto pTrack = tracks.Lock(mpTrack);
    if ( !pTrack )
       return RefreshCode::Cancelled;
 
    const wxMouseEvent &event = evt.event;
-   TrackList *const tracks = pProject->GetTracks();
 
    int delta = (event.m_y - mMouseClickY);
 
@@ -182,13 +182,13 @@ UIHandle::Result TrackPanelResizeHandle::Drag
    {
       case IsResizingBelowLinkedTracks:
       {
-         auto prev = * -- tracks->Find(pTrack.get());
+         auto prev = * -- tracks.Find(pTrack.get());
          doResizeBelow(prev, false);
          break;
       }
       case IsResizingBetweenLinkedTracks:
       {
-         auto next = * ++ tracks->Find(pTrack.get());
+         auto next = * ++ tracks.Find(pTrack.get());
          doResizeBetween(next, false);
          break;
       }
@@ -227,11 +227,11 @@ UIHandle::Result TrackPanelResizeHandle::Release
 
 UIHandle::Result TrackPanelResizeHandle::Cancel(AudacityProject *pProject)
 {
-   auto pTrack = pProject->GetTracks()->Lock(mpTrack);
+   auto &tracks = TrackList::Get( *pProject );
+   auto pTrack = tracks.Lock(mpTrack);
    if ( !pTrack )
       return RefreshCode::Cancelled;
 
-   TrackList *const tracks = pProject->GetTracks();
 
    switch (mMode) {
    case IsResizing:
@@ -242,7 +242,7 @@ UIHandle::Result TrackPanelResizeHandle::Cancel(AudacityProject *pProject)
    break;
    case IsResizingBetweenLinkedTracks:
    {
-      Track *const next = * ++ tracks->Find(pTrack.get());
+      Track *const next = * ++ tracks.Find(pTrack.get());
       pTrack->SetHeight(mInitialUpperActualHeight);
       pTrack->SetMinimized(mInitialMinimized);
       next->SetHeight(mInitialActualHeight);
@@ -251,7 +251,7 @@ UIHandle::Result TrackPanelResizeHandle::Cancel(AudacityProject *pProject)
    break;
    case IsResizingBelowLinkedTracks:
    {
-      Track *const prev = * -- tracks->Find(pTrack.get());
+      Track *const prev = * -- tracks.Find(pTrack.get());
       pTrack->SetHeight(mInitialActualHeight);
       pTrack->SetMinimized(mInitialMinimized);
       prev->SetHeight(mInitialUpperActualHeight);

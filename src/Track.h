@@ -22,6 +22,7 @@
 #include <wx/gdicmn.h>
 #include <wx/longlong.h>
 
+#include "ClientData.h"
 #include "SampleFormat.h"
 #include "tracks/ui/CommonTrackPanelCell.h"
 #include "xml/XMLTagHandler.h"
@@ -1162,8 +1163,11 @@ wxDECLARE_EXPORTED_EVENT(AUDACITY_DLL_API,
 wxDECLARE_EXPORTED_EVENT(AUDACITY_DLL_API,
                          EVT_TRACKLIST_DELETION, TrackListEvent);
 
-class TrackList final : public wxEvtHandler, public ListOfTracks
+class TrackList final
+   : public wxEvtHandler
+   , public ListOfTracks
    , public std::enable_shared_from_this<TrackList>
+   , public ClientData::Base
 {
    // privatize this, make you use Add instead:
    using ListOfTracks::push_back;
@@ -1182,6 +1186,9 @@ class TrackList final : public wxEvtHandler, public ListOfTracks
    void clear() = delete;
 
  public:
+   static TrackList &Get( AudacityProject &project );
+   static const TrackList &Get( const AudacityProject &project );
+ 
    // Create an empty TrackList
    // Don't call directly -- use Create() instead
    TrackList();

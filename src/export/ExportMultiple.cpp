@@ -109,7 +109,7 @@ ExportMultiple::ExportMultiple(AudacityProject *project)
    SetName(GetTitle());
 
    mProject = project;
-   mTracks = project->GetTracks();
+   mTracks = &TrackList::Get( *project );
    // Construct an array of non-owning pointers
    for (const auto &plugin : mExporter.GetPlugins())
       mPlugins.push_back(plugin.get());

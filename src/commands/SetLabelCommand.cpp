@@ -68,13 +68,13 @@ bool SetLabelCommand::Apply(const CommandContext & context)
 
    //wxString mode = GetString(wxT("Type"));
    AudacityProject * p = context.GetProject();
-   TrackList *tracks = context.GetProject()->GetTracks();
+   auto &tracks = TrackList::Get( context.project );
    LabelStruct * pLabel = NULL;
    int i=0;
    int nn=0;
 
    LabelTrack *labelTrack {};
-   for (auto lt : tracks->Any<LabelTrack>()) {
+   for (auto lt : tracks.Any<LabelTrack>()) {
       if( i > mLabelIndex )
          break;
       labelTrack = lt;

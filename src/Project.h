@@ -23,7 +23,6 @@
 #include "Experimental.h"
 
 #include "ClientData.h"
-#include "Track.h"
 #include "Prefs.h"
 #include "SelectionState.h"
 #include "ViewInfo.h"
@@ -195,9 +194,6 @@ class AUDACITY_DLL_API AudacityProject final : public wxFrame,
 
    virtual void ApplyUpdatedTheme();
 
-   TrackList *GetTracks() { return mTracks.get(); }
-   const TrackList *GetTracks() const { return mTracks.get(); }
-   size_t GetTrackCount() const { return GetTracks()->size(); }
    UndoManager *GetUndoManager() { return mUndoManager.get(); }
 
    sampleFormat GetDefaultFormat() { return mDefaultFormat; }
@@ -567,9 +563,6 @@ public:
    // To keep undo working correctly, always replace this with a NEW duplicate
    // BEFORE doing any editing of it!
    std::shared_ptr<Tags> mTags;
-
-   // List of tracks and display info
-   std::shared_ptr<TrackList> mTracks;
 
    int mSnapTo;
    NumericFormatSymbol mSelectionFormat;

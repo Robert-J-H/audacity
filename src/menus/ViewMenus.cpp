@@ -123,7 +123,7 @@ namespace ViewActions {
 
 double GetZoomOfToFit( const AudacityProject &project )
 {
-   const auto &tracks = *project.GetTracks();
+   auto &tracks = TrackList::Get( project );
    const auto &viewInfo = project.GetViewInfo();
    const auto &trackPanel = *project.GetTrackPanel();
 
@@ -145,10 +145,10 @@ double GetZoomOfToFit( const AudacityProject &project )
 void DoZoomFit(AudacityProject &project)
 {
    auto &viewInfo = project.GetViewInfo();
-   auto tracks = project.GetTracks();
+   auto &tracks = TrackList::Get( project );
 
    const double start = viewInfo.bScrollBeyondZero
-      ? std::min(tracks->GetStartTime(), 0.0)
+      ? std::min(tracks.GetStartTime(), 0.0)
       : 0;
 
    project.Zoom( GetZoomOfToFit( project ) );
@@ -158,10 +158,10 @@ void DoZoomFit(AudacityProject &project)
 void DoZoomFitV(AudacityProject &project)
 {
    auto trackPanel = project.GetTrackPanel();
-   auto tracks = project.GetTracks();
+   auto &tracks = TrackList::Get( project );
 
    // Only nonminimized audio tracks will be resized
-   auto range = tracks->Any<AudioTrack>() - &Track::GetMinimized;
+   auto range = tracks.Any<AudioTrack>() - &Track::GetMinimized;
    auto count = range.size();
    if (count == 0)
       return;
@@ -173,7 +173,7 @@ void DoZoomFitV(AudacityProject &project)
    
    // The height of minimized and non-audio tracks cannot be apportioned
    height -=
-      tracks->Any().sum( &Track::GetHeight ) - range.sum( &Track::GetHeight );
+      tracks.Any().sum( &Track::GetHeight ) - range.sum( &Track::GetHeight );
    
    // Give each resized track the average of the remaining height
    height = height / count;
@@ -271,9 +271,9 @@ void OnAdvancedVZoom(const CommandContext &context)
 void OnCollapseAllTracks(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tracks = project.GetTracks();
+   auto &tracks = TrackList::Get( project );
 
-   for (auto t : tracks->Any())
+   for (auto t : tracks.Any())
       t->SetMinimized(true);
 
    project.ModifyState(true);
@@ -283,9 +283,9 @@ void OnCollapseAllTracks(const CommandContext &context)
 void OnExpandAllTracks(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tracks = project.GetTracks();
+   auto &tracks = TrackList::Get( project );
 
-   for (auto t : tracks->Any())
+   for (auto t : tracks.Any())
       t->SetMinimized(false);
 
    project.ModifyState(true);
