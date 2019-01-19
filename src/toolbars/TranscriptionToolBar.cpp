@@ -32,12 +32,12 @@
 
 #include "../Envelope.h"
 
-#include "ControlToolBar.h"
 #include "../AllThemeResources.h"
 #include "../AudioIO.h"
 #include "../ImageManipulation.h"
 #include "../Project.h"
 #include "../TimeTrack.h"
+#include "../TransportState.h"
 #include "../ViewInfo.h"
 #include "../WaveTrack.h"
 #include "../widgets/AButton.h"

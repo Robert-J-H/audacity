@@ -265,6 +265,8 @@ audacity_SOURCES = \
 	TrackPanelResizerCell.cpp \
 	TrackPanelResizerCell.h \
 	TranslatableStringArray.h \
+	TransportState.cpp \
+	TransportState.h \
 	UIHandle.h \
 	UIHandle.cpp \
 	UndoManager.cpp \

@@ -36,6 +36,7 @@
 #include "Snap.h"
 #include "TrackPanel.h"
 #include "TrackPanelMouseEvent.h"
+#include "TransportState.h"
 #include "UIHandle.h"
 #include "ViewInfo.h"
 #include "prefs/TracksBehaviorsPrefs.h"

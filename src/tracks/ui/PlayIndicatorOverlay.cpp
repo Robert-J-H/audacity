@@ -16,10 +16,10 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../AudioIO.h"
 #include "../../Project.h"
 #include "../../TrackPanel.h"
+#include "../../TransportState.h"
 #include "../../ViewInfo.h"
 #include "Scrubbing.h"
 #include "TrackView.h"
-#include "../../toolbars/ControlToolBar.h"
 
 #include <wx/dc.h>
 

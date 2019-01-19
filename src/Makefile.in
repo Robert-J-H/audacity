@@ -336,8 +336,9 @@ am__audacity_SOURCES_DIST = BlockFile.cpp BlockFile.h DirManager.cpp \
 	TrackPanelDrawingContext.h TrackPanelListener.h \
 	TrackPanelMouseEvent.h TrackPanelResizeHandle.cpp \
 	TrackPanelResizeHandle.h TrackPanelResizerCell.cpp \
-	TrackPanelResizerCell.h TranslatableStringArray.h UIHandle.h \
-	UIHandle.cpp UndoManager.cpp UndoManager.h UserException.cpp \
+	TrackPanelResizerCell.h TranslatableStringArray.h \
+	TransportState.cpp TransportState.h UIHandle.h UIHandle.cpp \
+	UndoManager.cpp UndoManager.h UserException.cpp \
 	UserException.h ViewInfo.cpp ViewInfo.h VoiceKey.cpp \
 	VoiceKey.h WaveClip.cpp WaveClip.h WaveTrack.cpp WaveTrack.h \
 	WrappedType.cpp WrappedType.h wxFileNameWrapper.h \
@@ -686,7 +687,8 @@ am_audacity_OBJECTS = $(am__objects_1) audacity-AboutDialog.$(OBJEXT) \
 	audacity-TrackPanelAx.$(OBJEXT) \
 	audacity-TrackPanelResizeHandle.$(OBJEXT) \
 	audacity-TrackPanelResizerCell.$(OBJEXT) \
-	audacity-UIHandle.$(OBJEXT) audacity-UndoManager.$(OBJEXT) \
+	audacity-TransportState.$(OBJEXT) audacity-UIHandle.$(OBJEXT) \
+	audacity-UndoManager.$(OBJEXT) \
 	audacity-UserException.$(OBJEXT) audacity-ViewInfo.$(OBJEXT) \
 	audacity-VoiceKey.$(OBJEXT) audacity-WaveClip.$(OBJEXT) \
 	audacity-WaveTrack.$(OBJEXT) audacity-WrappedType.$(OBJEXT) \
@@ -1404,8 +1406,9 @@ audacity_SOURCES = $(libaudacity_la_SOURCES) AboutDialog.cpp \
 	TrackPanelDrawingContext.h TrackPanelListener.h \
 	TrackPanelMouseEvent.h TrackPanelResizeHandle.cpp \
 	TrackPanelResizeHandle.h TrackPanelResizerCell.cpp \
-	TrackPanelResizerCell.h TranslatableStringArray.h UIHandle.h \
-	UIHandle.cpp UndoManager.cpp UndoManager.h UserException.cpp \
+	TrackPanelResizerCell.h TranslatableStringArray.h \
+	TransportState.cpp TransportState.h UIHandle.h UIHandle.cpp \
+	UndoManager.cpp UndoManager.h UserException.cpp \
 	UserException.h ViewInfo.cpp ViewInfo.h VoiceKey.cpp \
 	VoiceKey.h WaveClip.cpp WaveClip.h WaveTrack.cpp WaveTrack.h \
 	WrappedType.cpp WrappedType.h wxFileNameWrapper.h \
@@ -2604,6 +2607,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/audacity-TrackPanelAx.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/audacity-TrackPanelResizeHandle.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/audacity-TrackPanelResizerCell.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/audacity-TransportState.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/audacity-UIHandle.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/audacity-UndoManager.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/audacity-UserException.Po@am__quote@
@@ -4300,6 +4304,20 @@ audacity-TrackPanelResizerCell.obj: TrackPanelResizerCell.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='TrackPanelResizerCell.cpp' object='audacity-TrackPanelResizerCell.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -c -o audacity-TrackPanelResizerCell.obj `if test -f 'TrackPanelResizerCell.cpp'; then $(CYGPATH_W) 'TrackPanelResizerCell.cpp'; else $(CYGPATH_W) '$(srcdir)/TrackPanelResizerCell.cpp'; fi`
+
+audacity-TransportState.o: TransportState.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -MT audacity-TransportState.o -MD -MP -MF $(DEPDIR)/audacity-TransportState.Tpo -c -o audacity-TransportState.o `test -f 'TransportState.cpp' || echo '$(srcdir)/'`TransportState.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/audacity-TransportState.Tpo $(DEPDIR)/audacity-TransportState.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='TransportState.cpp' object='audacity-TransportState.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -c -o audacity-TransportState.o `test -f 'TransportState.cpp' || echo '$(srcdir)/'`TransportState.cpp
+
+audacity-TransportState.obj: TransportState.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -MT audacity-TransportState.obj -MD -MP -MF $(DEPDIR)/audacity-TransportState.Tpo -c -o audacity-TransportState.obj `if test -f 'TransportState.cpp'; then $(CYGPATH_W) 'TransportState.cpp'; else $(CYGPATH_W) '$(srcdir)/TransportState.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/audacity-TransportState.Tpo $(DEPDIR)/audacity-TransportState.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='TransportState.cpp' object='audacity-TransportState.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -c -o audacity-TransportState.obj `if test -f 'TransportState.cpp'; then $(CYGPATH_W) 'TransportState.cpp'; else $(CYGPATH_W) '$(srcdir)/TransportState.cpp'; fi`
 
 audacity-UIHandle.o: UIHandle.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(audacity_CPPFLAGS) $(CPPFLAGS) $(audacity_CXXFLAGS) $(CXXFLAGS) -MT audacity-UIHandle.o -MD -MP -MF $(DEPDIR)/audacity-UIHandle.Tpo -c -o audacity-UIHandle.o `test -f 'UIHandle.cpp' || echo '$(srcdir)/'`UIHandle.cpp

@@ -11,6 +11,7 @@
 #include "../SoundActivatedRecord.h"
 #include "../TimerRecordDialog.h"
 #include "../TrackPanel.h"
+#include "../TransportState.h"
 #include "../UndoManager.h"
 #include "../WaveClip.h"
 #include "../ViewInfo.h"

@@ -228,7 +228,7 @@ int TransportState::PlayPlayRegion(const SelectedRegion &selectedRegion,
 
    // Let other UI update appearance
    if (p)
-      p->GetRulerPanel()->DrawBothOverlays();
+      AdornedRulerPanel::Get( *p ).DrawBothOverlays();
 
    return token;
 }
@@ -243,9 +243,8 @@ void TransportState::PlayCurrentRegion(bool looped /* = false */,
 
    if (p)
    {
-
-      double playRegionStart, playRegionEnd;
-      p->GetPlayRegion(&playRegionStart, &playRegionEnd);
+      auto &viewInfo = ViewInfo::Get( *p );
+      const auto &playRegion = viewInfo.playRegion;
 
       auto options = AudioIOStartStreamOptions::PlayDefaults( *p );
       options.playLooped = looped;
@@ -255,8 +254,8 @@ void TransportState::PlayCurrentRegion(bool looped /* = false */,
          cutpreview ? PlayMode::cutPreviewPlay
          : options.playLooped ? PlayMode::loopedPlay
          : PlayMode::normalPlay;
-      PlayPlayRegion(SelectedRegion(playRegionStart, playRegionEnd),
-         options, mode);
+      PlayPlayRegion(SelectedRegion(playRegion.GetStart(), playRegion.GetEnd()),
+                     options, mode);
    }
 }
 
@@ -549,14 +548,14 @@ bool TransportState::DoRecord(AudacityProject &project,
                }
 
                if (useDateStamp) {
-                  if (!nameSuffix.IsEmpty()) {
+                  if (!nameSuffix.empty()) {
                      nameSuffix += wxT("_");
                   }
                   nameSuffix += wxDateTime::Now().FormatISODate();
                }
 
                if (useTimeStamp) {
-                  if (!nameSuffix.IsEmpty()) {
+                  if (!nameSuffix.empty()) {
                      nameSuffix += wxT("_");
                   }
                   nameSuffix += wxDateTime::Now().FormatISOTime();
@@ -566,9 +565,9 @@ bool TransportState::DoRecord(AudacityProject &project,
                nameSuffix.Replace(wxT(":"), wxT("-"));
 
                newTrack->GetGroupData().SetName(
-                  baseTrackName.IsEmpty()
+                  baseTrackName.empty()
                   ? nameSuffix
-                  : nameSuffix.IsEmpty()
+                  : nameSuffix.empty()
                      ? baseTrackName
                      : baseTrackName + wxT("_") + nameSuffix
                );
@@ -581,7 +580,7 @@ bool TransportState::DoRecord(AudacityProject &project,
             TrackList::Get( *p ).RegisterPendingNewTrack( newTrack, c == 0 );
             transportTracks.captureTracks.push_back(newTrack);
             // Bug 1548.  New track needs the focus.
-            p->GetTrackPanel()->SetFocusedTrack( newTrack.get() );
+            TrackPanel::Get( *p ).SetFocusedTrack( newTrack.get() );
          }
       }
       

@@ -40,6 +40,7 @@
 #include "Prefs.h" // for RTL_WORKAROUND
 #include "Project.h"
 #include "TrackPanel.h" // for EVT_TRACK_PANEL_TIMER
+#include "TransportState.h"
 #include "UndoManager.h"
 #include "WaveTrack.h"
 
@@ -55,7 +56,6 @@
 #endif
 
 #include "commands/CommandManager.h"
-#include "toolbars/ControlToolBar.h"
 
 // class MixerTrackSlider
 

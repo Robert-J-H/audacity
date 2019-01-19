@@ -218,6 +218,8 @@ src/TrackPanelResizeHandle.h
 src/TrackPanelResizerCell.cpp
 src/TrackPanelResizerCell.h
 src/TranslatableStringArray.h
+src/TransportState.cpp
+src/TransportState.h
 src/UIHandle.cpp
 src/UIHandle.h
 src/UndoManager.cpp

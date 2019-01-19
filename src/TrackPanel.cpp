@@ -81,13 +81,13 @@ is time to refresh some aspect of the screen.
 #include "RefreshCode.h"
 #include "TrackArtist.h"
 #include "TrackPanelAx.h"
+#include "TransportState.h"
 #include "ViewInfo.h"
 #include "WaveTrack.h"
 #ifdef EXPERIMENTAL_MIDI_OUT
 #include "NoteTrack.h"
 #endif
 
-#include "toolbars/ControlToolBar.h"
 #include "toolbars/ToolsToolBar.h"
 
 #include "tracks/ui/TrackView.h" // for inheritance relation
