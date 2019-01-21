@@ -944,8 +944,7 @@ AudacityProject::AudacityProject(wxWindow * parent, wxWindowID id,
          gPrefs->Read(wxT("/FrequencySelectionFormatName"), wxT("")) ) ),
      mBandwidthSelectionFormatName( NumericTextCtrl::LookupFormat(
          NumericConverter::BANDWIDTH,
-         gPrefs->Read(wxT("/BandwidthSelectionFormatName"), wxT("")) ) ),
-     mUndoManager(std::make_unique<UndoManager>())
+         gPrefs->Read(wxT("/BandwidthSelectionFormatName"), wxT("")) ) )
      , mCommandManager( std::make_unique<CommandManager>() )
 {
    if (!gPrefs->Read(wxT("/SamplingRate/DefaultProjectSampleRate"), &mRate, AudioIO::GetOptimalSupportedSampleRate())) {
@@ -2436,7 +2435,7 @@ void AudacityProject::OnCloseWindow(wxCloseEvent & event)
    // We may not bother to prompt the user to save, if the
    // project is now empty.
    if (event.CanVeto() && (mEmptyCanBeDirty || bHasTracks)) {
-      if (GetUndoManager()->UnsavedChanges()) {
+      if ( UndoManager::Get( project ).UnsavedChanges() ) {
          TitleRestorer Restorer( this );// RAII
          /* i18n-hint: The first %s numbers the project, the second %s is the project name.*/
          wxString Title =  wxString::Format(_("%sSave changes to %s?"), Restorer.sProjNumber, Restorer.sProjName);
@@ -2563,7 +2562,7 @@ void AudacityProject::OnCloseWindow(wxCloseEvent & event)
 
    // This must be done before the following Deref() since it holds
    // references to the DirManager.
-   GetUndoManager()->ClearStates();
+   UndoManager::Get( project ).ClearStates();
 
    // MM: Tell the DirManager it can now DELETE itself
    // if it finds it is no longer needed. If it is still
@@ -3737,6 +3736,7 @@ bool AudacityProject::DoSave (const bool fromSaveAs,
 {
    // See explanation above
    // ProjectDisabler disabler(this);
+   auto &proj = *this;
 
    wxASSERT_MSG(!bWantSaveCopy || fromSaveAs, "Copy Project SHOULD only be availabele from SaveAs");
 
@@ -3747,7 +3747,7 @@ bool AudacityProject::DoSave (const bool fromSaveAs,
       auto &tracks = TrackList::Get( project );
       if ( ! tracks.Any() )
       {
-         if (GetUndoManager()->UnsavedChanges() && mEmptyCanBeDirty) {
+         if ( UndoManager::Get( proj ).UnsavedChanges() && mEmptyCanBeDirty) {
             int result = AudacityMessageBox(_("Your project is now empty.\nIf saved, the project will have no tracks.\n\nTo save any previously open tracks:\nClick 'No', Edit > Undo until all tracks\nare open, then File > Save Project.\n\nSave anyway?"),
                                       _("Warning - Empty Project"),
                                       wxYES_NO | wxICON_QUESTION, this);
@@ -3959,8 +3959,7 @@ bool AudacityProject::DoSave (const bool fromSaveAs,
          mLastSavedTracks->Clear();
       mLastSavedTracks = TrackList::Create();
 
-      auto &project = *this;
-      auto &tracks = TrackList::Get( project );
+      auto &tracks = TrackList::Get( proj );
       for ( auto t : tracks.Any() ) {
          mLastSavedTracks->Add(t->Duplicate());
 
@@ -3970,7 +3969,7 @@ bool AudacityProject::DoSave (const bool fromSaveAs,
          //            wt->MarkSaved();
       }
 
-      GetUndoManager()->StateSaved();
+      UndoManager::Get( proj ).StateSaved();
    }
 
    // If we get here, saving the project was successful, so we can DELETE
@@ -4519,14 +4518,15 @@ void AudacityProject::InitialState()
    auto &project = *this;
    auto &tracks = TrackList::Get( project );
    auto &viewInfo = ViewInfo::Get( project );
+   auto &undoManager = UndoManager::Get( project );
 
-   GetUndoManager()->ClearStates();
+   undoManager.ClearStates();
 
-   GetUndoManager()->PushState(
+   undoManager.PushState(
       &tracks, viewInfo.selectedRegion, mTags,
       _("Created new project"), wxT(""));
 
-   GetUndoManager()->StateSaved();
+   undoManager.StateSaved();
 
    GetMenuManager(*this).ModifyUndoMenuItems(*this);
 
@@ -4537,7 +4537,8 @@ bool AudacityProject::UndoAvailable()
 {
    auto &project = *this;
    auto &tracks = TrackList::Get( project );
-   return GetUndoManager()->UndoAvailable() &&
+   auto &undoManager = UndoManager::Get( project );
+   return undoManager.UndoAvailable() &&
        !tracks.HasPendingTracks();
 }
 
@@ -4545,8 +4546,9 @@ bool AudacityProject::RedoAvailable()
 {
    auto &project = *this;
    auto &tracks = TrackList::Get( project );
-   return GetUndoManager()->RedoAvailable() &&
-       !tracks.HasPendingTracks();
+   auto &undoManager = UndoManager::Get( project );
+   return undoManager.RedoAvailable() &&
+      !tracks.HasPendingTracks();
 }
 
 void AudacityProject::PushState(const wxString &desc, const wxString &shortDesc)
@@ -4561,7 +4563,8 @@ void AudacityProject::PushState(const wxString &desc,
    auto &project = *this;
    auto &tracks = TrackList::Get( project );
    auto &viewInfo = ViewInfo::Get( project );
-   GetUndoManager()->PushState(
+   auto &undoManager = UndoManager::Get( project );
+   undoManager.PushState(
       &tracks, viewInfo.selectedRegion, mTags,
       desc, shortDesc, flags);
 
@@ -4581,7 +4584,9 @@ void AudacityProject::PushState(const wxString &desc,
 
 void AudacityProject::RollbackState()
 {
-   SetStateTo(GetUndoManager()->GetCurrentState());
+   auto &project = *this;
+   auto &undoManager = UndoManager::Get( project );
+   SetStateTo( undoManager.GetCurrentState() );
 }
 
 void AudacityProject::ModifyState(bool bWantsAutoSave)
@@ -4589,7 +4594,8 @@ void AudacityProject::ModifyState(bool bWantsAutoSave)
    auto &project = *this;
    auto &tracks = TrackList::Get( project );
    auto &viewInfo = ViewInfo::Get( project );
-   GetUndoManager()->ModifyState(
+   auto &undoManager = UndoManager::Get( project );
+   undoManager.ModifyState(
       &tracks, viewInfo.selectedRegion, mTags);
    if (bWantsAutoSave)
       AutoSave();
@@ -4657,7 +4663,9 @@ void AudacityProject::PopState(const UndoState &state)
 
 void AudacityProject::SetStateTo(unsigned int n)
 {
-   GetUndoManager()->SetStateTo(n,
+   auto &project = *this;
+   auto &undoManager = UndoManager::Get( project );
+   undoManager.SetStateTo(n,
       [this]( const UndoState &state ){ PopState(state); } );
 
    HandleResize();
@@ -5345,7 +5353,9 @@ void AudacityProject::ResetProjectToEmpty() {
    mbLoadedFromAup = false;
    SetProjectTitle();
    mDirty = false;
-   GetUndoManager()->ClearStates();
+   
+   auto &undoManager = UndoManager::Get( project );
+   undoManager.ClearStates();
 }
 
 bool AudacityProject::SaveFromTimerRecording(wxFileName fnFile) {
@@ -5520,8 +5530,10 @@ MixerBoardFrame* AudacityProject::GetMixerBoardFrame(bool create)
 
 HistoryWindow *AudacityProject::GetHistoryWindow(bool create)
 {
+   auto &project = *this;
+   auto &undoManager = UndoManager::Get( project );
    if (create && !mHistoryWindow)
-      mHistoryWindow = safenew HistoryWindow{ this, GetUndoManager() };
+      mHistoryWindow = safenew HistoryWindow{ this, &undoManager };
    return mHistoryWindow;
 }
 
