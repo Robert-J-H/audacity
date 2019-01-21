@@ -114,7 +114,7 @@ UIHandlePtr SampleHandle::HitTest
  const wxMouseState &state, const wxRect &rect,
  const AudacityProject *pProject, const std::shared_ptr<WaveTrack> &pTrack)
 {
-   const ViewInfo &viewInfo = pProject->GetViewInfo();
+   const auto &viewInfo = ViewInfo::Get( *pProject );
 
    /// method that tells us if the mouse event landed on an
    /// editable sample
@@ -212,7 +212,7 @@ UIHandle::Result SampleHandle::Click
 
    const wxMouseEvent &event = evt.event;
    const wxRect &rect = evt.rect;
-   const ViewInfo &viewInfo = pProject->GetViewInfo();
+   const auto &viewInfo = ViewInfo::Get( *pProject );
    const auto pTrack = mClickedTrack.get();
 
    /// Someone has just clicked the mouse.  What do we do?
@@ -336,7 +336,7 @@ UIHandle::Result SampleHandle::Drag
 {
    using namespace RefreshCode;
    const wxMouseEvent &event = evt.event;
-   const ViewInfo &viewInfo = pProject->GetViewInfo();
+   const auto &viewInfo = ViewInfo::Get( *pProject );
 
    const bool unsafe = pProject->IsAudioActive();
    if (unsafe) {

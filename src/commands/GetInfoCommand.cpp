@@ -31,6 +31,7 @@ This class now lists
 #include "../TrackPanel.h"
 #include "../Track.h"
 #include "../WaveClip.h"
+#include "../ViewInfo.h"
 #include "../WaveTrack.h"
 #include "../LabelTrack.h"
 #include "../Envelope.h"

@@ -55,7 +55,7 @@ namespace {
       (const AudacityProject &project, const TimeTrack &tt,
        double &dBRange, bool &dB, float &zoomMin, float &zoomMax)
    {
-      const auto &viewInfo = project.GetViewInfo();
+      const auto &viewInfo = ViewInfo::Get( project );
       dBRange = viewInfo.dBr;
       dB = tt.GetDisplayLog();
       zoomMin = tt.GetRangeLower(), zoomMax = tt.GetRangeUpper();
@@ -120,7 +120,7 @@ UIHandlePtr EnvelopeHandle::HitEnvelope
  Envelope *envelope, float zoomMin, float zoomMax,
  bool dB, float dBRange, bool timeTrack)
 {
-   const ViewInfo &viewInfo = pProject->GetViewInfo();
+   const auto &viewInfo = ViewInfo::Get( *pProject );
 
    const double envValue =
       envelope->GetValue(viewInfo.PositionToTime(state.m_x, rect.x));
@@ -176,7 +176,7 @@ UIHandle::Result EnvelopeHandle::Click
       return Cancelled;
 
    const wxMouseEvent &event = evt.event;
-   const ViewInfo &viewInfo = pProject->GetViewInfo();
+   const auto &viewInfo = ViewInfo::Get( *pProject );
    const auto pTrack = static_cast<Track*>(evt.pCell.get());
 
    mEnvelopeEditors.clear();
@@ -242,7 +242,7 @@ UIHandle::Result EnvelopeHandle::Drag
 {
    using namespace RefreshCode;
    const wxMouseEvent &event = evt.event;
-   const ViewInfo &viewInfo = pProject->GetViewInfo();
+   const auto &viewInfo = ViewInfo::Get( *pProject );
    const bool unsafe = pProject->IsAudioActive();
    if (unsafe) {
       this->Cancel(pProject);
@@ -281,7 +281,7 @@ UIHandle::Result EnvelopeHandle::Release
  wxWindow *)
 {
    const wxMouseEvent &event = evt.event;
-   const ViewInfo &viewInfo = pProject->GetViewInfo();
+   const auto &viewInfo = ViewInfo::Get( *pProject );
    const bool unsafe = pProject->IsAudioActive();
    if (unsafe)
       return this->Cancel(pProject);

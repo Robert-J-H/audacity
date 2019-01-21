@@ -44,6 +44,7 @@ It forwards the actual work of doing the commands to the ScreenshotCommand.
 #include "Prefs.h"
 #include "toolbars/ToolManager.h"
 
+#include "ViewInfo.h"
 #include "WaveTrack.h"
 
 class OldStyleCommandType;
@@ -670,9 +671,10 @@ void ScreenFrame::OnCaptureSomething(wxCommandEvent &  event)
 
 void ScreenFrame::TimeZoom(double seconds)
 {
+   auto &viewInfo = ViewInfo::Get( mContext.project );
    int width, height;
    mContext.GetProject()->GetClientSize(&width, &height);
-   mContext.GetProject()->mViewInfo.SetZoom((0.75 * width) / seconds);
+   viewInfo.SetZoom((0.75 * width) / seconds);
    mContext.GetProject()->RedrawProject();
 }
 

@@ -69,6 +69,7 @@ for drawing different aspects of the label and its text box.
 #include "TrackArtist.h"
 #include "TrackPanel.h"
 #include "UndoManager.h"
+#include "ViewInfo.h"
 #include "commands/CommandManager.h"
 
 #include "effects/TimeWarper.h"
@@ -1755,8 +1756,9 @@ bool LabelTrack::DoCaptureKey(wxKeyEvent & event)
 #endif
 
          // If there's a label there already don't capture
-         if( GetLabelIndex(pProj->mViewInfo.selectedRegion.t0(),
-                           pProj->mViewInfo.selectedRegion.t1()) != wxNOT_FOUND ) {
+         auto &selectedRegion = ViewInfo::Get( *pProj ).selectedRegion;
+         if( GetLabelIndex(selectedRegion.t0(),
+                           selectedRegion.t1()) != wxNOT_FOUND ) {
             return false;
          }
 
@@ -2090,21 +2092,22 @@ bool LabelTrack::OnChar(SelectedRegion &WXUNUSED(newSel), wxKeyEvent & event)
       bool useDialog;
       AudacityProject *p = GetActiveProject();
       gPrefs->Read(wxT("/GUI/DialogForNameNewLabel"), &useDialog, false);
+      auto &selectedRegion = ViewInfo::Get( *p ).selectedRegion;
       if (useDialog) {
          wxString title;
          if (DialogForLabelName(
-            *p, p->mViewInfo.selectedRegion, charCode, title) ==
+            *p, selectedRegion, charCode, title) ==
              wxID_CANCEL) {
             return false;
          }
          SetSelected(true);
-         AddLabel(p->mViewInfo.selectedRegion, title, -2);
+         AddLabel(selectedRegion, title, -2);
          p->PushState(_("Added label"), _("Label"));
          return false;
       }
       else {
          SetSelected(true);
-         AddLabel(p->mViewInfo.selectedRegion);
+         AddLabel(selectedRegion);
          p->PushState(_("Added label"), _("Label"));
       }
    }
@@ -2191,7 +2194,7 @@ void LabelTrack::ShowContextMenu()
 void LabelTrack::OnContextMenu(wxCommandEvent & evt)
 {
    AudacityProject *p = GetActiveProject();
-   auto &selectedRegion = p->GetViewInfo().selectedRegion;
+   auto &selectedRegion = ViewInfo::Get( *p ).selectedRegion;
 
    switch (evt.GetId())
    {
@@ -3060,7 +3063,7 @@ void LabelTrack::DoEditLabels
    auto &tracks = TrackList::Get( project );
    auto trackFactory = project.GetTrackFactory();
    auto rate = project.GetRate();
-   auto &viewInfo = project.GetViewInfo();
+   auto &viewInfo = ViewInfo::Get( project );
 
    LabelDialog dlg(&project, *trackFactory, &tracks,
                    lt, index,
@@ -3081,7 +3084,7 @@ int LabelTrack::DialogForLabelName(
    const SelectedRegion& region, const wxString& initialValue, wxString& value)
 {
    auto trackPanel = project.GetTrackPanel();
-   auto &viewInfo = project.GetViewInfo();
+   auto &viewInfo = ViewInfo::Get( project );
 
    wxPoint position =
       trackPanel->FindTrackRect(trackPanel->GetFocusedTrack()).GetBottomLeft();

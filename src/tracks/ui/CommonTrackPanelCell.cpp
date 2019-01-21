@@ -21,6 +21,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../Track.h"
 #include "../../TrackPanel.h"
 #include "../../TrackPanelMouseEvent.h"
+#include "../../ViewInfo.h"
 
 CommonTrackPanelCell::~CommonTrackPanelCell()
 {
@@ -46,7 +47,7 @@ unsigned CommonTrackPanelCell::HandleWheelRotation
 
    unsigned result = RefreshAll;
    const wxMouseEvent &event = evt.event;
-   ViewInfo &viewInfo = pProject->GetViewInfo();
+   auto &viewInfo = ViewInfo::Get( *pProject );
    Scrubber &scrubber = pProject->GetScrubber();
    const auto steps = evt.steps;
 

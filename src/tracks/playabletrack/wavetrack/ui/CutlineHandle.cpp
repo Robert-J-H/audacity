@@ -21,6 +21,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../../../Snap.h" // for kPixelTolerance
 #include "../../../../TrackPanelMouseEvent.h"
 #include "../../../../UndoManager.h"
+#include "../../../../ViewInfo.h"
 #include "../../../../WaveTrack.h"
 #include "../../../../WaveTrackLocation.h"
 #include "../../../../../images/Cursors.h"
@@ -102,7 +103,7 @@ UIHandlePtr CutlineHandle::HitTest
  const AudacityProject *pProject,
  const std::shared_ptr<WaveTrack> &pTrack)
 {
-   const ViewInfo &viewInfo = pProject->GetViewInfo();
+      auto &viewInfo = ViewInfo::Get( *pProject );
    /// method that tells us if the mouse event landed on an
    /// editable Cutline
 
@@ -128,7 +129,7 @@ UIHandle::Result CutlineHandle::Click
       return Cancelled;
 
    const wxMouseEvent &event = evt.event;
-   ViewInfo &viewInfo = pProject->GetViewInfo();
+   auto &viewInfo = ViewInfo::Get( *pProject );
 
    // Can affect the track by merging clips, expanding a cutline, or
    // deleting a cutline.
@@ -247,8 +248,8 @@ UIHandle::Result CutlineHandle::Cancel(AudacityProject *pProject)
    UIHandle::Result result = RefreshCell;
    pProject->RollbackState();
    if (mOperation == Expand) {
-      AudacityProject *const project = pProject;
-      auto &selectedRegion = project->GetViewInfo().selectedRegion;
+      AudacityProject &project = *pProject;
+      auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
       selectedRegion.setTimes( mStartTime, mEndTime );
       result |= UpdateSelection;
    }

@@ -58,6 +58,7 @@ greater use in future.
 #include "../PluginManager.h"
 #include "../ShuttleGui.h"
 #include "../Shuttle.h"
+#include "../ViewInfo.h"
 #include "../WaveTrack.h"
 #include "../toolbars/ControlToolBar.h"
 #include "../widgets/AButton.h"
@@ -1871,7 +1872,7 @@ bool Effect::ProcessTrack(int count,
       // Transfer the data from the temporary tracks to the actual ones
       genLeft->Flush();
       // mT1 gives us the NEW selection. We want to replace up to GetSel1().
-      auto &selectedRegion = p->GetViewInfo().selectedRegion;
+      auto &selectedRegion = ViewInfo::Get( *p ).selectedRegion;
       left->ClearAndPaste(mT0,
          selectedRegion.t1(), genLeft.get(), true, true,
          nullptr /* &warper */);
@@ -3250,7 +3251,7 @@ void EffectUIHost::OnApply(wxCommandEvent & evt)
       mEffect && 
       mEffect->GetType() != EffectTypeGenerate && 
       mEffect->GetType() != EffectTypeTool && 
-      mProject->mViewInfo.selectedRegion.isPoint())
+      ViewInfo::Get( *mProject ).selectedRegion.isPoint())
    {
       auto flags = AlwaysEnabledFlag;
       bool allowed =
@@ -3487,7 +3488,7 @@ void EffectUIHost::OnPlay(wxCommandEvent & WXUNUSED(evt))
    }
    else
    {
-      auto &viewInfo = mProject->GetViewInfo();
+      auto &viewInfo = ViewInfo::Get( *mProject );
       const auto &playRegion = viewInfo.playRegion;
       const auto &selectedRegion = viewInfo.selectedRegion;
       if ( playRegion.Locked() )
@@ -3496,9 +3497,9 @@ void EffectUIHost::OnPlay(wxCommandEvent & WXUNUSED(evt))
          mPlayPos = mRegion.t0();
       }
       else if (selectedRegion.t0() != mRegion.t0() ||
-               selectedRegion.t1() != mRegion.t1())
+             selectedRegion.t1() != mRegion.t1())
       {
-         mRegion = mProject->mViewInfo.selectedRegion;
+         mRegion = selectedRegion;
          mPlayPos = mRegion.t0();
       }
 
@@ -3580,7 +3581,7 @@ void EffectUIHost::OnPlayback(wxCommandEvent & evt)
 
    if (mPlaying)
    {
-      mRegion = mProject->mViewInfo.selectedRegion;
+      mRegion = ViewInfo::Get( *mProject ).selectedRegion;
       mPlayPos = mRegion.t0();
    }
 

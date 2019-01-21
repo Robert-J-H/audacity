@@ -5,6 +5,7 @@
 #include "../Prefs.h"
 #include "../Project.h"
 #include "../TrackPanel.h"
+#include "../ViewInfo.h"
 #include "../WaveTrack.h"
 #include "../commands/CommandContext.h"
 #include "../commands/CommandManager.h"
@@ -259,7 +260,7 @@ void OnEditLabels(const CommandContext &context)
 void OnAddLabel(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &selectedRegion = project.GetViewInfo().selectedRegion;
+   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
 
    DoAddLabel(project, selectedRegion);
 }
@@ -284,7 +285,7 @@ void OnPasteNewLabel(const CommandContext &context)
    auto &tracks = TrackList::Get( project );
    auto trackFactory = project.GetTrackFactory();
    auto trackPanel = project.GetTrackPanel();
-   auto &selectedRegion = project.GetViewInfo().selectedRegion;
+   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
 
    bool bPastedSomething = false;
 
@@ -356,7 +357,7 @@ void OnCutLabels(const CommandContext &context)
 {
    auto &project = context.project;
    auto &tracks = TrackList::Get( project );
-   auto &selectedRegion = project.GetViewInfo().selectedRegion;
+   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
 
    if( selectedRegion.isPoint() )
      return;
@@ -389,7 +390,7 @@ void OnDeleteLabels(const CommandContext &context)
 {
    auto &project = context.project;
    auto &tracks = TrackList::Get( project );
-   auto &selectedRegion = project.GetViewInfo().selectedRegion;
+   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
 
    if( selectedRegion.isPoint() )
       return;
@@ -411,7 +412,7 @@ void OnSplitCutLabels(const CommandContext &context)
 {
    auto &project = context.project;
    auto &tracks = TrackList::Get( project );
-   auto &selectedRegion = project.GetViewInfo().selectedRegion;
+   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
 
    if( selectedRegion.isPoint() )
       return;
@@ -434,7 +435,7 @@ void OnSplitDeleteLabels(const CommandContext &context)
 {
    auto &project = context.project;
    auto &tracks = TrackList::Get( project );
-   auto &selectedRegion = project.GetViewInfo().selectedRegion;
+   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
 
    if( selectedRegion.isPoint() )
       return;
@@ -457,7 +458,7 @@ void OnSilenceLabels(const CommandContext &context)
    auto &project = context.project;
    auto trackPanel = project.GetTrackPanel();
    auto &tracks = TrackList::Get( project );
-   auto &selectedRegion = project.GetViewInfo().selectedRegion;
+   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
 
    if( selectedRegion.isPoint() )
       return;
@@ -478,7 +479,7 @@ void OnCopyLabels(const CommandContext &context)
    auto &project = context.project;
    auto trackPanel = project.GetTrackPanel();
    auto &tracks = TrackList::Get( project );
-   auto &selectedRegion = project.GetViewInfo().selectedRegion;
+   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
 
    if( selectedRegion.isPoint() )
       return;
@@ -498,7 +499,7 @@ void OnSplitLabels(const CommandContext &context)
 {
    auto &project = context.project;
    auto &tracks = TrackList::Get( project );
-   auto &selectedRegion = project.GetViewInfo().selectedRegion;
+   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
 
    EditByLabel( tracks, selectedRegion, &WaveTrack::Split, false );
 
@@ -516,7 +517,7 @@ void OnJoinLabels(const CommandContext &context)
 {
    auto &project = context.project;
    auto &tracks = TrackList::Get( project );
-   auto &selectedRegion = project.GetViewInfo().selectedRegion;
+   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
 
    if( selectedRegion.isPoint() )
       return;
@@ -537,7 +538,7 @@ void OnDisjoinLabels(const CommandContext &context)
 {
    auto &project = context.project;
    auto &tracks = TrackList::Get( project );
-   auto &selectedRegion = project.GetViewInfo().selectedRegion;
+   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
 
    if( selectedRegion.isPoint() )
       return;

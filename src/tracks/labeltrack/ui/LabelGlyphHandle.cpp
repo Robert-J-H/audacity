@@ -89,7 +89,7 @@ UIHandle::Result LabelGlyphHandle::Click
 
    const wxMouseEvent &event = evt.event;
 
-   ViewInfo &viewInfo = pProject->GetViewInfo();
+   auto &viewInfo = ViewInfo::Get( *pProject );
    mpLT->HandleGlyphClick
       (mHit, event, mRect, viewInfo, &viewInfo.selectedRegion);
 
@@ -119,7 +119,7 @@ UIHandle::Result LabelGlyphHandle::Drag
    auto result = LabelDefaultClickHandle::Drag( evt, pProject );
 
    const wxMouseEvent &event = evt.event;
-   ViewInfo &viewInfo = pProject->GetViewInfo();
+   auto &viewInfo = ViewInfo::Get( *pProject );
    mpLT->HandleGlyphDragRelease
       (mHit, event, mRect, viewInfo, &viewInfo.selectedRegion);
 
@@ -140,7 +140,7 @@ UIHandle::Result LabelGlyphHandle::Release
    auto result = LabelDefaultClickHandle::Release( evt, pProject, pParent );
 
    const wxMouseEvent &event = evt.event;
-   ViewInfo &viewInfo = pProject->GetViewInfo();
+   auto &viewInfo = ViewInfo::Get( *pProject );
    if (mpLT->HandleGlyphDragRelease
           (mHit, event, mRect, viewInfo, &viewInfo.selectedRegion)) {
       pProject->PushState(_("Modified Label"),

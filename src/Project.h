@@ -25,7 +25,6 @@
 #include "ClientData.h"
 #include "Prefs.h"
 #include "SelectionState.h"
-#include "ViewInfo.h"
 #include "commands/CommandManagerWindowClasses.h"
 
 #include "TrackPanelListener.h"
@@ -199,9 +198,6 @@ class AUDACITY_DLL_API AudacityProject final : public wxFrame,
    sampleFormat GetDefaultFormat() { return mDefaultFormat; }
 
    double GetRate() const { return mRate; }
-   const ZoomInfo &GetZoomInfo() const { return mViewInfo; }
-   const ViewInfo &GetViewInfo() const { return mViewInfo; }
-   ViewInfo &GetViewInfo() { return mViewInfo; }
 
    wxString GetName();
    const std::shared_ptr<DirManager> &GetDirManager();
@@ -511,7 +507,6 @@ public:
    void WriteXMLHeader(XMLWriter &xmlFile) const;
 
    PlayMode mLastPlayMode{ PlayMode::normalPlay };
-   ViewInfo mViewInfo;
 
    // Audio IO callback methods
    void OnAudioIORate(int rate) override;

@@ -70,6 +70,7 @@
 #include "../Prefs.h"
 #include "../Project.h"
 #include "../Theme.h"
+#include "../ViewInfo.h"
 #include "../WaveTrack.h"
 #include "../widgets/AButton.h"
 #include "../widgets/Meter.h"
@@ -612,7 +613,7 @@ int ControlToolBar::PlayPlayRegion(const SelectedRegion &selectedRegion,
 
    if (t1 == t0) {
       if (looped) {
-         const auto &selectedRegion = p->GetViewInfo().selectedRegion;
+         const auto &selectedRegion = ViewInfo::Get( *p ).selectedRegion;
          // play selection if there is one, otherwise
          // set start of play region to project start, 
          // and loop the project from current play position.
@@ -740,7 +741,7 @@ void ControlToolBar::PlayCurrentRegion(bool looped /* = false */,
 
    if (p)
    {
-      auto &viewInfo = p->GetViewInfo();
+      auto &viewInfo = ViewInfo::Get( *p );
       const auto &playRegion = viewInfo.playRegion;
 
       auto options = AudioIOStartStreamOptions::PlayDefaults( *p );
@@ -983,7 +984,7 @@ void ControlToolBar::OnRecord(wxCommandEvent &evt)
    const bool appendRecord = (altAppearance == bPreferNewTrack);
 
    if (p) {
-      const auto &selectedRegion = p->GetViewInfo().selectedRegion;
+      const auto &selectedRegion = ViewInfo::Get( *p ).selectedRegion;
       double t0 = selectedRegion.t0();
       double t1 = selectedRegion.t1();
       // When no time selection, recording duration is 'unlimited'.

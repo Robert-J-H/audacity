@@ -38,6 +38,7 @@
 #include "../ImageManipulation.h"
 #include "../Project.h"
 #include "../TimeTrack.h"
+#include "../ViewInfo.h"
 #include "../WaveTrack.h"
 #include "../widgets/AButton.h"
 #include "../widgets/ASlider.h"
@@ -414,7 +415,7 @@ void TranscriptionToolBar::GetSamples(
    //First, get the current selection. It is part of the mViewInfo, which is
    //part of the project
 
-   const auto &selectedRegion = p->GetViewInfo().selectedRegion;
+   const auto &selectedRegion = ViewInfo::Get( *p ).selectedRegion;
    double start = selectedRegion.t0();
    double end = selectedRegion.t1();
 
@@ -483,7 +484,7 @@ void TranscriptionToolBar::PlayAtSpeed(bool looped, bool cutPreview)
    }
 
    // Get the current play region
-   const auto &viewInfo = p->GetViewInfo();
+   auto &viewInfo = ViewInfo::Get( *p );
    const auto &playRegion = viewInfo.playRegion;
 
    // Start playing

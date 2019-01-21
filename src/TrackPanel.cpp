@@ -82,6 +82,7 @@ is time to refresh some aspect of the screen.
 #include "RefreshCode.h"
 #include "TrackArtist.h"
 #include "TrackPanelAx.h"
+#include "ViewInfo.h"
 #include "WaveTrack.h"
 #ifdef EXPERIMENTAL_MIDI_OUT
 #include "NoteTrack.h"
@@ -2821,7 +2822,7 @@ unsigned TrackPanelCell::Char(wxKeyEvent &event, ViewInfo &, wxWindow *)
 
 IsVisibleTrack::IsVisibleTrack(AudacityProject *project)
    : mPanelRect {
-        wxPoint{ 0, project->mViewInfo.vpos },
+        wxPoint{ 0, ViewInfo::Get( *project ).vpos },
         project->GetTPTracksUsableArea()
      }
 {}

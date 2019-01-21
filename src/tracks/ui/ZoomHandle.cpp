@@ -128,7 +128,7 @@ UIHandle::Result ZoomHandle::Release
  wxWindow *)
 {
    const wxMouseEvent &event = evt.event;
-   ViewInfo &viewInfo = pProject->GetViewInfo();
+   auto &viewInfo = ViewInfo::Get( *pProject );
    if (mZoomEnd < mZoomStart)
       std::swap(mZoomStart, mZoomEnd);
 

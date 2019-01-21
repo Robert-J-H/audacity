@@ -58,6 +58,7 @@
 #include <wx/numdlg.h>
 #include <wx/radiobut.h>
 #include <wx/tooltip.h>
+#include <wx/wxcrtvararg.h>
 
 #include <math.h>
 

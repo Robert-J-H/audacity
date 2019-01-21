@@ -8,6 +8,7 @@
 #include "../Prefs.h"
 #include "../Project.h"
 #include "../TrackPanel.h"
+#include "../ViewInfo.h"
 #include "../commands/CommandContext.h"
 #include "../commands/CommandManager.h"
 #include "../prefs/TracksPrefs.h"
@@ -23,7 +24,7 @@ namespace {
 
 double GetZoomOfSelection( const AudacityProject &project )
 {
-   const auto &viewInfo = project.GetViewInfo();
+   auto &viewInfo = ViewInfo::Get( project );
    const auto &trackPanel = *project.GetTrackPanel();
 
    const double lowerBound =
@@ -124,7 +125,7 @@ namespace ViewActions {
 double GetZoomOfToFit( const AudacityProject &project )
 {
    auto &tracks = TrackList::Get( project );
-   const auto &viewInfo = project.GetViewInfo();
+   auto &viewInfo = ViewInfo::Get( project );
    const auto &trackPanel = *project.GetTrackPanel();
 
    const double end = tracks.GetEndTime();
@@ -144,7 +145,7 @@ double GetZoomOfToFit( const AudacityProject &project )
 
 void DoZoomFit(AudacityProject &project)
 {
-   auto &viewInfo = project.GetViewInfo();
+   auto &viewInfo = ViewInfo::Get( project );
    auto &tracks = TrackList::Get( project );
 
    const double start = viewInfo.bScrollBeyondZero
@@ -211,7 +212,7 @@ void OnZoomOut(const CommandContext &context)
 void OnZoomSel(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &selectedRegion = project.GetViewInfo().selectedRegion;
+   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
 
    project.Zoom( GetZoomOfSelection( project ) );
    project.TP_ScrollWindow(selectedRegion.t0());
@@ -220,7 +221,7 @@ void OnZoomSel(const CommandContext &context)
 void OnZoomToggle(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &viewInfo = project.GetViewInfo();
+   auto &viewInfo = ViewInfo::Get( project );
    auto trackPanel = project.GetTrackPanel();
 
 //   const double origLeft = viewInfo.h;
@@ -295,7 +296,7 @@ void OnExpandAllTracks(const CommandContext &context)
 void OnGoSelStart(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &viewInfo = project.GetViewInfo();
+   auto &viewInfo = ViewInfo::Get( project );
    auto &selectedRegion = viewInfo.selectedRegion;
    auto &trackPanel = *project.GetTrackPanel();
 
@@ -309,7 +310,7 @@ void OnGoSelStart(const CommandContext &context)
 void OnGoSelEnd(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &viewInfo = project.GetViewInfo();
+   auto &viewInfo = ViewInfo::Get( project );
    auto &selectedRegion = viewInfo.selectedRegion;
    auto &trackPanel = *project.GetTrackPanel();
 

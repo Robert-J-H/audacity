@@ -16,6 +16,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../AudioIO.h"
 #include "../../Project.h"
 #include "../../TrackPanel.h"
+#include "../../ViewInfo.h"
 #include "Scrubbing.h"
 
 #include <wx/dc.h>
@@ -146,7 +147,7 @@ void PlayIndicatorOverlay::OnTimer(wxCommandEvent &event)
       }
    }
    else {
-      ViewInfo &viewInfo = mProject->GetViewInfo();
+      const auto &viewInfo = ViewInfo::Get( *mProject );
 
       // Calculate the horizontal position of the indicator
       const double playPos = viewInfo.mRecentStreamTime;
