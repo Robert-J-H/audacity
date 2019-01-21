@@ -727,7 +727,7 @@ bool Exporter::CheckFilename()
    // existing file.)
    //
 
-   if (!mProject->GetDirManager()->EnsureSafeFilename(mFilename))
+   if (!DirManager::Get( *mProject ).EnsureSafeFilename(mFilename))
       return false;
 
    if( mFormatName.empty() )

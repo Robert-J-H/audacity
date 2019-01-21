@@ -19,10 +19,14 @@
 #include "audacity/Types.h"
 #include "xml/XMLTagHandler.h"
 
+#include <memory>
 #include <unordered_map>
+
+#include "ClientData.h"
 
 class wxFileNameWrapper;
 class wxHashTable;
+class AudacityProject;
 class BlockArray;
 class BlockFile;
 
@@ -47,8 +51,16 @@ enum {
 };
 
 
-class PROFILE_DLL_API DirManager final : public XMLTagHandler {
+class PROFILE_DLL_API DirManager final
+   : public XMLTagHandler
+   , public ClientData::Base
+   , public std::enable_shared_from_this< DirManager >
+{
  public:
+
+   static DirManager &Get( AudacityProject &project );
+   static const DirManager &Get( const AudacityProject &project );
+   static DirManager &Reset( AudacityProject &project );
 
    // MM: Construct DirManager
    DirManager();

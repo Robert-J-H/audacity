@@ -933,7 +933,7 @@ void AudacityApp::MarkAliasedFilesMissingWarning(const AliasBlockFile *b)
    size_t numProjects = gAudacityProjects.size();
       for (size_t ii = 0; ii < numProjects; ++ii) {
          // search each project for the blockfile
-         if (gAudacityProjects[ii]->GetDirManager()->ContainsBlockFile(b)) {
+         if ( DirManager::Get( *gAudacityProjects[ii] ).ContainsBlockFile(b)) {
             m_LastMissingBlockFileProject = gAudacityProjects[ii];
             break;
          }

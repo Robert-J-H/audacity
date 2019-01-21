@@ -334,15 +334,15 @@ bool RecordingRecoveryHandler::HandleXMLTag(const wxChar *tag,
       Sequence* seq = clip->GetSequence();
 
       // Load the blockfile from the XML
-      const auto &dirManager = mProject->GetDirManager();
-      dirManager->SetLoadingFormat(seq->GetSampleFormat());
+      auto &dirManager = DirManager::Get( *mProject );
+      dirManager.SetLoadingFormat(seq->GetSampleFormat());
 
       BlockArray array;
       array.resize(1);
-      dirManager->SetLoadingTarget(&array, 0);
+      dirManager.SetLoadingTarget(&array, 0);
       auto &blockFile = array[0].f;
 
-      if (!dirManager->HandleXMLTag(tag, attrs) || !blockFile)
+      if (!dirManager.HandleXMLTag(tag, attrs) || !blockFile)
       {
          // This should only happen if there is a bug
          wxASSERT(false);

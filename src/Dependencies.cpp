@@ -163,7 +163,7 @@ static void RemoveDependencies(AudacityProject *project,
                                AliasedFileArray &aliasedFiles)
 // STRONG-GUARANTEE
 {
-   const auto &dirManager = project->GetDirManager();
+   auto &dirManager = DirManager::Get( *project );
 
    ProgressDialog progress
       (_("Removing Dependencies"),
@@ -208,7 +208,7 @@ static void RemoveDependencies(AudacityProject *project,
             // can allow exceptions from ReadData too
             f->ReadData(buffer.ptr(), format, 0, len);
             newBlockFile =
-               dirManager->NewSimpleBlockFile(buffer.ptr(), len, format);
+               dirManager.NewSimpleBlockFile(buffer.ptr(), len, format);
          }
 
          // Update our hash so we know what block files we've done
