@@ -751,7 +751,7 @@ void MacrosWindow::UpdateMenus()
 {
    // OK even on mac, as dialog is modal.
    auto p = GetActiveProject();
-   GetMenuManager(*p).RebuildMenuBar(*p);
+   MenuManager::Get(*p).RebuildMenuBar(*p);
 }
 
 void MacrosWindow::UpdateDisplay( bool bExpanded )

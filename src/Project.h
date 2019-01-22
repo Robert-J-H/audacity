@@ -697,12 +697,7 @@ private:
 private:
 #endif
 
-private:
-   std::unique_ptr<MenuManager> mMenuManager;
-
 public:
-   friend MenuManager &GetMenuManager(AudacityProject &project);
-
    class PlaybackScroller final : public wxEvtHandler
    {
    public:

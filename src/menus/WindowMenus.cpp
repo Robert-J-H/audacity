@@ -45,7 +45,7 @@ void DoMacMinimize(AudacityProject *project)
 #endif
 
       // So that the Minimize menu command disables
-      GetMenuManager(*project).UpdateMenus(*project);
+      MenuManager::Get(*project).UpdateMenus(*project);
    }
 }
 

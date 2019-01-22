@@ -13,6 +13,7 @@
 #include "audacity/Types.h"
 
 #include <wx/string.h> // member variable
+#include "ClientData.h"
 #include "Prefs.h"
 
 class wxArrayString;
@@ -50,9 +51,16 @@ public:
    PluginID mLastEffect{};
 };
 
-class MenuManager final : public MenuCreator, private PrefsListener
+class MenuManager final
+   : public MenuCreator
+   , private PrefsListener
+   , public ClientData::Base
 {
 public:
+
+   static MenuManager &Get( AudacityProject &project );
+   static const MenuManager &Get( const AudacityProject &project );
+
    MenuManager();
 
    static void ModifyUndoMenuItems(AudacityProject &project);
@@ -88,8 +96,6 @@ private:
    bool mStopIfWasPaused;
 };
 
-
-MenuManager &GetMenuManager(AudacityProject &project);
 
 // Exported helper functions from various menu handling source files
 

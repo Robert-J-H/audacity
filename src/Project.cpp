@@ -982,8 +982,6 @@ AudacityProject::AudacityProject(wxWindow * parent, wxWindowID id,
 
    auto &viewInfo = ViewInfo::Get( *this );
 
-   mMenuManager = std::make_unique<MenuManager>();
-
    UpdatePrefs();
 
    // Make sure valgrind sees mIsSyncLocked is initialized, even
@@ -1127,7 +1125,7 @@ AudacityProject::AudacityProject(wxWindow * parent, wxWindowID id,
    mTrackPanel->AddOverlay( mScrubOverlay );
 #endif
 
-   mMenuManager->CreateMenusAndCommands(*this);
+   MenuManager::Get( project ).CreateMenusAndCommands( project );
 
    mTrackPanel->SetBackgroundCell(mBackgroundCell);
 
@@ -1968,7 +1966,7 @@ void AudacityProject::FixScrollbars()
       mTrackPanel->Refresh(false);
    }
 
-   GetMenuManager(*this).UpdateMenus(*this);
+   MenuManager::Get(*this).UpdateMenus(*this);
 
    if (oldhstate != newhstate || oldvstate != newvstate) {
       UpdateLayout();
@@ -2232,7 +2230,7 @@ void AudacityProject::OnMenu(wxCommandEvent & event)
    auto &project = *this;
    auto &commandManager = CommandManager::Get( project );
    bool handled = commandManager.HandleMenuID(
-      event.GetId(), GetMenuManager(*this).GetUpdateFlags(*this),
+      event.GetId(), MenuManager::Get(*this).GetUpdateFlags(*this),
       NoFlagsSpecified);
 
    if (handled)
@@ -2245,7 +2243,7 @@ void AudacityProject::OnMenu(wxCommandEvent & event)
 
 void AudacityProject::OnUpdateUI(wxUpdateUIEvent & WXUNUSED(event))
 {
-   GetMenuManager(*this).UpdateMenus(*this);
+   MenuManager::Get(*this).UpdateMenus(*this);
 }
 
 void AudacityProject::MacShowUndockedToolbars(bool show)
@@ -4521,9 +4519,9 @@ void AudacityProject::InitialState()
 
    undoManager.StateSaved();
 
-   GetMenuManager(*this).ModifyUndoMenuItems(*this);
+   MenuManager::Get(*this).ModifyUndoMenuItems(*this);
 
-   GetMenuManager(*this).UpdateMenus(*this);
+   MenuManager::Get(*this).UpdateMenus(*this);
 }
 
 bool AudacityProject::UndoAvailable()
@@ -4564,9 +4562,9 @@ void AudacityProject::PushState(const wxString &desc,
 
    mDirty = true;
 
-   GetMenuManager(*this).ModifyUndoMenuItems(*this);
+   MenuManager::Get(*this).ModifyUndoMenuItems(*this);
 
-   GetMenuManager(*this).UpdateMenus(*this);
+   MenuManager::Get(*this).UpdateMenus(*this);
 
    if (GetTracksFitVerticallyZoomed())
       ViewActions::DoZoomFitV(*this);
@@ -4652,7 +4650,7 @@ void AudacityProject::PopState(const UndoState &state)
 
    HandleResize();
 
-   GetMenuManager(*this).UpdateMenus(*this);
+   MenuManager::Get(*this).UpdateMenus(*this);
 
    AutoSave();
 }
@@ -4667,7 +4665,7 @@ void AudacityProject::SetStateTo(unsigned int n)
    HandleResize();
    mTrackPanel->SetFocusedTrack(NULL);
    mTrackPanel->Refresh(false);
-   GetMenuManager(*this).ModifyUndoMenuItems(*this);
+   MenuManager::Get(*this).ModifyUndoMenuItems(*this);
 }
 
 //
@@ -5691,7 +5689,7 @@ void AudacityProject::SelectAllIfNone()
    auto &project = *this;
    auto &viewInfo = ViewInfo::Get( project );
 
-   auto flags = GetMenuManager(*this).GetUpdateFlags(*this);
+   auto flags = MenuManager::Get(*this).GetUpdateFlags(*this);
    if(!(flags & TracksSelectedFlag) ||
       (viewInfo.selectedRegion.isPoint()))
       SelectActions::DoSelectSomething(*this);
@@ -5700,7 +5698,7 @@ void AudacityProject::SelectAllIfNone()
 // Stop playing or recording, if paused.
 void AudacityProject::StopIfPaused()
 {
-   auto flags = GetMenuManager(*this).GetUpdateFlags(*this);
+   auto flags = MenuManager::Get(*this).GetUpdateFlags(*this);
    if( flags & PausedFlag )
       TransportActions::DoStop(*this);
 }
