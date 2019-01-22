@@ -61,7 +61,6 @@ class ODLock;
 class Overlay;
 class RecordingRecoveryHandler;
 class TrackList;
-class Tags;
 
 class TrackPanel;
 class FreqWindow;
@@ -198,8 +197,6 @@ class AUDACITY_DLL_API AudacityProject final : public wxFrame,
 
    wxString GetName();
    AdornedRulerPanel *GetRulerPanel();
-   const Tags *GetTags();
-   void SetTags( const std::shared_ptr<Tags> &tags );
    int GetAudioIOToken() const;
    bool IsAudioActive() const;
    void SetAudioIOToken(int token);
@@ -541,12 +538,6 @@ public:
 
    double mRate;
    sampleFormat mDefaultFormat;
-
-   // Tags (artist name, song properties, MP3 ID3 info, etc.)
-   // The structure may be shared with undo history entries
-   // To keep undo working correctly, always replace this with a NEW duplicate
-   // BEFORE doing any editing of it!
-   std::shared_ptr<Tags> mTags;
 
    int mSnapTo;
    NumericFormatSymbol mSelectionFormat;

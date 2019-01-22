@@ -46,6 +46,7 @@
 #include "FileNames.h"
 #include "Internat.h"
 #include "Prefs.h"
+#include "Project.h"
 #include "ShuttleGui.h"
 #include "TranslatableStringArray.h"
 #include "widgets/Grid.h"
@@ -224,6 +225,28 @@ static const wxChar *DefaultGenres[] =
    wxT("JPop"),
    wxT("Synthpop")
 };
+
+static const AudacityProject::AttachedObjects::RegisteredFactory key{
+  [](AudacityProject &){ return std::make_shared< Tags >(); }
+};
+
+Tags &Tags::Get( AudacityProject &project )
+{
+   return project.AttachedObjects::Get< Tags >( key );
+}
+
+const Tags &Tags::Get( const AudacityProject &project )
+{
+   return Get( const_cast< AudacityProject & >( project ) );
+}
+
+Tags &Tags::Set( AudacityProject &project, const std::shared_ptr< Tags > &tags )
+{
+   auto &result = *tags;
+   auto copy = tags;
+   project.AttachedObjects::Assign( key, std::move(copy) );
+   return result;
+}
 
 Tags::Tags()
 {
