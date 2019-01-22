@@ -1624,15 +1624,21 @@ private:
    std::vector< Updater > mUpdaters;
 };
 
-class AUDACITY_DLL_API TrackFactory
+class AUDACITY_DLL_API TrackFactory final
+   : public ClientData::Base
 {
- private:
+ public:
+   static TrackFactory &Get( AudacityProject &project );
+   static const TrackFactory &Get( const AudacityProject &project );
+   static TrackFactory &Reset( AudacityProject &project );
+
    TrackFactory(const std::shared_ptr<DirManager> &dirManager, const ZoomInfo *zoomInfo):
       mDirManager(dirManager)
       , mZoomInfo(zoomInfo)
    {
    }
 
+ private:
    const std::shared_ptr<DirManager> mDirManager;
    const ZoomInfo *const mZoomInfo;
    friend class AudacityProject;

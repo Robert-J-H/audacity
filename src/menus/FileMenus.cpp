@@ -117,7 +117,7 @@ AudacityProject *DoImportMIDI(
    auto cleanup = finally( [&]
       { if ( pNewProject ) pNewProject->Close(true); } );
 
-   auto newTrack = pProject->GetTrackFactory()->NewNoteTrack();
+   auto newTrack = TrackFactory::Get( *pProject ).NewNoteTrack();
 
    if (::ImportMIDI(fileName, newTrack.get())) {
 
@@ -437,7 +437,7 @@ void OnImport(const CommandContext &context)
 void OnImportLabels(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackFactory = project.GetTrackFactory();
+   auto &trackFactory = TrackFactory::Get( project );
    auto &tracks = TrackList::Get( project );
 
    wxString fileName =
@@ -460,7 +460,7 @@ void OnImportLabels(const CommandContext &context)
          return;
       }
 
-      auto newTrack = trackFactory->NewLabelTrack();
+      auto newTrack = trackFactory.NewLabelTrack();
       wxString sTrackName;
       wxFileName::SplitPath(fileName, NULL, NULL, &sTrackName, NULL);
       newTrack->SetName(sTrackName);
@@ -500,7 +500,7 @@ void OnImportMIDI(const CommandContext &context)
 void OnImportRaw(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackFactory = project.GetTrackFactory();
+   auto &trackFactory = TrackFactory::Get( project );
 
    wxString fileName =
        FileNames::SelectFile(FileNames::Operation::Open,
@@ -517,7 +517,7 @@ void OnImportRaw(const CommandContext &context)
 
    TrackHolders newTracks;
 
-   ::ImportRaw(&project, fileName, trackFactory, newTracks);
+   ::ImportRaw(&project, fileName, &trackFactory, newTracks);
 
    if (newTracks.size() <= 0)
       return;

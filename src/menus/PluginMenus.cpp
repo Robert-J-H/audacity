@@ -393,7 +393,7 @@ bool DoEffect(
    AudacityProject &project = context.project;
    auto &tracks = TrackList::Get( project );
    auto trackPanel = project.GetTrackPanel();
-   auto trackFactory = project.GetTrackFactory();
+   auto &trackFactory = TrackFactory::Get( project );
    auto rate = project.GetRate();
    auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
    auto &commandManager = CommandManager::Get( project );
@@ -445,7 +445,7 @@ bool DoEffect(
    EffectManager & em = EffectManager::Get();
 
    success = em.DoEffect(ID, &project, rate,
-      &tracks, trackFactory, &selectedRegion,
+      &tracks, &trackFactory, &selectedRegion,
       (flags & kConfigured) == 0);
 
    if (!success)
