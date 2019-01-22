@@ -72,7 +72,6 @@ class DeviceToolBar;
 class EditToolBar;
 class MeterToolBar;
 class MixerToolBar;
-class Scrubber;
 class ScrubbingToolBar;
 class SelectionBar;
 class SpectralSelectionBar;
@@ -695,10 +694,6 @@ private:
 
 #ifdef EXPERIMENTAL_SCRUBBING_BASIC
    std::shared_ptr<Overlay> mScrubOverlay;
-   std::unique_ptr<Scrubber> mScrubber;
-public:
-   Scrubber &GetScrubber() { return *mScrubber; }
-   const Scrubber &GetScrubber() const { return *mScrubber; }
 private:
 #endif
 
