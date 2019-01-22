@@ -76,7 +76,6 @@ class Scrubber;
 class ScrubbingToolBar;
 class SelectionBar;
 class SpectralSelectionBar;
-class ToolManager;
 class ToolsToolBar;
 class TranscriptionToolBar;
 
@@ -599,10 +598,7 @@ private:
    MeterPanel *mPlaybackMeter{};
    MeterPanel *mCaptureMeter{};
 
-   std::unique_ptr<ToolManager> mToolManager;
-
  public:
-   ToolManager *GetToolManager() { return mToolManager.get(); }
    bool mShowSplashScreen;
    wxString mHelpPref;
    wxString mSoloPref;

@@ -325,6 +325,26 @@ BEGIN_EVENT_TABLE( ToolManager, wxEvtHandler )
    EVT_TIMER( wxID_ANY, ToolManager::OnTimer )
 END_EVENT_TABLE()
 
+static const AudacityProject::AttachedObjects::RegisteredFactory key{
+  []( AudacityProject &parent ){
+     return std::make_shared< ToolManager >( &parent, parent.GetTopPanel() ); }
+};
+
+ToolManager &ToolManager::Get( AudacityProject &project )
+{
+   return project.AttachedObjects::Get< ToolManager >( key );
+}
+
+const ToolManager &ToolManager::Get( const AudacityProject &project )
+{
+   return Get( const_cast< AudacityProject & >( project ) );
+}
+
+void ToolManager::Reset( AudacityProject &project )
+{
+   project.AttachedObjects::Assign( key, nullptr );
+}
+
 //
 // Constructor
 //

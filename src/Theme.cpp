@@ -257,7 +257,7 @@ void Theme::ApplyUpdatedImages()
       p->ApplyUpdatedTheme();
       for( int ii = 0; ii < ToolBarCount; ++ii )
       {
-         ToolBar *pToolBar = p->GetToolManager()->GetToolBar(ii);
+         ToolBar *pToolBar = ToolManager::Get( *p ).GetToolBar(ii);
          if( pToolBar )
             pToolBar->ReCreateButtons();
       }

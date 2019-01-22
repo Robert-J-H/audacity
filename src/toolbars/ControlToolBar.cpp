@@ -873,7 +873,7 @@ void ControlToolBar::StopPlaying(bool stopStream /* = true*/)
       }
    }
 
-   const auto toolbar = project->GetToolManager()->GetToolBar(ScrubbingBarID);
+   const auto toolbar = ToolManager::Get( *project ).GetToolBar(ScrubbingBarID);
    toolbar->EnableDisableButtons();
 }
 

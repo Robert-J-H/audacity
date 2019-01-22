@@ -19,6 +19,7 @@
 #include <wx/frame.h> // to inherit
 #include <wx/timer.h>
 
+#include "../ClientData.h"
 #include "ToolDock.h"
 #include "ToolBar.h"
 
@@ -42,10 +43,17 @@ class ToolFrame;
 /// class ToolManager
 ////////////////////////////////////////////////////////////
 
-class ToolManager final : public wxEvtHandler, public wxEventFilter
+class ToolManager final
+   : public wxEvtHandler
+   , public wxEventFilter
+   , public ClientData::Base
 {
 
  public:
+
+   static ToolManager &Get( AudacityProject &project );
+   static const ToolManager &Get( const AudacityProject &project );
+   static void Reset( AudacityProject &project );
 
    ToolManager( AudacityProject *parent, wxWindow *topDockParent );
    ~ToolManager();

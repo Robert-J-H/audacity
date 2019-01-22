@@ -802,7 +802,7 @@ bool ScreenshotCommand::Apply(const CommandContext & context)
    GetDerivedParams();
    //Don't reset the toolbars to a known state.
    //We will be capturing variations of them.
-   //context.GetProject()->GetToolManager()->Reset();
+   //ToolManager::Get( context.GetProject() ).Reset();
 
    wxTopLevelWindow *w = GetFrontWindow(context.GetProject());
    if (!w)
@@ -819,6 +819,8 @@ bool ScreenshotCommand::Apply(const CommandContext & context)
 
    wxPoint p( x2-x1, y2-y1);
 
+   auto &toolManager = ToolManager::Get( context.project );
+
    switch (mCaptureMode) {
    case kwindow:
       return Capture(context,  WindowFileName( context.GetProject(), w ) , w, GetWindowRect(w));
@@ -828,7 +830,7 @@ bool ScreenshotCommand::Apply(const CommandContext & context)
    case kfullscreen:
       return Capture(context, mFileName, w,GetScreenRect());
    case ktoolbars:
-      return CaptureDock(context, context.GetProject()->GetToolManager()->GetTopDock(), mFileName);
+      return CaptureDock(context, toolManager.GetTopDock(), mFileName);
    case kscriptables:
       CaptureScriptables(context, context.GetProject(), mFileName);
       break;
@@ -839,29 +841,29 @@ bool ScreenshotCommand::Apply(const CommandContext & context)
       CapturePreferences(context, context.GetProject(), mFileName);
       break;
    case kselectionbar:
-      return CaptureToolbar(context, context.GetProject()->GetToolManager(), SelectionBarID, mFileName);
+      return CaptureToolbar(context, &toolManager, SelectionBarID, mFileName);
    case kspectralselection:
-      return CaptureToolbar(context, context.GetProject()->GetToolManager(), SpectralSelectionBarID, mFileName);
+      return CaptureToolbar(context, &toolManager, SpectralSelectionBarID, mFileName);
    case ktools:
-      return CaptureToolbar(context, context.GetProject()->GetToolManager(), ToolsBarID, mFileName);
+      return CaptureToolbar(context, &toolManager, ToolsBarID, mFileName);
    case ktransport:
-      return CaptureToolbar(context, context.GetProject()->GetToolManager(), TransportBarID, mFileName);
+      return CaptureToolbar(context, &toolManager, TransportBarID, mFileName);
    case kmixer:
-      return CaptureToolbar(context, context.GetProject()->GetToolManager(), MixerBarID, mFileName);
+      return CaptureToolbar(context, &toolManager, MixerBarID, mFileName);
    case kmeter:
-      return CaptureToolbar(context, context.GetProject()->GetToolManager(), MeterBarID, mFileName);
+      return CaptureToolbar(context, &toolManager, MeterBarID, mFileName);
    case krecordmeter:
-      return CaptureToolbar(context, context.GetProject()->GetToolManager(), RecordMeterBarID, mFileName);
+      return CaptureToolbar(context, &toolManager, RecordMeterBarID, mFileName);
    case kplaymeter:
-      return CaptureToolbar(context, context.GetProject()->GetToolManager(), PlayMeterBarID, mFileName);
+      return CaptureToolbar(context, &toolManager, PlayMeterBarID, mFileName);
    case kedit:
-      return CaptureToolbar(context, context.GetProject()->GetToolManager(), EditBarID, mFileName);
+      return CaptureToolbar(context, &toolManager, EditBarID, mFileName);
    case kdevice:
-      return CaptureToolbar(context, context.GetProject()->GetToolManager(), DeviceBarID, mFileName);
+      return CaptureToolbar(context, &toolManager, DeviceBarID, mFileName);
    case ktranscription:
-      return CaptureToolbar(context, context.GetProject()->GetToolManager(), TranscriptionBarID, mFileName);
+      return CaptureToolbar(context, &toolManager, TranscriptionBarID, mFileName);
    case kscrub:
-      return CaptureToolbar(context, context.GetProject()->GetToolManager(), ScrubbingBarID, mFileName);
+      return CaptureToolbar(context, &toolManager, ScrubbingBarID, mFileName);
    case ktrackpanel:
       return Capture(context, mFileName, panel, GetPanelRect(panel));
    case kruler:
