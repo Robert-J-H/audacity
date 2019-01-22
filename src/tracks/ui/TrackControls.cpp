@@ -140,25 +140,25 @@ BEGIN_POPUP_MENU(TrackMenuTable)
       // functions.
       OnMoveUpID,
       _("Move Track &Up") + wxT("\t") +
-         (GetActiveProject()->GetCommandManager()->
+         (CommandManager::Get( *GetActiveProject() ).
           GetKeyFromName(wxT("TrackMoveUp")).Raw()),
       OnMoveTrack)
    POPUP_MENU_ITEM(
       OnMoveDownID,
       _("Move Track &Down") + wxT("\t") +
-         (GetActiveProject()->GetCommandManager()->
+         (CommandManager::Get( *GetActiveProject() ).
           GetKeyFromName(wxT("TrackMoveDown")).Raw()),
       OnMoveTrack)
    POPUP_MENU_ITEM(
       OnMoveTopID,
       _("Move Track to &Top") + wxT("\t") +
-         (GetActiveProject()->GetCommandManager()->
-          GetKeyFromName(wxT("TrackMoveTop")).Raw()),
+         (CommandManager::Get( *GetActiveProject() ).
+         GetKeyFromName(wxT("TrackMoveTop")).Raw()),
       OnMoveTrack)
    POPUP_MENU_ITEM(
       OnMoveBottomID,
       _("Move Track to &Bottom") + wxT("\t") +
-         (GetActiveProject()->GetCommandManager()->
+         (CommandManager::Get( *GetActiveProject() ).
           GetKeyFromName(wxT("TrackMoveBottom")).Raw()),
       OnMoveTrack)
 END_POPUP_MENU()

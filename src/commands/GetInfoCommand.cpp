@@ -411,7 +411,7 @@ void GetInfoCommand::ExploreMenu( const CommandContext &context, wxMenu * pMenu,
    if( !pMenu )
       return;
 
-   CommandManager * pMan = context.GetProject()->GetCommandManager();
+   auto &commandManager = CommandManager::Get( context.project );
 
    wxMenuItemList list = pMenu->GetMenuItems();
    size_t lcnt = list.size();
@@ -423,7 +423,7 @@ void GetInfoCommand::ExploreMenu( const CommandContext &context, wxMenu * pMenu,
    for (size_t lndx = 0; lndx < lcnt; lndx++) {
       item = list.Item(lndx)->GetData();
       Label = item->GetItemLabelText();
-      Name = pMan->GetNameFromNumericID( item->GetId() );
+      Name = commandManager.GetNameFromNumericID( item->GetId() );
       Accel = item->GetItemLabel();
       if( Accel.Contains("\t") )
          Accel = Accel.AfterLast('\t');

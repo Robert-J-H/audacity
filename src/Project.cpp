@@ -946,7 +946,6 @@ AudacityProject::AudacityProject(wxWindow * parent, wxWindowID id,
      mBandwidthSelectionFormatName( NumericTextCtrl::LookupFormat(
          NumericConverter::BANDWIDTH,
          gPrefs->Read(wxT("/BandwidthSelectionFormatName"), wxT("")) ) )
-     , mCommandManager( std::make_unique<CommandManager>() )
 {
    if (!gPrefs->Read(wxT("/SamplingRate/DefaultProjectSampleRate"), &mRate, AudioIO::GetOptimalSupportedSampleRate())) {
       // The default given above can vary with host/devices. So unless there is an entry for
@@ -2248,7 +2247,9 @@ void AudacityProject::OnMenu(wxCommandEvent & event)
       return;
    }
 #endif
-   bool handled = GetCommandManager()->HandleMenuID(
+   auto &project = *this;
+   auto &commandManager = CommandManager::Get( project );
+   bool handled = commandManager.HandleMenuID(
       event.GetId(), GetMenuManager(*this).GetUpdateFlags(*this),
       NoFlagsSpecified);
 

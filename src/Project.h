@@ -158,7 +158,6 @@ class ImportXMLTagHandler final : public XMLTagHandler
 
 class EffectPlugs;
 class CommandContext;
-class CommandManager;
 class Track;
 class TrackHolder;
 class TrackList;
@@ -317,11 +316,6 @@ public:
    int GetEstimatedRecordingMinsLeftOnDisk(long lCaptureChannels = 0);
    // Converts number of minutes to human readable format
    wxString GetHoursMinsString(int iMinutes);
-
-   CommandManager *GetCommandManager()
-      { return mCommandManager.get(); }
-   const CommandManager *GetCommandManager() const
-      { return mCommandManager.get(); }
 
    // Keyboard capture
    static bool HasKeyboardCapture(const wxWindow *handler);
@@ -576,10 +570,6 @@ public:
 
 private:
    bool mDirty{ false };
-
-   // Commands
-
-   std::unique_ptr<CommandManager> mCommandManager;
 
    // Window elements
 

@@ -428,7 +428,7 @@ void ScreenshotCommand::CapturePreferences(
    AudacityProject * pProject, const wxString &FileName ){
    (void)&FileName;//compiler food.
    (void)&context;
-   CommandManager * pMan = pProject->GetCommandManager();
+   CommandManager &commandManager = CommandManager::Get( *pProject );
 
    // Yucky static variables.  Is there a better way?  The problem is that we need the
    // idle callback to know more about what to do.
@@ -447,7 +447,7 @@ void ScreenshotCommand::CapturePreferences(
       gPrefs->Flush();
       CommandID Command{ wxT("Preferences") };
       const CommandContext projectContext( *pProject );
-      if( !pMan->HandleTextualCommand( Command, projectContext, AlwaysEnabledFlag, AlwaysEnabledFlag ) )
+      if( !commandManager.HandleTextualCommand( Command, projectContext, AlwaysEnabledFlag, AlwaysEnabledFlag ) )
       {
          wxLogDebug("Command %s not found", Command );
       }
@@ -590,7 +590,7 @@ void ScreenshotCommand::CaptureScriptables(
 void ScreenshotCommand::CaptureCommands( 
    const CommandContext & context, const wxArrayStringEx & Commands ){
    AudacityProject * pProject = context.GetProject();
-   CommandManager * pMan = pProject->GetCommandManager();
+   CommandManager &manager = CommandManager::Get( *pProject );
    wxString Str;
    // Yucky static variables.  Is there a better way?  The problem is that we need the
    // idle callback to know more about what to do.
@@ -606,7 +606,7 @@ void ScreenshotCommand::CaptureCommands(
       SetIdleHandler( IdleHandler );
       Str = Commands[i];
       const CommandContext projectContext( *pProject );
-      if( !pMan->HandleTextualCommand( Str, projectContext, AlwaysEnabledFlag, AlwaysEnabledFlag ) )
+      if( !manager.HandleTextualCommand( Str, projectContext, AlwaysEnabledFlag, AlwaysEnabledFlag ) )
       {
          wxLogDebug("Command %s not found", Str);
       }
