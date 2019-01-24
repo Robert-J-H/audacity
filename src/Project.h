@@ -192,7 +192,6 @@ class AUDACITY_DLL_API AudacityProject final : public wxFrame,
    double GetRate() const { return mRate; }
 
    wxString GetName();
-   AdornedRulerPanel *GetRulerPanel();
    int GetAudioIOToken() const;
    bool IsAudioActive() const;
    void SetAudioIOToken(int token);
@@ -555,7 +554,6 @@ private:
 
    wxStatusBar *mStatusBar;
 
-   AdornedRulerPanel *mRuler{};
    wxPanel *mTopPanel{};
    wxPanel * mMainPanel;
    wxScrollBar *mHsbar;

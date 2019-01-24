@@ -261,7 +261,7 @@ void Theme::ApplyUpdatedImages()
          if( pToolBar )
             pToolBar->ReCreateButtons();
       }
-      p->GetRulerPanel()->ReCreateButtons();
+      AdornedRulerPanel::Get( *p ).ReCreateButtons();
    }
 }
 

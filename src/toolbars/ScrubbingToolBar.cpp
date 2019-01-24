@@ -175,7 +175,7 @@ void ScrubbingToolBar::RegenerateTooltips()
       fn(*seekButton, label, wxT("Seek"));
 
       label = (
-               project->GetRulerPanel()->ShowingScrubRuler()
+               AdornedRulerPanel::Get( *project ).ShowingScrubRuler()
                ? _("Hide Scrub Ruler")
                : _("Show Scrub Ruler")
                );
@@ -248,7 +248,7 @@ void ScrubbingToolBar::EnableDisableButtons()
 
    const auto barButton = mButtons[STBRulerID];
    barButton->Enable();
-   if (p->GetRulerPanel()->ShowingScrubRuler())
+   if (AdornedRulerPanel::Get( *p ).ShowingScrubRuler())
       barButton->PushDown();
    else
       barButton->PopUp();

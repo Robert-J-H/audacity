@@ -186,7 +186,7 @@ AdornedRulerPanel::QuickPlayRulerOverlay::QuickPlayRulerOverlay(
 
 AdornedRulerPanel *AdornedRulerPanel::QuickPlayRulerOverlay::GetRuler() const
 {
-   return mPartner.mProject->GetRulerPanel();
+   return &Get( *mPartner.mProject );
 }
 
 void AdornedRulerPanel::QuickPlayRulerOverlay::Update()
@@ -824,6 +824,35 @@ std::vector<UIHandlePtr> AdornedRulerPanel::ScrubbingCell::HitTest
    return results;
 }
 
+namespace{
+AudacityProject::AttachedWindows::RegisteredFactory sKey{
+[]( AudacityProject & ) -> wxWeakRef< wxWindow > {
+   // Do not create on demand here.  Instead let the constructor of
+   // AdornedRulerPanel reassign the pointer.
+   return nullptr;
+}
+};
+}
+
+AdornedRulerPanel &AdornedRulerPanel::Get( AudacityProject &project )
+{
+   return project.AttachedWindows::Get< AdornedRulerPanel >( sKey );
+}
+
+const AdornedRulerPanel &AdornedRulerPanel::Get( const AudacityProject &project )
+{
+   return Get( const_cast< AudacityProject & >( project ) );
+}
+
+void AdornedRulerPanel::Destroy( AudacityProject &project )
+{
+   auto *pPanel = project.AttachedWindows::Find( sKey );
+   if (pPanel) {
+      pPanel->wxWindow::Destroy();
+      project.AttachedWindows::Assign( sKey, nullptr );
+   }
+}
+
 AdornedRulerPanel::AdornedRulerPanel(AudacityProject* project,
                                      wxWindow *parent,
                                      wxWindowID id,
@@ -833,6 +862,8 @@ AdornedRulerPanel::AdornedRulerPanel(AudacityProject* project,
 :  CellularPanel(parent, id, pos, size, viewinfo)
 , mProject(project)
 {
+   project->AttachedWindows::Assign( sKey, this );
+
    mQPCell = std::make_shared<QPCell>( this );
    mScrubbingCell = std::make_shared<ScrubbingCell>( this );
    

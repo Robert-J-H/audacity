@@ -64,11 +64,9 @@ std::pair<wxRect, bool> EditCursorOverlay::DoGetRectangle(wxSize size)
 void EditCursorOverlay::Draw(OverlayPanel &panel, wxDC &dc)
 {
    if (mIsMaster && !mPartner) {
-      auto ruler = mProject->GetRulerPanel();
-      if (ruler) {
-         mPartner = std::make_shared<EditCursorOverlay>(mProject, false);
-         ruler->AddOverlay( mPartner );
-      }
+      auto &ruler = AdornedRulerPanel::Get( *mProject );
+      mPartner = std::make_shared<EditCursorOverlay>(mProject, false);
+      ruler.AddOverlay( mPartner );
    }
 
    mLastCursorX = mNewCursorX;

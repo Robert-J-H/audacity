@@ -1021,12 +1021,12 @@ AudacityProject::AudacityProject(wxWindow * parent, wxWindowID id,
    //
    // Create the horizontal ruler
    //
-   mRuler = safenew AdornedRulerPanel( this, mTopPanel,
+   auto &ruler = *safenew AdornedRulerPanel( this, mTopPanel,
       wxID_ANY,
       wxDefaultPosition,
       wxSize( -1, AdornedRulerPanel::GetRulerHeight(false) ),
       &viewInfo );
-   mRuler->SetLayoutDirection(wxLayout_LeftToRight);
+   ruler.SetLayoutDirection(wxLayout_LeftToRight);
 
    //
    // Create the TrackPanel and the scrollbars
@@ -1071,7 +1071,7 @@ AudacityProject::AudacityProject(wxWindow * parent, wxWindowID id,
    {
       auto ubs = std::make_unique<wxBoxSizer>(wxVERTICAL);
       ubs->Add( ToolManager::Get( project ).GetTopDock(), 0, wxEXPAND | wxALIGN_TOP );
-      ubs->Add(mRuler, 0, wxEXPAND);
+      ubs->Add(&ruler, 0, wxEXPAND);
       mTopPanel->SetSizer(ubs.release());
    }
 
@@ -1097,7 +1097,7 @@ AudacityProject::AudacityProject(wxWindow * parent, wxWindowID id,
                                              tracks.shared_from_this(),
                                              &viewInfo,
                                              this,
-                                             mRuler);
+                                             &ruler);
 
    mCursorOverlay = std::make_shared<EditCursorOverlay>(this);
 
@@ -1189,7 +1189,7 @@ AudacityProject::AudacityProject(wxWindow * parent, wxWindowID id,
 
    InitialState();
    FixScrollbars();
-   mRuler->SetLeftOffset(trackPanel.GetLeftOffset());  // bevel on AdornedRuler
+   ruler.SetLeftOffset(trackPanel.GetLeftOffset());  // bevel on AdornedRuler
 
    //
    // Set the Icon
@@ -1344,11 +1344,6 @@ void AudacityProject::OnCapture(wxCommandEvent& evt)
       mIsCapturing = false;
 }
 
-
-AdornedRulerPanel *AudacityProject::GetRulerPanel()
-{
-   return mRuler;
-}
 
 int AudacityProject::GetAudioIOToken() const
 {
@@ -2491,8 +2486,7 @@ void AudacityProject::OnCloseWindow(wxCloseEvent & event)
    // Some of the AdornedRulerPanel functions refer to the TrackPanel, so destroy this
    // before the TrackPanel is destroyed. This change was needed to stop Audacity
    // crashing when running with Jaws on Windows 10 1703.
-   if (mRuler)
-	   mRuler->Destroy();
+   AdornedRulerPanel::Destroy( project );
 
    // Destroy the TrackPanel early so it's not around once we start
    // deleting things like tracks and such out from underneath it.
@@ -2570,7 +2564,6 @@ void AudacityProject::OnCloseWindow(wxCloseEvent & event)
 
    // Destroys this
    pSelf.reset();
-   mRuler = nullptr;
 
    mIsBeingDeleted = true;
 
@@ -4954,18 +4947,17 @@ void AudacityProject::TP_DisplayStatusMessage(const wxString &msg)
 void AudacityProject::TP_DisplaySelection()
 {
    auto &project = *this;
+   auto &ruler = AdornedRulerPanel::Get(project);
    auto &viewInfo = ViewInfo::Get( project );
+   const auto &selectedRegion = viewInfo.selectedRegion;
+   auto &playRegion = viewInfo.playRegion;
    double audioTime;
 
-   auto &playRegion = viewInfo.playRegion;
-   const auto &selectedRegion = viewInfo.selectedRegion;
-   if (mRuler) {
-      if (!gAudioIO->IsBusy() && !playRegion.Locked())
-         playRegion.SetTimes(selectedRegion.t0(), selectedRegion.t1());
-      else
-         // Cause ruler redraw anyway, because we may be zooming or scrolling
-         mRuler->Refresh();
-   }
+   if (!gAudioIO->IsBusy() && !playRegion.Locked())
+      playRegion.SetTimes(selectedRegion.t0(), selectedRegion.t1());
+   else
+      // Cause ruler redraw anyway, because we may be zooming or scrolling
+      ruler.Refresh();
 
    if (gAudioIO->IsBusy())
       audioTime = gAudioIO->GetStreamTime();
