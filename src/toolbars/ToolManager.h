@@ -51,6 +51,7 @@ class ToolManager final
 
  public:
 
+   static ToolManager *Find( AudacityProject &project );
    static ToolManager &Get( AudacityProject &project );
    static const ToolManager &Get( const AudacityProject &project );
    static void Reset( AudacityProject &project );

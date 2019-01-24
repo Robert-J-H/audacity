@@ -330,6 +330,11 @@ static const AudacityProject::AttachedObjects::RegisteredFactory key{
      return std::make_shared< ToolManager >( &parent, parent.GetTopPanel() ); }
 };
 
+ToolManager *ToolManager::Find( AudacityProject &project )
+{
+   return project.AttachedObjects::Find< ToolManager >( key );
+}
+
 ToolManager &ToolManager::Get( AudacityProject &project )
 {
    return project.AttachedObjects::Get< ToolManager >( key );

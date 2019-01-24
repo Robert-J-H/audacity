@@ -4759,9 +4759,11 @@ void AudacityProject::SkipEnd(bool shift)
 ControlToolBar *AudacityProject::GetControlToolBar()
 {
    auto &project = *this;
-   auto &toolManager = ToolManager::Get( project );
+   auto *pToolManager = ToolManager::Find( project );
+   if (!pToolManager)
+      return nullptr;
    return (ControlToolBar *)
-          (toolManager.GetToolBar(TransportBarID));
+          (pToolManager->GetToolBar(TransportBarID));
 }
 
 DeviceToolBar *AudacityProject::GetDeviceToolBar()
