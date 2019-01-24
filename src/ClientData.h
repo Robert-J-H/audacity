@@ -414,6 +414,18 @@ protected:
          static_cast< void >( Ensure( data, iter, ii ) );
    }
 
+   // \brief For each registered factory, assign nullptr to the corresponding
+   // slot.  Whether that causes deletion of the objects depends on the kind
+   // of pointer specified in the template parameter.
+   void NullAll()
+   {
+      auto data = GetData();
+      size_t size = data.mObject.size();
+      auto iter = GetIterator( data, 0 );
+      for ( size_t ii = 0; ii < size; ++ii, ++iter )
+         *iter = nullptr;
+   }
+
 private:
    // Simplify this compile-time switching with C++17 if constexpr ?
    void ReparentAllIf( std::false_type ) {}
