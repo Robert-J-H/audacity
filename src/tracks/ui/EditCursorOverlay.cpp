@@ -48,7 +48,7 @@ std::pair<wxRect, bool> EditCursorOverlay::DoGetRectangle(wxSize size)
    else {
       mCursorTime = selection.t0();
       mNewCursorX = ZoomInfo::Get( *mProject ).TimeToPosition
-         (mCursorTime, mProject->GetTrackPanel()->GetLeftOffset());
+         (mCursorTime, TrackPanel::Get( *mProject ).GetLeftOffset());
    }
 
    // Excessive height in case of the ruler, but it matters little.
@@ -77,10 +77,11 @@ void EditCursorOverlay::Draw(OverlayPanel &panel, wxDC &dc)
 
    const auto &viewInfo = ZoomInfo::Get( *mProject );
 
+   auto &trackPanel = TrackPanel::Get( *mProject );
    const bool
    onScreen = between_incexc(viewInfo.h,
                              mCursorTime,
-                             mProject->GetTrackPanel()->GetScreenEndTime());
+                             trackPanel.GetScreenEndTime());
 
    if (!onScreen)
       return;
@@ -95,7 +96,7 @@ void EditCursorOverlay::Draw(OverlayPanel &panel, wxDC &dc)
          if (!pTrack)
             return;
          if (pTrack->GetSelected() ||
-             mProject->GetTrackPanel()->GetAx().IsFocused(pTrack))
+             trackPanel.GetAx().IsFocused(pTrack))
          {
             // AColor::Line includes both endpoints so use GetBottom()
             AColor::Line(dc, mLastCursorX, rect.GetTop(), mLastCursorX, rect.GetBottom());

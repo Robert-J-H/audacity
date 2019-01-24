@@ -275,8 +275,6 @@ public:
    void SetProjectTitle( int number =-1);
 
    wxPanel *GetTopPanel() { return mTopPanel; }
-   TrackPanel * GetTrackPanel() {return mTrackPanel;}
-   const TrackPanel * GetTrackPanel() const {return mTrackPanel;}
 
    bool GetTracksFitVerticallyZoomed() { return mTracksFitVerticallyZoomed; } //lda
    void SetTracksFitVerticallyZoomed(bool flag) { mTracksFitVerticallyZoomed = flag; } //lda
@@ -559,7 +557,6 @@ private:
 
    AdornedRulerPanel *mRuler{};
    wxPanel *mTopPanel{};
-   TrackPanel *mTrackPanel{};
    wxPanel * mMainPanel;
    wxScrollBar *mHsbar;
    wxScrollBar *mVsbar;

@@ -354,10 +354,10 @@ bool Scrubber::MaybeStartScrubbing(wxCoord xx)
       wxCoord position = xx;
       if (abs(mScrubStartPosition - position) >= SCRUBBING_PIXEL_TOLERANCE) {
          auto &viewInfo = ViewInfo::Get( *mProject );
-         TrackPanel *const trackPanel = mProject->GetTrackPanel();
+         auto &trackPanel = TrackPanel::Get( *mProject );
          ControlToolBar * const ctb = mProject->GetControlToolBar();
          double maxTime = TrackList::Get( *mProject ).GetEndTime();
-         const int leftOffset = trackPanel->GetLeftOffset();
+         const int leftOffset = trackPanel.GetLeftOffset();
          double time0 = std::min(maxTime,
             viewInfo.PositionToTime(mScrubStartPosition, leftOffset)
          );
@@ -576,8 +576,8 @@ void Scrubber::ContinueScrubbingPoll()
       gAudioIO->UpdateScrub(speed, mOptions);
    } else {
       const wxMouseState state(::wxGetMouseState());
-      const auto trackPanel = mProject->GetTrackPanel();
-      const wxPoint position = trackPanel->ScreenToClient(state.GetPosition());
+      auto &trackPanel = TrackPanel::Get( *mProject );
+      const wxPoint position = trackPanel.ScreenToClient(state.GetPosition());
       auto &viewInfo = ViewInfo::Get( *mProject );
 #ifdef DRAG_SCRUB
       if (mDragging && mSmoothScrollingScrub) {
@@ -594,7 +594,7 @@ void Scrubber::ContinueScrubbingPoll()
       else
 #endif
       {
-         const auto origin = trackPanel->GetLeftOffset();
+         const auto origin = trackPanel.GetLeftOffset();
          auto xx = position.x;
          if (!seek && !mSmoothScrollingScrub) {
             // If mouse is out-of-bounds, so that we scrub at maximum speed
@@ -602,7 +602,7 @@ void Scrubber::ContinueScrubbingPoll()
             // extreme position to avoid catching-up and halting before the
             // screen scrolls.
             int width;
-            trackPanel->GetTracksUsableArea(&width, NULL);
+            trackPanel.GetTracksUsableArea(&width, NULL);
             auto delta = xx - origin;
             if (delta < 0)
                delta -= width;
@@ -811,7 +811,7 @@ double Scrubber::FindScrubSpeed(bool seeking, double time) const
 {
    auto &viewInfo = ViewInfo::Get( *mProject );
    const double screen =
-      mProject->GetTrackPanel()->GetScreenEndTime() - viewInfo.h;
+      TrackPanel::Get( *mProject ).GetScreenEndTime() - viewInfo.h;
    return (seeking ? FindSeekSpeed : FindScrubbingSpeed)
       (viewInfo, mMaxSpeed, screen, time);
 }
@@ -982,12 +982,12 @@ void ScrubbingOverlay::OnTimer(wxCommandEvent &event)
       mNextScrubRect = wxRect();
    }
    else {
-      TrackPanel *const trackPanel = mProject->GetTrackPanel();
+      TrackPanel &trackPanel = TrackPanel::Get( *mProject );
       int panelWidth, panelHeight;
-      trackPanel->GetSize(&panelWidth, &panelHeight);
+      trackPanel.GetSize(&panelWidth, &panelHeight);
 
       // Where's the mouse?
-      position = trackPanel->ScreenToClient(position);
+      position = trackPanel.ScreenToClient(position);
 
       const bool seeking = scrubber.Seeks() || scrubber.TemporarilySeeks();
 
@@ -997,7 +997,7 @@ void ScrubbingOverlay::OnTimer(wxCommandEvent &event)
          scrubber.IsScrollScrubbing()
          ? scrubber.FindScrubSpeed( seeking,
              ViewInfo::Get( *mProject )
-                .PositionToTime(position.x, trackPanel->GetLeftOffset()))
+                .PositionToTime(position.x, trackPanel.GetLeftOffset()))
          : maxScrubSpeed;
 
       const wxChar *format =
@@ -1012,7 +1012,7 @@ void ScrubbingOverlay::OnTimer(wxCommandEvent &event)
       // Find the origin for drawing text
       wxCoord width, height;
       {
-         wxClientDC dc(trackPanel);
+         wxClientDC dc( &trackPanel );
          static const wxFont labelFont(24, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
          dc.SetFont(labelFont);
          dc.GetTextExtent(mNextScrubSpeedText, &width, &height);
@@ -1048,13 +1048,13 @@ void Scrubber::DoScrub(bool seek)
    const bool wasScrubbing = HasMark() || IsScrubbing();
    const bool scroll = ShouldScrubPinned();
    if (!wasScrubbing) {
-      auto tp = mProject->GetTrackPanel();
-      wxCoord xx = tp->ScreenToClient(::wxGetMouseState().GetPosition()).x;
+      auto &tp = TrackPanel::Get( *mProject );
+      wxCoord xx = tp.ScreenToClient(::wxGetMouseState().GetPosition()).x;
 
       // Limit x
       int width;
-      tp->GetTracksUsableArea(&width, nullptr);
-      const auto offset = tp->GetLeftOffset();
+      tp.GetTracksUsableArea(&width, nullptr);
+      const auto offset = tp.GetLeftOffset();
       xx = (std::max(offset, std::min(offset + width - 1, xx)));
 
       MarkScrubStart(xx, scroll, seek);

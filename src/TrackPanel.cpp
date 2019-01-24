@@ -200,6 +200,39 @@ std::unique_ptr<wxCursor> MakeCursor( int WXUNUSED(CursorId), const char * const
 }
 
 
+namespace{
+AudacityProject::AttachedWindows::RegisteredFactory sKey{
+[]( AudacityProject & ) -> wxWeakRef< wxWindow > {
+   // Do not create on demand here.  Instead let the constructor of TrackPanel
+   // reassign the pointer.
+   return nullptr;
+}
+};
+}
+
+TrackPanel *TrackPanel::Find( AudacityProject &project )
+{
+   return project.AttachedWindows::Find< TrackPanel >( sKey );
+}
+
+TrackPanel &TrackPanel::Get( AudacityProject &project )
+{
+   return project.AttachedWindows::Get< TrackPanel >( sKey );
+}
+
+const TrackPanel &TrackPanel::Get( const AudacityProject &project )
+{
+   return Get( const_cast< AudacityProject & >( project ) );
+}
+
+void TrackPanel::Destroy( AudacityProject &project )
+{
+   auto *pPanel = project.AttachedWindows::Find( sKey );
+   if (pPanel) {
+      pPanel->wxWindow::Destroy();
+      project.AttachedWindows::Assign( sKey, nullptr );
+   }
+}
 
 // Don't warn us about using 'this' in the base member initializer list.
 #ifndef __WXGTK__ //Get rid if this pragma for gtk
@@ -210,11 +243,11 @@ TrackPanel::TrackPanel(wxWindow * parent, wxWindowID id,
                        const wxSize & size,
                        const std::shared_ptr<TrackList> &tracks,
                        ViewInfo * viewInfo,
-                       TrackPanelListener * listener,
+                       AudacityProject * project,
                        AdornedRulerPanel * ruler)
    : CellularPanel(parent, id, pos, size, viewInfo,
                    wxWANTS_CHARS | wxNO_BORDER),
-     mListener(listener),
+     mListener(project),
      mTracks(tracks),
      mRuler(ruler),
      mTrackArtist(nullptr),
@@ -224,6 +257,8 @@ TrackPanel::TrackPanel(wxWindow * parent, wxWindowID id,
 #pragma warning( default: 4355 )
 #endif
 {
+   project->AttachedWindows::Assign( sKey, this );
+
    TrackInfo::ReCreateSliders( this );
    TrackInfo::UpdatePrefs( this );
 
@@ -2730,7 +2765,7 @@ static TrackPanel * TrackPanelFactory(wxWindow * parent,
    const wxSize & size,
    const std::shared_ptr<TrackList> &tracks,
    ViewInfo * viewInfo,
-   TrackPanelListener * listener,
+   AudacityProject * project,
    AdornedRulerPanel * ruler)
 {
    wxASSERT(parent); // to justify safenew
@@ -2741,7 +2776,7 @@ static TrackPanel * TrackPanelFactory(wxWindow * parent,
       size,
       tracks,
       viewInfo,
-      listener,
+      project,
       ruler);
 }
 
@@ -2755,7 +2790,7 @@ TrackPanel *(*TrackPanel::FactoryFunction)(
               const wxSize & size,
               const std::shared_ptr<TrackList> &tracks,
               ViewInfo * viewInfo,
-              TrackPanelListener * listener,
+              AudacityProject * project,
               AdornedRulerPanel * ruler) = TrackPanelFactory;
 
 TrackPanelNode::TrackPanelNode()
