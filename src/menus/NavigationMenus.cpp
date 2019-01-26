@@ -34,7 +34,7 @@ void NextOrPrevFrame(AudacityProject &project, bool forward)
    static const unsigned rotationSize = 3u;
 
    wxWindow *const begin [rotationSize] = {
-      project.GetTopPanel(),
+      ProjectWindow::Get( project ).GetTopPanel(),
       &TrackPanel::Get( project ),
       botDock,
    };
@@ -309,15 +309,16 @@ struct Handler
 void OnPrevWindow(const CommandContext &context)
 {
    auto &project = context.project;
-   auto isEnabled = project.IsEnabled();
+   auto &window = ProjectWindow::Get( project );
+   auto isEnabled = window.IsEnabled();
 
    wxWindow *w = wxGetTopLevelParent(wxWindow::FindFocus());
-   const auto & list = project.GetChildren();
+   const auto & list = window.GetChildren();
    auto iter = list.rbegin(), end = list.rend();
 
    // If the project window has the current focus, start the search with the
    // last child
-   if (w == &project)
+   if (w == &window)
    {
    }
    // Otherwise start the search with the current window's previous sibling
@@ -344,7 +345,7 @@ void OnPrevWindow(const CommandContext &context)
    // Ran out of siblings, so make the current project active
    if ((iter == end) && isEnabled)
    {
-      w = &project;
+      w = &window;
    }
 
    // And make sure it's on top (only for floating windows...project window will
@@ -367,15 +368,16 @@ void OnPrevWindow(const CommandContext &context)
 void OnNextWindow(const CommandContext &context)
 {
    auto &project = context.project;
-   auto isEnabled = project.IsEnabled();
+   auto &window = ProjectWindow::Get( project );
+   auto isEnabled = window.IsEnabled();
 
    wxWindow *w = wxGetTopLevelParent(wxWindow::FindFocus());
-   const auto & list = project.GetChildren();
+   const auto & list = window.GetChildren();
    auto iter = list.begin(), end = list.end();
 
    // If the project window has the current focus, start the search with the
    // first child
-   if (w == &project)
+   if (w == &window)
    {
    }
    // Otherwise start the search with the current window's next sibling
@@ -406,7 +408,7 @@ void OnNextWindow(const CommandContext &context)
    // Ran out of siblings, so make the current project active
    if ((iter == end) && isEnabled)
    {
-      w = &project;
+      w = &window;
    }
 
    // And make sure it's on top (only for floating windows...project window will

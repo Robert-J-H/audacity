@@ -104,7 +104,8 @@ BEGIN_EVENT_TABLE(MouseEvtHandler, wxEvtHandler)
 END_EVENT_TABLE()
 
 ExportMultiple::ExportMultiple(AudacityProject *project)
-: wxDialogWrapper(project, wxID_ANY, wxString(_("Export Multiple")))
+: wxDialogWrapper( &ProjectWindow::Get( *project ),
+   wxID_ANY, wxString(_("Export Multiple")) )
 , mSelectionState{ SelectionState::Get( *project ) }
 {
    SetName(GetTitle());
@@ -715,7 +716,8 @@ ProgressResult ExportMultiple::ExportMultipleByLabel(bool byName,
          setting.filetags.SetTag(TAG_TITLE, title);
          setting.filetags.SetTag(TAG_TRACK, l+1);
          // let the user have a crack at editing it, exit if cancelled
-         if( !setting.filetags.ShowEditDialog(mProject, _("Edit Metadata Tags"), tagsPrompt) )
+         if( !setting.filetags.ShowEditDialog( ProjectWindow::Find( mProject ),
+            _("Edit Metadata Tags"), tagsPrompt) )
             return ProgressResult::Cancelled;
       }
 
@@ -827,7 +829,8 @@ ProgressResult ExportMultiple::ExportMultipleByTrack(bool byName,
          setting.filetags.SetTag(TAG_TITLE, title);
          setting.filetags.SetTag(TAG_TRACK, l+1);
          // let the user have a crack at editing it, exit if cancelled
-         if (!setting.filetags.ShowEditDialog(mProject,_("Edit Metadata Tags"), tagsPrompt))
+         if (!setting.filetags.ShowEditDialog( ProjectWindow::Find( mProject ),
+            _("Edit Metadata Tags"), tagsPrompt ))
             return ProgressResult::Cancelled;
       }
       /* add the settings to the array of settings to be used for export */

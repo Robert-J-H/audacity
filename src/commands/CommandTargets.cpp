@@ -368,7 +368,8 @@ void LongMessageDialog::OnCancel(wxCommandEvent & WXUNUSED(evt)){
 void LongMessageDialog::AcceptText( const wxString & Text )
 {
    if( pDlg == NULL ){
-      pDlg = new LongMessageDialog( GetActiveProject(), _( "Long Message" ) );
+      pDlg = new LongMessageDialog(
+         &ProjectWindow::Get( *GetActiveProject() ), _( "Long Message" ) );
       pDlg->Init();
       pDlg->Show();
    }

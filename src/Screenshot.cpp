@@ -472,7 +472,7 @@ void ScreenFrame::PopulateOrExchange(ShuttleGui & S)
       CentreOnParent();
    }
 
-   SetIcon(mContext.GetProject()->GetIcon());
+   SetIcon( ProjectWindow::Get( mContext.project ).GetIcon() );
 }
 
 bool ScreenFrame::ProcessEvent(wxEvent & e)
@@ -567,8 +567,9 @@ void ScreenFrame::SizeMainWindow(int w, int h)
 {
    int top = 20;
 
-   mContext.GetProject()->Maximize(false);
-   mContext.GetProject()->SetSize(16, 16 + top, w, h);
+   auto &window = ProjectWindow::Get( mContext.project );
+   window.Maximize(false);
+   window.SetSize(16, 16 + top, w, h);
    //Bug383 - Toolbar Resets not wanted.
    //ToolManager::Get( mContext.GetProject() ).Reset();
 }
@@ -672,10 +673,11 @@ void ScreenFrame::OnCaptureSomething(wxCommandEvent &  event)
 void ScreenFrame::TimeZoom(double seconds)
 {
    auto &viewInfo = ViewInfo::Get( mContext.project );
+   auto &window = ProjectWindow::Get( mContext.project );
    int width, height;
-   mContext.GetProject()->GetClientSize(&width, &height);
+   window.GetClientSize(&width, &height);
    viewInfo.SetZoom((0.75 * width) / seconds);
-   mContext.GetProject()->RedrawProject();
+   window.RedrawProject();
 }
 
 void ScreenFrame::OnOneSec(wxCommandEvent & WXUNUSED(event))
@@ -720,7 +722,7 @@ void ScreenFrame::SizeTracks(int h)
       for (auto channel : channels)
          channel->SetHeight(height);
    }
-   mContext.GetProject()->RedrawProject();
+   ProjectWindow::Get( mContext.project ).RedrawProject();
 }
 
 void ScreenFrame::OnShortTracks(wxCommandEvent & WXUNUSED(event))
@@ -728,7 +730,7 @@ void ScreenFrame::OnShortTracks(wxCommandEvent & WXUNUSED(event))
    for (auto t : TrackList::Get( mContext.project ).Any<WaveTrack>())
       t->SetHeight(t->GetMinimizedHeight());
 
-   mContext.GetProject()->RedrawProject();
+   ProjectWindow::Get( mContext.project ).RedrawProject();
 }
 
 void ScreenFrame::OnMedTracks(wxCommandEvent & WXUNUSED(event))

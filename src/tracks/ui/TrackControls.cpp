@@ -211,7 +211,7 @@ void TrackMenuTable::OnSetName(wxCommandEvent &)
       SetTrackNameCommand Command;
       Command.mName = oldName;
       // Bug 1837 : We need an OK/Cancel result if we are to enter a blank string.
-      bool bResult = Command.PromptUser( proj );
+      bool bResult = Command.PromptUser( &ProjectWindow::Get( *proj ) );
       if (bResult) 
       {
          wxString newName = Command.mName;

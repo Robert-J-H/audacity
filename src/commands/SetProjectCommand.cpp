@@ -67,13 +67,13 @@ void SetProjectCommand::PopulateOrExchange(ShuttleGui & S)
 
 bool SetProjectCommand::Apply(const CommandContext & context)
 {
-   AudacityProject * pProj = context.GetProject();
+   auto * pProj = &ProjectWindow::Get( context.project );
    if( bHasName )
       pProj->SetLabel(mName);
 
    if( bHasRate && mRate >= 1 && mRate <= 1000000 )
    {
-      auto *bar = pProj->GetSelectionBar();
+      auto *bar = context.project.GetSelectionBar();
       if( bar ){
          bar->SetRate( mRate );
       }

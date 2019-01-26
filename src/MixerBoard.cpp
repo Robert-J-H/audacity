@@ -755,9 +755,7 @@ void MixerTrackCluster::OnButton_Mute(wxCommandEvent& WXUNUSED(event))
 
    // Update the TrackPanel correspondingly.
    if (mProject->IsSoloSimple())
-   {
-      mProject->RedrawProject();
-   }
+      ProjectWindow::Get( *mProject ).RedrawProject();
    else
       // Update only the changed track.
       mProject->RefreshTPTrack(mTrack.get());
@@ -772,7 +770,7 @@ void MixerTrackCluster::OnButton_Solo(wxCommandEvent& WXUNUSED(event))
 
    // Update the TrackPanel correspondingly.
    // Bug 509: Must repaint all, as many tracks can change with one Solo change.
-   mProject->RedrawProject();
+   ProjectWindow::Get( *mProject ).RedrawProject();
 }
 
 
@@ -914,7 +912,7 @@ MixerBoard::MixerBoard(AudacityProject* pProject,
    mTracks = &TrackList::Get( *mProject );
 
    // Events from the project don't propagate directly to this other frame, so...
-   mProject->Bind(EVT_TRACK_PANEL_TIMER,
+   ProjectWindow::Get( *mProject ).Bind(EVT_TRACK_PANEL_TIMER,
       &MixerBoard::OnTimer,
       this);
 
@@ -1401,7 +1399,7 @@ const wxSize kDefaultSize =
    wxSize(MIXER_BOARD_MIN_WIDTH, MIXER_BOARD_MIN_HEIGHT);
 
 MixerBoardFrame::MixerBoardFrame(AudacityProject* parent)
-: wxFrame(parent, -1,
+: wxFrame( &ProjectWindow::Get( *parent ), -1,
           wxString::Format(_("Audacity Mixer Board%s"),
                            ((parent->GetName().empty()) ?
                               wxT("") :

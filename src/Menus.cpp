@@ -302,7 +302,7 @@ void MenuCreator::CreateMenusAndCommands(AudacityProject &project)
 
    VisitItem( project, menuTree.get() );
 
-   project.SetMenuBar(menubar.release());
+   ProjectWindow::Get( project ).SetMenuBar(menubar.release());
 
    mLastFlags = AlwaysEnabledFlag;
 
@@ -361,8 +361,9 @@ void MenuCreator::RebuildMenuBar(AudacityProject &project)
    // Delete the menus, since we will soon recreate them.
    // Rather oddly, the menus don't vanish as a result of doing this.
    {
-      std::unique_ptr<wxMenuBar> menuBar{ project.GetMenuBar() };
-      project.DetachMenuBar();
+      auto &window = ProjectWindow::Get( project );
+      std::unique_ptr<wxMenuBar> menuBar{ window.GetMenuBar() }; // DestroyPtr ?
+      window.DetachMenuBar();
       // menuBar gets deleted here
    }
 
@@ -411,7 +412,8 @@ CommandFlag MenuManager::GetUpdateFlags
    static auto lastFlags = flags;
 
    // if (auto focus = wxWindow::FindFocus()) {
-   if (wxWindow * focus = &project) {
+   auto &window = ProjectWindow::Get( project );
+   if (wxWindow * focus = &window) {
       while (focus && focus->GetParent())
          focus = focus->GetParent();
       if (focus && !static_cast<wxTopLevelWindow*>(focus)->IsIconized())
@@ -430,7 +432,7 @@ CommandFlag MenuManager::GetUpdateFlags
       flags |= NotPausedFlag;
 
    // quick 'short-circuit' return.
-   if ( checkActive && !project.IsActive() ){
+   if ( checkActive && !window.IsActive() ){
       const auto checkedFlags = 
          NotMinimizedFlag | AudioIONotBusyFlag | AudioIOBusyFlag |
          PausedFlag | NotPausedFlag;
@@ -558,7 +560,7 @@ CommandFlag MenuManager::GetUpdateFlags
    if (!EffectManager::Get().RealtimeIsActive())
       flags |= IsRealtimeNotActiveFlag;
 
-      if (!project.IsCapturing())
+      if (!window.IsCapturing())
       flags |= CaptureNotBusyFlag;
 
    ControlToolBar *bar = project.GetControlToolBar();

@@ -167,6 +167,7 @@ using AttachedWindows = ClientData::Site<
    AudacityProject, wxWindow, ClientData::SkipCopying, wxWeakRef
 >;
 
+using ProjectWindow = AudacityProject;
 class AUDACITY_DLL_API AudacityProject final : public wxFrame,
                                      public TrackPanelListener,
                                      public SelectionBarListener,
@@ -178,6 +179,12 @@ class AUDACITY_DLL_API AudacityProject final : public wxFrame,
    , public AttachedWindows
 {
  public:
+   static ProjectWindow &Get( AudacityProject &project ) { return project; }
+   static const ProjectWindow &Get( const AudacityProject &project ) { return project; }
+   static ProjectWindow *Find( AudacityProject *pProject ) { return pProject; }
+   static const ProjectWindow *Find( const AudacityProject *pProject ) { return pProject; }
+   AudacityProject &GetProject() { return *this; }
+ 
    using AttachedObjects = ::AttachedObjects;
    using AttachedWindows = ::AttachedWindows;
 

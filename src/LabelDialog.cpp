@@ -741,7 +741,7 @@ void LabelDialog::OnSelectCell(wxGridEvent &event)
       RowData &rd = mData[event.GetRow()];
       mViewInfo->selectedRegion = rd.selectedRegion;
 
-      GetActiveProject()->RedrawProject();
+      ProjectWindow::Get( *GetActiveProject() ).RedrawProject();
    }
 
    event.Skip();

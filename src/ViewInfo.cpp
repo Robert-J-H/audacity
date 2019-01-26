@@ -147,7 +147,7 @@ static const AudacityProject::AttachedObjects::RegisteredFactory key{
    []( AudacityProject &project ) {
       auto result =
          std::make_unique<ViewInfo>(0.0, 1.0, ZoomInfo::GetDefaultZoom());
-      project.Bind(EVT_TRACK_PANEL_TIMER,
+      ProjectWindow::Get( project ).Bind(EVT_TRACK_PANEL_TIMER,
          &ViewInfo::OnTimer,
          result.get());
       return std::move( result );

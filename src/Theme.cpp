@@ -254,7 +254,7 @@ void Theme::ApplyUpdatedImages()
 
    for (size_t i = 0; i < gAudacityProjects.size(); i++) {
       AudacityProject *p = gAudacityProjects[i].get();
-      p->ApplyUpdatedTheme();
+      ProjectWindow::Get( *p ).ApplyUpdatedTheme();
       for( int ii = 0; ii < ToolBarCount; ++ii )
       {
          ToolBar *pToolBar = ToolManager::Get( *p ).GetToolBar(ii);

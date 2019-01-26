@@ -44,8 +44,8 @@ END_EVENT_TABLE()
 
 const wxSize gSize = wxSize(LYRICS_DEFAULT_WIDTH, LYRICS_DEFAULT_HEIGHT);
 
-LyricsWindow::LyricsWindow(AudacityProject *parent):
-   wxFrame(parent, -1,
+LyricsWindow::LyricsWindow(AudacityProject *parent)
+   : wxFrame( &ProjectWindow::Get( *parent ), -1,
             wxString::Format(_("Audacity Karaoke%s"),
                               ((parent->GetName().empty()) ?
                                  wxT("") :
@@ -129,7 +129,7 @@ LyricsWindow::LyricsWindow(AudacityProject *parent):
    //}
 
    // Events from the project don't propagate directly to this other frame, so...
-   mProject->Bind(EVT_TRACK_PANEL_TIMER,
+   GetParent()->Bind(EVT_TRACK_PANEL_TIMER,
       &LyricsWindow::OnTimer,
       this);
    Center();

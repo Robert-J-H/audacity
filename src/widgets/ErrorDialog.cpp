@@ -65,15 +65,17 @@ AliasedFileMissingDialog::AliasedFileMissingDialog(AudacityProject *parent,
       const wxString & dlogTitle,
       const wxString & message,
       const wxString & helpURL,
-      const bool Close, const bool modal):
-ErrorDialog(parent, dlogTitle, message, helpURL, Close, modal)
+      const bool Close, const bool modal)
+: ErrorDialog( ProjectWindow::Find( parent ),
+   dlogTitle, message, helpURL, Close, modal)
 {
    parent->SetMissingAliasFileDialog(this);
 }
 
 AliasedFileMissingDialog::~AliasedFileMissingDialog()
 {
-   ((AudacityProject*)GetParent())->SetMissingAliasFileDialog(NULL);
+   static_cast<ProjectWindow*>( GetParent() )->
+      GetProject().SetMissingAliasFileDialog(NULL);
 }
 
 ErrorDialog::ErrorDialog(
@@ -217,7 +219,7 @@ void ShowAliasMissingDialog(AudacityProject *parent,
    wxPoint point;
    point.x = 0;
 
-   point.y = parent ? parent->GetPosition().y - 200 : 100;
+   point.y = parent ? ProjectWindow::Get( *parent ).GetPosition().y - 200 : 100;
 
    if (point.y < 100)
       point.y = 100;

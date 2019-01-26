@@ -59,7 +59,7 @@ void ScriptCommandRelay::PostCommand(AudacityProject *project, const OldStyleCom
    wxASSERT(cmd != NULL);
    AppCommandEvent ev;
    ev.SetCommand(cmd);
-   project->GetEventHandler()->AddPendingEvent(ev);
+   ProjectWindow::Get( *project ).GetEventHandler()->AddPendingEvent(ev);
 }
 
 /// This is the function which actually obeys one command.  Rather than applying

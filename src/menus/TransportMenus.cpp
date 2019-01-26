@@ -79,6 +79,7 @@ enum {
 void DoPlayStop(const CommandContext &context)
 {
    auto &project = context.project;
+   auto &window = ProjectWindow::Get( project );
    auto toolbar = project.GetControlToolBar();
    auto token = project.GetAudioIOToken();
 
@@ -112,7 +113,7 @@ void DoPlayStop(const CommandContext &context)
       //play the front project
       if (!gAudioIO->IsBusy()) {
          //update the playing area
-         project.TP_DisplaySelection();
+         window.TP_DisplaySelection();
          //Otherwise, start playing (assuming audio I/O isn't busy)
          //toolbar->SetPlay(true); // Not needed as done in PlayPlayRegion.
          toolbar->SetStop(false);
@@ -135,6 +136,7 @@ void DoMoveToLabel(AudacityProject &project, bool next)
 {
    auto &tracks = TrackList::Get( project );
    auto &trackPanel = TrackPanel::Get( project );
+   auto &window = ProjectWindow::Get( project );
 
    // Find the number of label tracks, and ptr to last track found
    auto trackRange = tracks.Any<LabelTrack>();
@@ -168,13 +170,13 @@ void DoMoveToLabel(AudacityProject &project, bool next)
          if (project.IsAudioActive()) {
             DoPlayStop(project);     // stop
             selectedRegion = label->selectedRegion;
-            project.RedrawProject();
+            window.RedrawProject();
             DoPlayStop(project);     // play
          }
          else {
             selectedRegion = label->selectedRegion;
             trackPanel.ScrollIntoView(selectedRegion.t0());
-            project.RedrawProject();
+            window.RedrawProject();
          }
 
          wxString message;
@@ -393,6 +395,7 @@ void OnTimerRecord(const CommandContext &context)
 {
    auto &project = context.project;
    auto &undoManager = UndoManager::Get( project );
+   auto &window = ProjectWindow::Get( project );
 
    // MY: Due to improvements in how Timer Recording saves and/or exports
    // it is now safer to disable Timer Recording when there is more than
@@ -424,7 +427,7 @@ void OnTimerRecord(const CommandContext &context)
    //and therefore remove the newly inserted track.
 
    TimerRecordDialog dialog(
-      &project, bProjectSaved); /* parent, project saved? */
+      &ProjectWindow::Get( project ), bProjectSaved); /* parent, project saved? */
    int modalResult = dialog.ShowModal();
    if (modalResult == wxID_CANCEL)
    {
@@ -436,9 +439,9 @@ void OnTimerRecord(const CommandContext &context)
       bool bPreferNewTrack;
       gPrefs->Read("/GUI/PreferNewTrackRecord",&bPreferNewTrack, false);
       if (bPreferNewTrack) {
-         project.Rewind(false);
+         window.Rewind(false);
       } else {
-         project.SkipEnd(false);
+         window.SkipEnd(false);
       }
 
       int iTimerRecordingOutcome = dialog.RunWaitDialog();
@@ -507,7 +510,7 @@ void OnPunchAndRoll(const CommandContext &context)
          ? _("Please select in a stereo track.")
          : wxString::Format(
             _("Please select at least %d channels."), recordingChannels);
-      ShowErrorDialog(&project, _("Error"), message, url);
+      ShowErrorDialog(&ProjectWindow::Get( project ), _("Error"), message, url);
       return;
    }
 
@@ -549,7 +552,7 @@ void OnPunchAndRoll(const CommandContext &context)
 
    if (error) {
       auto message = _("Please select a time within a clip.");
-      ShowErrorDialog(&project, _("Error"), message, url);
+      ShowErrorDialog( &ProjectWindow::Get( project ), _("Error"), message, url);
       return;
    }
 
@@ -628,7 +631,7 @@ void OnSoundActivated(const CommandContext &context)
 {
    AudacityProject &project = context.project;
 
-   SoundActivatedRecord dialog(&project /* parent */ );
+   SoundActivatedRecord dialog( &ProjectWindow::Get( project ) /* parent */ );
    dialog.ShowModal();
 }
 

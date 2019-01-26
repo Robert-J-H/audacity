@@ -245,6 +245,7 @@ void MoveWhenAudioInactive
    auto &trackPanel = TrackPanel::Get( project );
    auto &tracks = TrackList::Get( project );
    auto &ruler = AdornedRulerPanel::Get( project );
+   auto &window = ProjectWindow::Get( project );
 
    // If TIME_UNIT_SECONDS, snap-to will be off.
    int snapToTime = project.GetSnapTo();
@@ -274,7 +275,7 @@ void MoveWhenAudioInactive
 
       // This updates the selection shown on the selection bar, and the play
       // region
-      project.TP_DisplaySelection();
+      window.TP_DisplaySelection();
    } else
    {
       // Transition to cursor mode.
@@ -466,6 +467,7 @@ void DoListSelection
    auto &trackPanel = TrackPanel::Get( project );
    auto &selectionState = SelectionState::Get( project );
    auto &viewInfo = ViewInfo::Get( project );
+   auto &window = ProjectWindow::Get( project );
    auto isSyncLocked = project.IsSyncLocked();
 
    selectionState.HandleListSelection
@@ -474,7 +476,7 @@ void DoListSelection
 
    if (! ctrl )
       trackPanel.SetFocusedTrack(t);
-   project.Refresh(false);
+   window.Refresh(false);
    if (modifyState)
       project.ModifyState(true);
 }
@@ -558,6 +560,7 @@ void OnSetLeftSelection(const CommandContext &context)
    auto token = project.GetAudioIOToken();
    auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
    auto &trackPanel = TrackPanel::Get( project );
+   auto &window = ProjectWindow::Get( project );
 
    bool bSelChanged = false;
    if ((token > 0) && gAudioIO->IsStreamActive(token))
@@ -571,7 +574,7 @@ void OnSetLeftSelection(const CommandContext &context)
       auto fmt = project.GetSelectionFormat();
       auto rate = project.GetRate();
 
-      TimeDialog dlg(&project, _("Set Left Selection Boundary"),
+      TimeDialog dlg(&window, _("Set Left Selection Boundary"),
          fmt, rate, selectedRegion.t0(), _("Position"));
 
       if (wxID_OK == dlg.ShowModal())
@@ -596,6 +599,7 @@ void OnSetRightSelection(const CommandContext &context)
    auto token = project.GetAudioIOToken();
    auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
    auto &trackPanel = TrackPanel::Get( project );
+   auto &window = ProjectWindow::Get( project );
 
    bool bSelChanged = false;
    if ((token > 0) && gAudioIO->IsStreamActive(token))
@@ -609,7 +613,7 @@ void OnSetRightSelection(const CommandContext &context)
       auto fmt = project.GetSelectionFormat();
       auto rate = project.GetRate();
 
-      TimeDialog dlg(&project, _("Set Right Selection Boundary"),
+      TimeDialog dlg(&window, _("Set Right Selection Boundary"),
          fmt, rate, selectedRegion.t1(), _("Position"));
 
       if (wxID_OK == dlg.ShowModal())
@@ -849,14 +853,16 @@ void OnSnapToPrior(const CommandContext &context)
 void OnSelToStart(const CommandContext &context)
 {
    auto &project = context.project;
-   project.Rewind(true);
+   auto &window = ProjectWindow::Get( project );
+   window.Rewind(true);
    project.ModifyState(false);
 }
 
 void OnSelToEnd(const CommandContext &context)
 {
    auto &project = context.project;
-   project.SkipEnd(true);
+   auto &window = ProjectWindow::Get( project );
+   window.SkipEnd(true);
    project.ModifyState(false);
 }
 

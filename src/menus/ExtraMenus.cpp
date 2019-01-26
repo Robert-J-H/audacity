@@ -122,10 +122,11 @@ void OnAudioHost(const CommandContext &context)
 void OnFullScreen(const CommandContext &context)
 {
    auto &project = context.project;
+   auto &window = ProjectWindow::Get( project );
    auto &commandManager = CommandManager::Get( project );
 
-   bool bChecked = !project.wxTopLevelWindow::IsFullScreen();
-   project.wxTopLevelWindow::ShowFullScreen(bChecked);
+   bool bChecked = !window.wxTopLevelWindow::IsFullScreen();
+   window.wxTopLevelWindow::ShowFullScreen(bChecked);
    commandManager.Check(wxT("FullScreenOnOff"), bChecked);
 }
 
@@ -255,8 +256,8 @@ MenuTable::BaseItemPtr ExtraMiscItems( AudacityProject &project )
       Command( wxT("FullScreenOnOff"), XXO("&Full Screen (on/off)"),
          FN(OnFullScreen),
          AlwaysEnabledFlag,
-         Options{ key }
-            .CheckState( project.wxTopLevelWindow::IsFullScreen() ) ),
+         Options{ key }.CheckState(
+            ProjectWindow::Get( project ).wxTopLevelWindow::IsFullScreen() ) ),
 
       ExtraWindowItems
    );
