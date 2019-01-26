@@ -483,11 +483,11 @@ void TranscriptionToolBar::PlayAtSpeed(bool looped, bool cutPreview)
    }
 
    // Get the current play region
-   double playRegionStart, playRegionEnd;
-   p->GetPlayRegion(&playRegionStart, &playRegionEnd);
+   const auto &viewInfo = p->GetViewInfo();
+   const auto &playRegion = viewInfo.playRegion;
 
    // Start playing
-   if (playRegionStart < 0)
+   if (playRegion.GetStart() < 0)
       return;
    if (bFixedSpeedPlay)
    {
@@ -501,8 +501,8 @@ void TranscriptionToolBar::PlayAtSpeed(bool looped, bool cutPreview)
          cutPreview ? ControlToolBar::PlayAppearance::CutPreview
          : looped ? ControlToolBar::PlayAppearance::Looped
          : ControlToolBar::PlayAppearance::Straight;
-      p->GetControlToolBar()->PlayPlayRegion
-         (SelectedRegion(playRegionStart, playRegionEnd),
+      p->GetControlToolBar()->PlayPlayRegion(
+         SelectedRegion(playRegion.GetStart(), playRegion.GetEnd()),
             options,
             PlayMode::normalPlay,
             appearance);
@@ -510,7 +510,8 @@ void TranscriptionToolBar::PlayAtSpeed(bool looped, bool cutPreview)
    else
    {
       Scrubber &Scrubber = p->GetScrubber();
-      Scrubber.StartSpeedPlay(GetPlaySpeed(), playRegionStart, playRegionEnd);
+      Scrubber.StartSpeedPlay(GetPlaySpeed(),
+         playRegion.GetStart(), playRegion.GetEnd());
    }
 }
 

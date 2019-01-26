@@ -290,14 +290,14 @@ void DoLockPlayRegion( AudacityProject &project )
    auto tracks = project.GetTracks();
    auto ruler = project.GetRulerPanel();
 
-   double start, end;
-   project.GetPlayRegion(&start, &end);
-   if (start >= tracks->GetEndTime()) {
+   auto &viewInfo = project.GetViewInfo();
+   auto &playRegion = viewInfo.playRegion;
+   if (playRegion.GetStart() >= tracks->GetEndTime()) {
        AudacityMessageBox(_("Cannot lock region beyond\nend of project."),
                     _("Error"));
    }
    else {
-      project.SetPlayRegionLocked( true );
+      playRegion.SetLocked( true );
       ruler->Refresh(false);
    }
 }
@@ -306,7 +306,9 @@ void DoUnlockPlayRegion( AudacityProject &project )
 {
    auto ruler = project.GetRulerPanel();
 
-   project.SetPlayRegionLocked( false );
+   auto &viewInfo = project.GetViewInfo();
+   auto &playRegion = viewInfo.playRegion;
+   playRegion.SetLocked( false );
    ruler->Refresh(false);
 }
 

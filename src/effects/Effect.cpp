@@ -3487,15 +3487,16 @@ void EffectUIHost::OnPlay(wxCommandEvent & WXUNUSED(evt))
    }
    else
    {
-      if (mProject->IsPlayRegionLocked())
+      auto &viewInfo = mProject->GetViewInfo();
+      const auto &playRegion = viewInfo.playRegion;
+      const auto &selectedRegion = viewInfo.selectedRegion;
+      if ( playRegion.Locked() )
       {
-         double t0, t1;
-         mProject->GetPlayRegion(&t0, &t1);
-         mRegion.setTimes(t0, t1);
+         mRegion.setTimes(playRegion.GetStart(), playRegion.GetEnd());
          mPlayPos = mRegion.t0();
       }
-      else if (mProject->mViewInfo.selectedRegion.t0() != mRegion.t0() ||
-               mProject->mViewInfo.selectedRegion.t1() != mRegion.t1())
+      else if (selectedRegion.t0() != mRegion.t0() ||
+               selectedRegion.t1() != mRegion.t1())
       {
          mRegion = mProject->mViewInfo.selectedRegion;
          mPlayPos = mRegion.t0();

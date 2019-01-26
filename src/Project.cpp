@@ -992,8 +992,6 @@ AudacityProject::AudacityProject(wxWindow * parent, wxWindowID id,
 
    UpdatePrefs();
 
-   mLockPlayRegion = false;
-
    // Make sure valgrind sees mIsSyncLocked is initialized, even
    // though we're about to set it from prefs.
    mIsSyncLocked = false;
@@ -4908,10 +4906,11 @@ void AudacityProject::TP_DisplaySelection()
 {
    double audioTime;
 
+   auto &playRegion = mViewInfo.playRegion;
+   const auto &selectedRegion = mViewInfo.selectedRegion;
    if (mRuler) {
-      if (!gAudioIO->IsBusy() && !mLockPlayRegion)
-         mRuler->SetPlayRegion(mViewInfo.selectedRegion.t0(),
-         mViewInfo.selectedRegion.t1());
+      if (!gAudioIO->IsBusy() && !playRegion.Locked())
+         playRegion.SetTimes(selectedRegion.t0(), selectedRegion.t1());
       else
          // Cause ruler redraw anyway, because we may be zooming or scrolling
          mRuler->Refresh();
@@ -4919,16 +4918,14 @@ void AudacityProject::TP_DisplaySelection()
 
    if (gAudioIO->IsBusy())
       audioTime = gAudioIO->GetStreamTime();
-   else {
-      double playEnd;
-      GetPlayRegion(&audioTime, &playEnd);
-   }
+   else
+      audioTime = playRegion.GetStart();
 
-   GetSelectionBar()->SetTimes(mViewInfo.selectedRegion.t0(),
-                               mViewInfo.selectedRegion.t1(), audioTime);
+   GetSelectionBar()->SetTimes(selectedRegion.t0(),
+                               selectedRegion.t1(), audioTime);
 #ifdef EXPERIMENTAL_SPECTRAL_EDITING
    GetSpectralSelectionBar()->SetFrequencies
-      (mViewInfo.selectedRegion.f0(), mViewInfo.selectedRegion.f1());
+      (selectedRegion.f0(), selectedRegion.f1());
 #endif
 
 }
@@ -4970,15 +4967,6 @@ void AudacityProject::TP_RedrawScrollbars()
 void AudacityProject::TP_HandleResize()
 {
    HandleResize();
-}
-
-void AudacityProject::GetPlayRegion(double* playRegionStart,
-                                    double *playRegionEnd)
-{
-   if (mRuler)
-      mRuler->GetPlayRegion(playRegionStart, playRegionEnd);
-   else
-      *playRegionEnd = *playRegionStart = 0;
 }
 
 void AudacityProject::AutoSave()
