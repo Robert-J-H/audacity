@@ -1582,7 +1582,7 @@ void LabelTrackView::ShowContextMenu()
 
    // Bug 2044.  parent can be nullptr after a context switch.
    if( !parent )
-      parent = GetActiveProject();
+      parent = &ProjectWindow::Get( *GetActiveProject() );
    
    if( parent )
    {
@@ -1963,8 +1963,9 @@ void LabelTrackView::DoEditLabels
    auto &trackFactory = TrackFactory::Get( project );
    auto rate = project.GetRate();
    auto &viewInfo = ViewInfo::Get( project );
+   auto &window = ProjectWindow::Get( project );
 
-   LabelDialog dlg(&project, trackFactory, &tracks,
+   LabelDialog dlg(&window, trackFactory, &tracks,
                    lt, index,
                    viewInfo, rate,
                    format, freqFormat);
@@ -1975,7 +1976,7 @@ void LabelTrackView::DoEditLabels
 
    if (dlg.ShowModal() == wxID_OK) {
       project.PushState(_("Edited labels"), _("Label"));
-      project.RedrawProject();
+      window.RedrawProject();
    }
 }
 
@@ -1985,6 +1986,7 @@ int LabelTrackView::DialogForLabelName(
 {
    auto &trackPanel = TrackPanel::Get( project );
    auto &viewInfo = ViewInfo::Get( project );
+   auto &window = ProjectWindow::Get( project );
 
    wxPoint position = trackPanel.FindTrackRect(trackPanel.GetFocusedTrack()).GetBottomLeft();
    // The start of the text in the text box will be roughly in line with the label's position
@@ -1994,7 +1996,7 @@ int LabelTrackView::DialogForLabelName(
       -40;
    position.y += 2;  // just below the bottom of the track
    position = trackPanel.ClientToScreen(position);
-   AudacityTextEntryDialog dialog{ &project,
+   AudacityTextEntryDialog dialog{ &window,
       _("Name:"),
       _("New label"),
       initialValue,
@@ -2003,7 +2005,7 @@ int LabelTrackView::DialogForLabelName(
 
    // keep the dialog within Audacity's window, so that the dialog is always fully visible
    wxRect dialogScreenRect = dialog.GetScreenRect();
-   wxRect projScreenRect = project.GetScreenRect();
+   wxRect projScreenRect = window.GetScreenRect();
    wxPoint max = projScreenRect.GetBottomRight() + wxPoint{ -dialogScreenRect.width, -dialogScreenRect.height };
    if (dialogScreenRect.x > max.x) {
       position.x = max.x;

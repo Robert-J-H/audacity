@@ -168,7 +168,7 @@ ToolFrame::~ToolFrame()
 
 ProjectWindow *ToolFrame::GetParent() const
 {
-   return mParent;
+   return &ProjectWindow::Get( *mParent );
 }
 
 void ToolFrame::OnGrabber( GrabberEvent & event )
