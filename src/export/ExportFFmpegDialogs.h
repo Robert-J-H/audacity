@@ -24,6 +24,7 @@ LRN
 #include "../widgets/wxPanelWrapper.h"
 
 #include <unordered_map>
+#include "audacity/Types.h"
 
 class wxArrayStringEx;
 

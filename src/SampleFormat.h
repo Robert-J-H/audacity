@@ -23,7 +23,7 @@
 //
 
 #if 0
-// Moved to audacity/types.h
+#include "audacity/Types.h"
 typedef enum {
    int16Sample = 0x00020001,
    int24Sample = 0x00040001,
