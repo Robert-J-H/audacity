@@ -1920,10 +1920,10 @@ void PluginManager::Load()
       registry.SetPath(cfgPath);
       for (bool cont = registry.GetFirstGroup(groupName, groupIndex);
          cont;
-         registry.SetPath(cfgPath),
          cont = registry.GetNextGroup(groupName, groupIndex))
       {
-         registry.SetPath(groupName);
+         wxConfigPathChanger changer{ &registry,
+            groupName + wxCONFIG_PATH_SEPARATOR };
          wxString effectSymbol = registry.Read(KEY_SYMBOL, "");
          wxString effectVersion = registry.Read(KEY_VERSION, "");
 
@@ -2016,22 +2016,18 @@ void PluginManager::LoadGroup(wxFileConfig *pRegistry, PluginType type)
    pRegistry->SetPath(cfgPath);
    for (bool cont = pRegistry->GetFirstGroup(groupName, groupIndex);
         cont;
-        pRegistry->SetPath(cfgPath),
         cont = pRegistry->GetNextGroup(groupName, groupIndex))
    {
       PluginDescriptor plug;
 
-      pRegistry->SetPath(groupName);
+      wxConfigPathChanger changer{ pRegistry,
+         groupName + wxCONFIG_PATH_SEPARATOR };
 
       groupName = ConvertID(groupName);
 
       // Bypass group if the ID is already in use
       if (mPlugins.find(groupName) != mPlugins.end())
-      {
-         pRegistry->SetPath(wxT(".."));
-
          continue;
-      }
 
       // Set the ID and type
       plug.SetID(groupName);
@@ -2781,10 +2777,8 @@ bool PluginManager::HasGroup(const RegistryPath & group)
    if (res)
    {
       // The group exists, but empty groups aren't considered valid
-      wxString oldPath = settings->GetPath();
-      settings->SetPath(group);
+      wxConfigPathChanger changer{ settings, group + wxCONFIG_PATH_SEPARATOR };
       res = settings->GetNumberOfEntries() || settings->GetNumberOfGroups();
-      settings->SetPath(oldPath);
    }
 
    return res;
@@ -2797,8 +2791,8 @@ bool PluginManager::GetSubgroups(const RegistryPath & group, RegistryPaths & sub
       return false;
    }
 
-   wxString path = GetSettings()->GetPath();
-   GetSettings()->SetPath(group);
+   wxConfigPathChanger changer{ GetSettings(),
+      group + wxCONFIG_PATH_SEPARATOR };
 
    wxString name;
    long index = 0;
@@ -2809,8 +2803,6 @@ bool PluginManager::GetSubgroups(const RegistryPath & group, RegistryPaths & sub
          subgroups.push_back(name);
       } while (GetSettings()->GetNextGroup(name, index));
    }
-
-   GetSettings()->SetPath(path);
 
    return true;
 }
