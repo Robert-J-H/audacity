@@ -240,11 +240,10 @@ wxString NyquistEffect::ManualPage()
 
 wxString NyquistEffect::HelpPage()
 {
-   auto paths = NyquistEffect::GetNyquistSearchPath();
    wxString fileName;
 
-   for (size_t i = 0, cnt = paths.size(); i < cnt; i++) {
-      fileName = wxFileName(paths[i] + wxT("/") + mHelpFile).GetFullPath();
+   for (const auto &path : NyquistEffect::GetNyquistSearchPath()) {
+      fileName = wxFileNameWrapper{ path, mHelpFile }.GetFullPath();
       if (wxFileExists(fileName)) {
          mHelpFileExists = true;
          return fileName;

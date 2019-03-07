@@ -1491,12 +1491,12 @@ void PluginManager::FindFilesInPathList(const wxString & pattern,
 
    // Add the "per-user" plug-ins directory
    {
-      const wxFileName &ff = FileNames::PlugInDir();
+      const wxFileNameWrapper ff{ FileNames::PlugInDir() };
       paths.push_back(ff.GetFullPath());
    }
  
    // Add the "Audacity" plug-ins directory
-   wxFileName ff = PlatformCompatibility::GetExecutablePath();
+   wxFileNameWrapper ff{ PlatformCompatibility::GetExecutablePath() };
 #if defined(__WXMAC__)
    // Path ends for example in "Audacity.app/Contents/MacOSX"
    //ff.RemoveLastDir();
@@ -1807,8 +1807,7 @@ bool PluginManager::DropFile(const wxString &fileName)
             // actions should not be tried.
 
             // Find path to copy it
-            wxFileName dst;
-            dst.AssignDir( ff );
+            wxFileNameWrapper dst{ ff + wxFILE_SEP_PATH };
             dst.SetFullName( src.GetFullName() );
             if ( dst.Exists() ) {
                // Query whether to overwrite
@@ -1981,7 +1980,7 @@ void PluginManager::LoadGroup(wxFileConfig *pRegistry, PluginType type)
    const auto fullExePath = PlatformCompatibility::GetExecutablePath();
 
    // Strip rightmost path components up to *.app
-   wxFileName exeFn{ fullExePath };
+   wxFileNameWrapper exeFn{ fullExePath };
    exeFn.SetEmptyExt();
    exeFn.SetName(wxString{});
    while(exeFn.GetDirCount() && !exeFn.GetDirs().back().EndsWith(".app"))

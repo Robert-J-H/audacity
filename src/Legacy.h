@@ -10,6 +10,6 @@
 
 #include <wx/defs.h>
 
-class wxFileName;
+class wxFileNameWrapper;
 
-bool ConvertLegacyProjectFile(const wxFileName &filename);
+bool ConvertLegacyProjectFile(const wxFileNameWrapper &filename);

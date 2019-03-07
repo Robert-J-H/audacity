@@ -144,7 +144,7 @@ private:
    void doDurationAndScrollOffset();
 
    std::unique_ptr<wxTextFile> mTextFile;
-   wxFileName mLOFFileName;  /**< The name of the LOF file, which is used to
+   wxFileNameWrapper mLOFFileName;  /**< The name of the LOF file, which is used to
                                 interpret relative paths in it */
    AudacityProject *mProject{ GetActiveProject() };
 

@@ -16,6 +16,7 @@
 #include "Nyquist.h"
 
 #include "../../FileNames.h"
+#include "../../wxFileNameWrapper.h"
 
 // ============================================================================
 // List of effects that ship with Audacity.  These will be autoregistered.
@@ -131,9 +132,9 @@ bool NyquistEffectsModule::Initialize()
 {
    const auto &audacityPathList = wxGetApp().audacityPathList;
 
-   for (size_t i = 0, cnt = audacityPathList.size(); i < cnt; i++)
+   for (const auto &path : audacityPathList)
    {
-      wxFileName name(audacityPathList[i], wxT(""));
+      wxFileNameWrapper name{ path, wxT("") };
       name.AppendDir(wxT("nyquist"));
       name.SetFullName(wxT("nyquist.lsp"));
       if (name.FileExists())

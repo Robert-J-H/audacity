@@ -596,10 +596,9 @@ DirManager::ProjectSetter::Impl::Impl(
 
    dirManager.projPath = newProjPath;
    dirManager.projName = newProjName;
-   if (newProjPath.Last() == wxFILE_SEP_PATH)
-      dirManager.projFull = newProjPath + newProjName;
-   else
-      dirManager.projFull = newProjPath + wxFILE_SEP_PATH + newProjName;
+   auto projFull =
+      wxFileNameWrapper{ newProjPath, newProjName }.GetFullPath();
+   dirManager.projFull = projFull;
 
    // Verify new paths, maybe creating a directory
    if (bCreate) {
@@ -733,7 +732,7 @@ void DirManager::ProjectSetter::Impl::Commit()
 
          if (ii < size)
             b->SetFileName(
-               wxFileNameWrapper{ wxFileName{ newPaths[ii] } } );
+               wxFileNameWrapper{ newPaths[ii] } );
       }
 
       ++ii;
@@ -797,7 +796,7 @@ FilePath DirManager::GetProjectName()
 wxLongLong DirManager::GetFreeDiskSpace()
 {
    wxLongLong freeSpace = -1;
-   wxFileName path;
+   wxFileNameWrapper path;
 
    path.SetPath(projPath.empty() ? mytemp : projPath);
 
@@ -827,8 +826,7 @@ void DirManager::SetLocalTempDir(const wxString &path)
 
 wxFileNameWrapper DirManager::MakeBlockFilePath(const wxString &value) {
 
-   wxFileNameWrapper dir;
-   dir.AssignDir(GetDataFilesDir());
+   wxFileNameWrapper dir{ GetDataFilesDir() + wxFILE_SEP_PATH };
 
    if(value.GetChar(0)==wxT('d')){
       // this file is located in a subdirectory tree
@@ -2119,9 +2117,9 @@ void DirManager::FindOrphanBlockFiles(
 {
    DirManager *clipboardDM = NULL;
 
-   for (size_t i = 0; i < filePathArray.size(); i++)
+   for (const auto &path : filePathArray)
    {
-      const wxFileName &fullname = filePathArray[i];
+      const wxFileNameWrapper fullname{ path };
       wxString basename = fullname.GetName();
       const wxString ext{fullname.GetExt()};
       if ((mBlockFileHash.find(basename) == mBlockFileHash.end()) && // is orphan

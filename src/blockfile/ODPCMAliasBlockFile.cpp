@@ -307,7 +307,7 @@ BlockFilePtr ODPCMAliasBlockFile::BuildFromXML(DirManager &dm, const wxChar **at
             aliasFileName.Assign(strValue);
          else if (XMLValueChecker::IsGoodFileName(strValue, dm.GetProjectDataDir()))
             // Allow fallback of looking for the file name, located in the data directory.
-            aliasFileName.Assign(dm.GetProjectDataDir(), strValue);
+            aliasFileName = { dm.GetProjectDataDir(), strValue };
          else if (XMLValueChecker::IsGoodPathString(strValue))
             // If the aliased file is missing, we failed XMLValueChecker::IsGoodPathName()
             // and XMLValueChecker::IsGoodFileName, because both do existence tests,
@@ -414,7 +414,9 @@ void ODPCMAliasBlockFile::WriteSummary()
       wxPrintf("Unable to write summary data to file: %s", fileNameChar.get());
 
       throw FileException{
-         FileException::Cause::Open, wxFileName{ fileNameChar.get() } };
+         FileException::Cause::Open,
+         wxFileNameWrapper{ fileNameChar.get() }
+      };
    }
 
    ArrayOf<char> cleanup;

@@ -38,7 +38,7 @@ public:
 
    // originally an ExportMultiple method. Append suffix if newName appears in otherNames.
    static void MakeNameUnique(
-      FilePaths &otherNames, wxFileName &newName);
+      FilePaths &otherNames, wxFileNameWrapper &newName);
 
    static wxString LowerCaseAppNameInPath( const wxString & dirIn);
    /** \brief Audacity user data directory

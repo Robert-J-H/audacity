@@ -1155,7 +1155,7 @@ void AudacityApp::GenerateCrashReport(wxDebugReport::Context ctx)
    wxDebugReportCompress rpt;
    rpt.AddAll(ctx);
 
-   wxFileName fn(FileNames::DataDir(), wxT("audacity.cfg"));
+   wxFileNameWrapper fn{ FileNames::DataDir(), wxT("audacity.cfg") };
    rpt.AddFile(fn.GetFullPath(), _TS("Audacity Configuration"));
    rpt.AddFile(FileNames::PluginRegistry(), wxT("Plugin Registry"));
    rpt.AddFile(FileNames::PluginSettings(), wxT("Plugin Settings"));
@@ -2107,12 +2107,12 @@ std::unique_ptr<wxCmdLineParser> AudacityApp::ParseCommandLine()
 void AudacityApp::AddUniquePathToPathList(const FilePath &pathArg,
                                           FilePaths &pathList)
 {
-   wxFileName pathNorm = pathArg;
+   wxFileNameWrapper pathNorm { pathArg };
    pathNorm.Normalize();
    const wxString newpath{ pathNorm.GetFullPath() };
 
-   for(unsigned int i=0; i<pathList.size(); i++) {
-      if (wxFileName(newpath) == wxFileName(pathList[i]))
+   for(const auto &path : pathList) {
+      if (pathNorm == wxFileNameWrapper{ path })
          return;
    }
 
@@ -2143,7 +2143,7 @@ void AudacityApp::FindFilesInPathList(const wxString & pattern,
       return;
    }
 
-   wxFileName ff;
+   wxFileNameWrapper ff;
 
    for(size_t i = 0; i < pathList.size(); i++) {
       ff = pathList[i] + wxFILE_SEP_PATH + pattern;

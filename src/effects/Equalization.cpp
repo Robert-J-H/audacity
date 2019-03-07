@@ -1381,7 +1381,7 @@ void EffectEqualization::LoadCurves(const wxString &fileName, bool append)
    //       creates a normal file as "$HOME/.audacity", while the former
    //       expects the ".audacity" portion to be a directory.
    // MJS:  I don't know what the above means, or if I have broken it.
-   wxFileName fn;
+   wxFileNameWrapper fn;
 
    if(fileName.empty()) {
       // Check if presets are up to date.
@@ -1395,7 +1395,7 @@ void EffectEqualization::LoadCurves(const wxString &fileName, bool append)
       // or update all factory preset curves.
       if (needUpdate)
          UpdateDefaultCurves( UPDATE_ALL != 0 );
-      fn = wxFileName( FileNames::DataDir(), wxT("EQCurves.xml") );
+      fn = wxFileNameWrapper{ FileNames::DataDir(), wxT("EQCurves.xml") };
    }
    else
       fn = fileName; // user is loading a specific set of curves
@@ -1476,7 +1476,7 @@ void EffectEqualization::UpdateDefaultCurves(bool updateAll /* false */)
    EQCurveArray userCurves = mCurves;
    mCurves.clear();
    // We only wamt to look for the shipped EQDefaultCurves.xml
-   wxFileName fn = wxFileName(FileNames::ResourcesDir(), wxT("EQDefaultCurves.xml"));
+   wxFileName fn = wxFileNameWrapper{ FileNames::ResourcesDir(), wxT("EQDefaultCurves.xml") };
    wxLogDebug(wxT("Attempting to load EQDefaultCurves.xml from %s"),fn.GetFullPath());
    XMLFileReader reader;
 
@@ -1579,14 +1579,14 @@ void EffectEqualization::UpdateDefaultCurves(bool updateAll /* false */)
 //
 // Get fully qualified filename of EQDefaultCurves.xml
 //
-bool EffectEqualization::GetDefaultFileName(wxFileName &fileName)
+bool EffectEqualization::GetDefaultFileName(wxFileNameWrapper &fileName)
 {
    // look in data dir first, in case the user has their own defaults (maybe downloaded ones)
-   fileName = wxFileName( FileNames::DataDir(), wxT("EQDefaultCurves.xml") );
+   fileName = wxFileNameWrapper{ FileNames::DataDir(), wxT("EQDefaultCurves.xml") };
    if( !fileName.FileExists() )
    {  // Default file not found in the data dir.  Fall back to Resources dir.
       // See http://docs.wxwidgets.org/trunk/classwx_standard_paths.html#5514bf6288ee9f5a0acaf065762ad95d
-      fileName = wxFileName( FileNames::ResourcesDir(), wxT("EQDefaultCurves.xml") );
+      fileName = wxFileNameWrapper{ FileNames::ResourcesDir(), wxT("EQDefaultCurves.xml") };
    }
    if( !fileName.FileExists() )
    {
@@ -1597,7 +1597,7 @@ bool EffectEqualization::GetDefaultFileName(wxFileName &fileName)
       //   errorMessage, wxT("http://wiki.audacityteam.org/wiki/EQCurvesDownload"), false);
 
       // Have another go at finding EQCurves.xml in the data dir, in case 'help' helped
-      fileName = wxFileName( FileNames::DataDir(), wxT("EQDefaultCurves.xml") );
+      fileName = wxFileNameWrapper{ FileNames::DataDir(), wxT("EQDefaultCurves.xml") };
    }
    return (fileName.FileExists());
 }
@@ -1608,7 +1608,7 @@ bool EffectEqualization::GetDefaultFileName(wxFileName &fileName)
 //
 void EffectEqualization::SaveCurves(const wxString &fileName)
 {
-   wxFileName fn;
+   wxFileNameWrapper fn;
    if( fileName.empty() )
    {
       // Construct default curve filename
@@ -1617,7 +1617,7 @@ void EffectEqualization::SaveCurves(const wxString &fileName)
       //       between wxStandardPaths and wxConfig under Linux.  The latter
       //       creates a normal file as "$HOME/.audacity", while the former
       //       expects the ".audacity" portion to be a directory.
-      fn = wxFileName( FileNames::DataDir(), wxT("EQCurves.xml") );
+      fn = wxFileNameWrapper{ FileNames::DataDir(), wxT("EQCurves.xml") };
 
       // If the directory doesn't exist...
       if( !fn.DirExists() )
@@ -3614,7 +3614,8 @@ void EditCurvesDialog::OnDefaults( wxCommandEvent & WXUNUSED(event))
 void EditCurvesDialog::OnOK(wxCommandEvent & WXUNUSED(event))
 {
    // Make a backup of the current curves
-   wxString backupPlace = wxFileName( FileNames::DataDir(), wxT("EQBackup.xml") ).GetFullPath();
+   wxString backupPlace = wxFileNameWrapper{ FileNames::DataDir(), wxT("EQBackup.xml") }
+      .GetFullPath();
    mEffect->SaveCurves(backupPlace);
    // Load back into the main dialog
    mEffect->mCurves.clear();

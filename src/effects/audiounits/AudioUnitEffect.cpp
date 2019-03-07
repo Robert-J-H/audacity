@@ -39,6 +39,7 @@
 #include <wx/tokenzr.h>
 
 #include "../../ShuttleGui.h"
+#include "../../wxFileNameWrapper.h"
 #include "../../widgets/valnum.h"
 #include "../../widgets/wxPanelWrapper.h"
 
@@ -697,7 +698,7 @@ void AudioUnitEffectImportDialog::PopulateOrExchange(ShuttleGui & S)
                PRESET_LOCAL_PATH,
                mEffect->mVendor,
                mEffect->mName);
-   wxFileName fn(path);
+   wxFileNameWrapper fn{ path };
    fn.Normalize();
    
    // Get all presets in the local domain for this effect

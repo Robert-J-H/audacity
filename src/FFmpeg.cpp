@@ -29,6 +29,8 @@ License: GPL v2.  See License.txt.
 #include <wx/file.h>
 #include <wx/filedlg.h>
 
+#include "wxFileNameWrapper.h"
+
 #if !defined(USE_FFMPEG)
 /// FFmpeg support may or may not be compiled in,
 /// but Preferences dialog requires this function nevertheless
@@ -255,7 +257,7 @@ int ufile_fopen_input(std::unique_ptr<FFmpegContext> &context_ptr, FilePath & na
    context_ptr.reset();
    auto context = std::make_unique<FFmpegContext>();
 
-   wxFileName ff{ name };
+   wxFileNameWrapper ff{ name };
    wxCharBuffer fname;
    const char *filename;
    int err;
@@ -815,8 +817,8 @@ bool FFmpegLibs::InitLibs(const wxString &libpath_format, bool WXUNUSED(showerr)
    // Initially we don't know where are the avcodec and avutl libs
    wxDynamicLibrary *codec = NULL;
    wxDynamicLibrary *util = NULL;
-   wxFileName avcodec_filename;
-   wxFileName avutil_filename;
+   wxFileNameWrapper avcodec_filename;
+   wxFileNameWrapper avutil_filename;
    wxFileName name{ libpath_format };
    wxString nameFull{name.GetFullPath()};
    bool gotError = false;

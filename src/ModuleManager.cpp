@@ -48,6 +48,8 @@ i.e. an alternative to the usual interface, for Audacity.
 
 #include "widgets/ErrorDialog.h"
 
+#include "wxFileNameWrapper.h"
+
 #define initFnName      "ExtensionModuleInit"
 #define versionFnName   "GetVersionString"
 #define scriptFnName    "RegScriptServerFunc"
@@ -114,7 +116,7 @@ bool Module::Load()
    // Check version string matches.  (For now, they must match exactly)
    tVersionFn versionFn = (tVersionFn)(mLib->GetSymbol(wxT(versionFnName)));
    if (versionFn == NULL){
-      wxString ShortName = wxFileName( mName ).GetName();
+      wxString ShortName = wxFileNameWrapper{ mName }.GetName();
       AudacityMessageBox(wxString::Format(_("The module %s does not provide a version string.\nIt will not be loaded."), ShortName), _("Module Unsuitable"));
       wxLogMessage(wxString::Format(_("The module %s does not provide a version string. It will not be loaded."), mName));
       mLib->Unload();
@@ -123,7 +125,7 @@ bool Module::Load()
 
    wxString moduleVersion = versionFn();
    if( moduleVersion != AUDACITY_VERSION_STRING) {
-      wxString ShortName = wxFileName( mName ).GetName();
+      wxString ShortName = wxFileNameWrapper{ mName }.GetName();
       AudacityMessageBox(wxString::Format(_("The module %s is matched with Audacity version %s.\n\nIt will not be loaded."), ShortName, moduleVersion), _("Module Unsuitable"));
       wxLogMessage(wxString::Format(_("The module %s is matched with Audacity version %s. It will not be loaded."), mName, moduleVersion));
       mLib->Unload();
@@ -265,7 +267,7 @@ void ModuleManager::Initialize(CommandHandler &cmdHandler)
       // I think it would be better to show the module prefs page,
       // and let the user decide for each one.
       {
-         wxString ShortName = wxFileName( files[i] ).GetName();
+         wxString ShortName = wxFileNameWrapper{ files[i] }.GetName();
          wxString msg;
          msg.Printf(_("Module \"%s\" found."), ShortName);
          msg += _("\n\nOnly use modules from trusted sources");

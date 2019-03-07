@@ -504,7 +504,7 @@ bool ImportXMLTagHandler::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
    if (!XMLValueChecker::IsGoodPathName(strAttr))
    {
       // Maybe strAttr is just a fileName, not the full path. Try the project data directory.
-      wxFileName fileName(mProject->GetDirManager()->GetProjectDataDir(), strAttr);
+      wxFileNameWrapper fileName{ mProject->GetDirManager()->GetProjectDataDir(), strAttr };
       if (XMLValueChecker::IsGoodFileName(strAttr, fileName.GetPath(wxPATH_GET_VOLUME)))
          strAttr = fileName.GetFullPath();
       else
@@ -1524,7 +1524,7 @@ void AudacityProject::SetTags( const std::shared_ptr<Tags> &tags )
 
 wxString AudacityProject::GetName()
 {
-   wxString name = wxFileNameFromPath(mFileName);
+   auto name = wxFileNameWrapper{ mFileName }.GetFullName();
 
    // Chop off the extension
    size_t len = name.length();
@@ -2827,11 +2827,12 @@ wxArrayString AudacityProject::ShowOpenDialog(const wxString &extraformat, const
 // static method, can be called outside of a project
 bool AudacityProject::IsAlreadyOpen(const FilePath &projPathName)
 {
-   const wxFileName newProjPathName(projPathName);
+   const wxFileNameWrapper newProjPathName{ projPathName };
    size_t numProjects = gAudacityProjects.size();
    for (size_t i = 0; i < numProjects; i++)
    {
-      if (newProjPathName.SameAs(gAudacityProjects[i]->mFileName))
+      if (newProjPathName
+         .SameAs(wxFileNameWrapper{ gAudacityProjects[i]->mFileName }))
       {
          wxString errMsg =
             wxString::Format(_("%s is already open in another window."),
@@ -3015,7 +3016,7 @@ void AudacityProject::OpenFile(const FilePath &fileNameArg, bool addtohistory)
       if( !WarnOfLegacyFile() )
          return;
       // Convert to the NEW format.
-      bool success = ConvertLegacyProjectFile(wxFileName{ fileName });
+      bool success = ConvertLegacyProjectFile(wxFileNameWrapper{ fileName });
       if (!success) {
          AudacityMessageBox(_("Audacity was unable to convert an Audacity 1.0 project to the new project format."),
                       _("Error Opening Project"),
@@ -3067,8 +3068,7 @@ void AudacityProject::OpenFile(const FilePath &fileNameArg, bool addtohistory)
    SetProjectTitle();
 
    const wxString autoSaveExt = wxT(".autosave");
-   if (mFileName.length() >= autoSaveExt.length() &&
-       mFileName.Right(autoSaveExt.length()) == autoSaveExt)
+   if ( wxFileNameWrapper{ mFileName }.GetExt() == autoSaveExt )
    {
       AutoSaveFile asf;
       if (!asf.Decode(fileName))
@@ -3463,7 +3463,7 @@ bool AudacityProject::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
             {
                realFileName += wxT(".aup");
                projPath = realFileDir.GetFullPath();
-               mFileName = wxFileName(projPath, realFileName).GetFullPath();
+               mFileName = wxFileNameWrapper{ projPath, realFileName }.GetFullPath();
                mbLoadedFromAup = true;
                projName = value;
             }
@@ -3665,10 +3665,10 @@ void AudacityProject::WriteXML(XMLWriter &xmlFile, bool bWantSaveCopy)
 {
    //TIMER_START( "AudacityProject::WriteXML", xml_writer_timer );
    // Warning: This block of code is duplicated in Save, for now...
-   wxString project = mFileName;
-   if (project.length() > 4 && project.Mid(project.length() - 4) == wxT(".aup"))
-      project = project.Mid(0, project.length() - 4);
-   wxString projName = wxFileNameFromPath(project) + wxT("_data");
+   wxFileNameWrapper project { mFileName };
+   if (project.GetExt() == wxT("aup"))
+      project.SetExt( {} );
+   auto projName = project.GetFullName() + wxT("_data");
    // End Warning -DMM
 
    xmlFile.StartTag(wxT("project"));
@@ -3897,9 +3897,11 @@ bool AudacityProject::DoSave (const bool fromSaveAs,
 
    if (fromSaveAs) {
       // This block of code is duplicated in WriteXML, for now...
+      wxFileNameWrapper projName{ mFileName };
       project = mFileName;
-      if (project.length() > 4 && project.Mid(project.length() - 4) == wxT(".aup"))
-         project = project.Mid(0, project.length() - 4);
+      if (projName.GetExt() == wxT("aup"))
+         projName.SetExt( {} );
+      project = projName.GetFullPath();
       projName = wxFileNameFromPath(project) + wxT("_data");
       projPath = wxPathOnly(project);
 
@@ -4136,7 +4138,7 @@ bool AudacityProject::SaveCopyWaveTracks(const FilePath & strProjectPathName,
    mStrOtherNamesArray.clear();
 
    Exporter theExporter;
-   wxFileName uniqueTrackFileName;
+   wxFileNameWrapper uniqueTrackFileName;
    for (auto pTrack : (trackRange + &Track::IsLeader))
    {
       SelectionStateChanger changer{ GetSelectionState(), *GetTracks() };
@@ -4144,7 +4146,8 @@ bool AudacityProject::SaveCopyWaveTracks(const FilePath & strProjectPathName,
 
       for (auto channel : channels)
          channel->SetSelected(true);
-      uniqueTrackFileName = wxFileName(strDataDirPathName, pTrack->GetName(), extension);
+      uniqueTrackFileName =
+         wxFileNameWrapper{ strDataDirPathName, pTrack->GetName(), extension };
       FileNames::MakeNameUnique(mStrOtherNamesArray, uniqueTrackFileName);
       const auto startTime = channels.min( &Track::GetStartTime );
       const auto endTime = channels.max( &Track::GetEndTime );
@@ -4399,7 +4402,7 @@ bool AudacityProject::SaveAs(bool bWantSaveCopy /*= false*/, bool bLossless /*= 
 {
    TitleRestorer Restorer(this); // RAII
    bool bHasPath = true;
-   wxFileName filename(mFileName);
+   wxFileNameWrapper filename{ mFileName };
    // Save a copy of the project with 32-bit float tracks.
    if (bLossless)
       bWantSaveCopy = true;
@@ -4500,7 +4503,7 @@ For an audio file that will open in other apps, use 'Export'.\n");
       // open in another window.
       int mayOverwrite = (mFileName == fName)? 2 : 1;
       for (auto p : gAudacityProjects) {
-         const wxFileName openProjectName(p->mFileName);
+         const wxFileNameWrapper openProjectName{ p->mFileName };
          if (openProjectName.SameAs(fName)) {
             mayOverwrite -= 1;
             if (mayOverwrite == 0)
@@ -5080,10 +5083,10 @@ void AudacityProject::AutoSave()
    if (mFileName.empty())
       projName = wxT("New Project");
    else
-      projName = wxFileName(mFileName).GetName();
+      projName = wxFileNameWrapper{ mFileName }.GetName();
 
-   wxString fn = wxFileName(FileNames::AutoSaveDir(),
-      projName + wxString(wxT(" - ")) + CreateUniqueName()).GetFullPath();
+   wxString fn = wxFileNameWrapper{ FileNames::AutoSaveDir(),
+      projName + wxString(wxT(" - ")) + CreateUniqueName() }.GetFullPath();
 
    // PRL:  I found a try-catch and rewrote it,
    // but this guard is unnecessary because AutoSaveFile does not throw

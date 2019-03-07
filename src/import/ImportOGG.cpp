@@ -304,7 +304,7 @@ ProgressResult OggImportFileHandle::Import(
             &bitstream);
 
          if (bytesRead == OV_HOLE) {
-            wxFileName ff(mFilename);
+            wxFileNameWrapper ff{ mFilename };
             wxLogError(wxT("Ogg Vorbis importer: file %s is malformed, ov_read() reported a hole"),
                ff.GetFullName());
             /* http://lists.xiph.org/pipermail/vorbis-dev/2001-February/003223.html

@@ -105,14 +105,14 @@ BlockFilePtr LegacyAliasBlockFile::BuildFromXML(const FilePath &projDir, const w
          //v Should this be
          //    dm.AssignFile(summaryFileName, strValue, false);
          // as in PCMAliasBlockFile::BuildFromXML? Test with an old project.
-         summaryFileName.Assign(projDir, strValue, wxT(""));
+         summaryFileName = wxFileNameWrapper{ projDir, strValue, wxT("") };
       else if ( !wxStricmp(attr, wxT("aliaspath")) )
       {
          if (XMLValueChecker::IsGoodPathName(strValue))
             aliasFileName.Assign(strValue);
          else if (XMLValueChecker::IsGoodFileName(strValue, projDir))
             // Allow fallback of looking for the file name, located in the data directory.
-            aliasFileName.Assign(projDir, strValue);
+            aliasFileName = wxFileNameWrapper{ projDir, strValue };
          else if (XMLValueChecker::IsGoodPathString(strValue))
             // If the aliased file is missing, we failed XMLValueChecker::IsGoodPathName()
             // and XMLValueChecker::IsGoodFileName, because both do existence tests,

@@ -684,7 +684,7 @@ bool AutoSaveFile::Decode(const FilePath & fileName)
    char ident[sizeof(AutoSaveIdent)];
    size_t len = strlen(AutoSaveIdent);
 
-   const wxFileName fn(fileName);
+   const wxFileNameWrapper fn{ fileName };
    const wxString fnPath{fn.GetFullPath()};
    wxFFile file;
 

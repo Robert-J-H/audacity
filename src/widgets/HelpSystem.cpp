@@ -295,7 +295,7 @@ void HelpSystem::ShowHelp(wxWindow *parent,
    if (releasePageName == wxT("Main_Page"))
    {
       releasePageName = wxT("index") + HelpSystem::ReleaseSuffix + anchor;
-      localHelpPage = wxFileName(FileNames::HtmlHelpDir(), releasePageName).GetFullPath();
+      localHelpPage = wxFileNameWrapper{ FileNames::HtmlHelpDir(), releasePageName }.GetFullPath();
       webHelpPath = wxT("https://")+HelpSystem::HelpHostname+HelpSystem::HelpServerHomeDir;
    }
    else if (releasePageName == wxT("Quick_Help"))
@@ -307,7 +307,7 @@ void HelpSystem::ShowHelp(wxWindow *parent,
       webHelpPath = wxT("http://www.darkaudacity.com/");
 #else
       releasePageName = wxT("quick_help") + HelpSystem::ReleaseSuffix + anchor;
-      localHelpPage = wxFileName(FileNames::HtmlHelpDir(), releasePageName).GetFullPath();
+      localHelpPage = wxFileNameWrapper{ FileNames::HtmlHelpDir(), releasePageName }.GetFullPath();
       webHelpPath = wxT("https://")+HelpSystem::HelpHostname+HelpSystem::HelpServerHomeDir;
 #endif
    }
@@ -345,7 +345,7 @@ void HelpSystem::ShowHelp(wxWindow *parent,
       // Concatenate file name with file extension and anchor.
       releasePageName = releasePageName + HelpSystem::ReleaseSuffix + anchor;
       // Other than index and quick_help, all local pages are in subdirectory 'LocalHelpManDir'.
-      localHelpPage = wxFileName(FileNames::HtmlHelpDir() + LocalHelpManDir, releasePageName).GetFullPath();
+      localHelpPage = wxFileNameWrapper{ FileNames::HtmlHelpDir() + LocalHelpManDir, releasePageName }.GetFullPath();
       // Other than index and quick_help, all on-line pages are in subdirectory 'HelpServerManDir'.
       webHelpPath = wxT("https://")+HelpSystem::HelpHostname+HelpSystem::HelpServerManDir;
    }

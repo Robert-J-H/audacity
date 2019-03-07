@@ -169,7 +169,7 @@ bool MacroCommands::ReadMacro(const wxString & macro)
    ResetMacro();
 
    // Build the filename
-   wxFileName name(FileNames::MacroDir(), macro, wxT("txt"));
+   wxFileNameWrapper name{ FileNames::MacroDir(), macro, wxT("txt") };
 
    // Set the file name
    wxTextFile tf(name.GetFullPath());
@@ -212,7 +212,7 @@ bool MacroCommands::ReadMacro(const wxString & macro)
 bool MacroCommands::WriteMacro(const wxString & macro)
 {
    // Build the filename
-   wxFileName name(FileNames::MacroDir(), macro, wxT("txt"));
+   wxFileNameWrapper name{ FileNames::MacroDir(), macro, wxT("txt") };
 
    // Set the file name
    wxTextFile tf(name.GetFullPath());
@@ -251,7 +251,7 @@ bool MacroCommands::WriteMacro(const wxString & macro)
 bool MacroCommands::AddMacro(const wxString & macro)
 {
    // Build the filename
-   wxFileName name(FileNames::MacroDir(), macro, wxT("txt"));
+   wxFileNameWrapper name{ FileNames::MacroDir(), macro, wxT("txt") };
 
    // Set the file name
    wxTextFile tf(name.GetFullPath());
@@ -263,13 +263,13 @@ bool MacroCommands::AddMacro(const wxString & macro)
 bool MacroCommands::DeleteMacro(const wxString & macro)
 {
    // Build the filename
-   wxFileName name(FileNames::MacroDir(), macro, wxT("txt"));
+   wxFileNameWrapper name{ FileNames::MacroDir(), macro, wxT("txt") };
 
    // Delete it...wxRemoveFile will display errors
    auto result = wxRemoveFile(name.GetFullPath());
 
    // Delete any legacy chain that it shadowed
-   auto oldPath = wxFileName{ FileNames::LegacyChainDir(), macro, wxT("txt") };
+   auto oldPath = wxFileNameWrapper{ FileNames::LegacyChainDir(), macro, wxT("txt") };
    wxRemoveFile(oldPath.GetFullPath()); // Don't care about this return value
 
    return result;
@@ -278,8 +278,8 @@ bool MacroCommands::DeleteMacro(const wxString & macro)
 bool MacroCommands::RenameMacro(const wxString & oldmacro, const wxString & newmacro)
 {
    // Build the filenames
-   wxFileName oname(FileNames::MacroDir(), oldmacro, wxT("txt"));
-   wxFileName nname(FileNames::MacroDir(), newmacro, wxT("txt"));
+   wxFileNameWrapper oname{ FileNames::MacroDir(), oldmacro, wxT("txt") };
+   wxFileNameWrapper nname{ FileNames::MacroDir(), newmacro, wxT("txt") };
 
    // Rename it...wxRenameFile will display errors
    return wxRenameFile(oname.GetFullPath(), nname.GetFullPath());
@@ -510,7 +510,7 @@ bool MacroCommands::IsMono()
 wxString MacroCommands::BuildCleanFileName(const FilePath &fileName,
    const FileExtension &extension)
 {
-   const wxFileName newFileName{ fileName };
+   const wxFileNameWrapper newFileName{ fileName };
    wxString justName = newFileName.GetName();
    wxString pathName = newFileName.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR);
    const auto cleanedString = _("cleaned");
@@ -972,10 +972,10 @@ void MacroCommands::MigrateLegacyChains()
       wxDir::GetAllFiles(oldDir, &files, wxT("*.txt"), wxDIR_FILES);
 
       // add a dummy path component to be overwritten by SetFullName
-      wxFileName newDir{ FileNames::MacroDir(), wxT("x") };
+      wxFileNameWrapper newDir{ FileNames::MacroDir(), wxT("x") };
 
       for (const auto &file : files) {
-         auto name = wxFileName{file}.GetFullName();
+         auto name = wxFileNameWrapper{ file }.GetFullName();
          newDir.SetFullName(name);
          const auto newPath = newDir.GetFullPath();
          if (!wxFileExists(newPath))
@@ -995,9 +995,9 @@ wxArrayString MacroCommands::GetNames()
    wxDir::GetAllFiles(FileNames::MacroDir(), &files, wxT("*.txt"), wxDIR_FILES);
    size_t i;
 
-   wxFileName ff;
-   for (i = 0; i < files.size(); i++) {
-      ff = (files[i]);
+   wxFileNameWrapper ff;
+   for ( const auto &file : files ) {
+      ff = file;
       names.push_back(ff.GetName());
    }
 

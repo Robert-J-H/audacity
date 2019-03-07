@@ -32,6 +32,8 @@
 #include "ErrorDialog.h"
 #include "HelpSystem.h"
 
+#include "../wxFileNameWrapper.h"
+
 BEGIN_EVENT_TABLE(BrowserDialog, wxDialogWrapper)
    EVT_BUTTON(wxID_FORWARD,  BrowserDialog::OnForward)
    EVT_BUTTON(wxID_BACKWARD, BrowserDialog::OnBackward)
@@ -142,7 +144,7 @@ void LinkingHtmlWindow::OnLinkClicked(const wxHtmlLinkInfo& link)
    if( href.StartsWith(wxT("innerlink:")) )
    {
       wxString FileName =
-         wxFileName( FileNames::HtmlHelpDir(), href.Mid( 10 ) + wxT(".htm") ).GetFullPath();
+         wxFileNameWrapper{ FileNames::HtmlHelpDir(), href.Mid( 10 ) + wxT(".htm") }.GetFullPath();
       if( wxFileExists( FileName ) )
       {
          HelpSystem::ShowHelp(this, FileName, wxEmptyString, false);

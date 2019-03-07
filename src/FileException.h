@@ -12,15 +12,17 @@
 #include "AudacityException.h"
 #include <wx/filename.h> // wxFileName member variable below
 
+#include "wxFileNameWrapper.h"
+
 class FileException /* not final */ : public MessageBoxException
 {
 public:
    enum class Cause { Open, Read, Write, Rename };
 
    explicit FileException
-      ( Cause cause_, const wxFileName &fileName_,
+      ( Cause cause_, const wxFileNameWrapper &fileName_,
         const wxString &caption = _("File Error"),
-        const wxFileName &renameTarget_ = {})
+        const wxFileNameWrapper &renameTarget_ = {})
    : MessageBoxException{ caption }
    , cause{ cause_ }, fileName{ fileName_ }, renameTarget{ renameTarget_ }
    {}
@@ -42,8 +44,8 @@ protected:
 
 public:
    Cause cause;
-   wxFileName fileName;
-   wxFileName renameTarget;
+   wxFileNameWrapper fileName;
+   wxFileNameWrapper renameTarget;
 };
 
 #endif

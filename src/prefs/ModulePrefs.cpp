@@ -26,6 +26,8 @@ with names like mnod-script-pipe that add NEW features.
 #include "../Prefs.h"
 #include "../Internat.h"
 
+#include "../wxFileNameWrapper.h"
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /* i18n-hint: Modules are optional extensions to Audacity that add NEW features.*/
@@ -146,7 +148,7 @@ int ModulePrefs::GetModuleStatus(const FilePath &fname){
    // Default status is NEW module, and we will ask once.
    int iStatus = kModuleNew;
 
-   wxString ShortName = wxFileName( fname ).GetName();
+   auto ShortName = wxFileNameWrapper{ fname }.GetName();
    wxString PrefName = wxString( wxT("/Module/") ) + ShortName.Lower();
 
    gPrefs->Read( PrefName, &iStatus, kModuleNew );
@@ -157,7 +159,7 @@ int ModulePrefs::GetModuleStatus(const FilePath &fname){
 }
 
 void ModulePrefs::SetModuleStatus(const FilePath &fname, int iStatus){
-   wxString ShortName = wxFileName( fname ).GetName();
+   wxString ShortName = wxFileNameWrapper{ fname }.GetName();
    wxString PrefName = wxString( wxT("/Module/") ) + ShortName.Lower();
    gPrefs->Write( PrefName, iStatus );
    PrefName = wxString( wxT("/ModulePath/") ) + ShortName.Lower();

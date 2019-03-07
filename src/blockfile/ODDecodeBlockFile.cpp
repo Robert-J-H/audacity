@@ -273,7 +273,7 @@ BlockFilePtr ODDecodeBlockFile::BuildFromXML(DirManager &dm, const wxChar **attr
             audioFileName.Assign(strValue);
          else if (XMLValueChecker::IsGoodFileName(strValue, dm.GetProjectDataDir()))
             // Allow fallback of looking for the file name, located in the data directory.
-            audioFileName.Assign(dm.GetProjectDataDir(), strValue);
+            audioFileName = { dm.GetProjectDataDir(), strValue };
          else if (XMLValueChecker::IsGoodPathString(strValue))
             // If the file is missing, we failed XMLValueChecker::IsGoodPathName()
             // and XMLValueChecker::IsGoodFileName, because both do existence tests,
