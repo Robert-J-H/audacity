@@ -292,6 +292,12 @@ void BuiltinEffectsModule::Terminate()
    return;
 }
 
+const FileExtensions &BuiltinEffectsModule::GetFileExtensions()
+{
+   static FileExtensions empty;
+   return empty;
+}
+
 bool BuiltinEffectsModule::AutoRegisterPlugins(PluginManagerInterface & pm)
 {
    wxString ignoredErrMsg;
