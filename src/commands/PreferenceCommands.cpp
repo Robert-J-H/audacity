@@ -18,17 +18,11 @@ SetPreferenceCommand classes
 #include "../Audacity.h"
 #include "PreferenceCommands.h"
 
-#include "LoadCommands.h"
 #include "../Menus.h"
 #include "../Prefs.h"
 #include "../Shuttle.h"
 #include "../ShuttleGui.h"
 #include "../commands/CommandContext.h"
-
-const ComponentInterfaceSymbol GetPreferenceCommand::Symbol
-{ XO("Get Preference") };
-
-namespace{ BuiltinCommandsModule::Registration< GetPreferenceCommand > reg; }
 
 bool GetPreferenceCommand::DefineParams( ShuttleParams & S ){
    S.Define( mName, wxT("Name"),   wxT("") );
@@ -56,11 +50,6 @@ bool GetPreferenceCommand::Apply(const CommandContext & context)
    context.Status(prefValue);
    return true;
 }
-
-const ComponentInterfaceSymbol SetPreferenceCommand::Symbol
-{ XO("Set Preference") };
-
-namespace{ BuiltinCommandsModule::Registration< SetPreferenceCommand > reg2; }
 
 bool SetPreferenceCommand::DefineParams( ShuttleParams & S ){
    S.Define(    mName,   wxT("Name"),    wxT("") );

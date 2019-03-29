@@ -21,7 +21,6 @@
 
 #include "../Audacity.h"
 #include "Phaser.h"
-#include "LoadEffects.h"
 
 #include "../Experimental.h"
 
@@ -66,11 +65,6 @@ Param( OutGain,   double,  wxT("Gain"),      -6.0,    -30.0,    30.0,    1   );
 // EffectPhaser
 //
 
-const ComponentInterfaceSymbol EffectPhaser::Symbol
-{ XO("Phaser") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectPhaser > reg; }
-
 BEGIN_EVENT_TABLE(EffectPhaser, wxEvtHandler)
     EVT_SLIDER(ID_Stages, EffectPhaser::OnStagesSlider)
     EVT_SLIDER(ID_DryWet, EffectPhaser::OnDryWetSlider)
@@ -109,7 +103,7 @@ EffectPhaser::~EffectPhaser()
 
 ComponentInterfaceSymbol EffectPhaser::GetSymbol()
 {
-   return Symbol;
+   return PHASER_PLUGIN_SYMBOL;
 }
 
 wxString EffectPhaser::GetDescription()

@@ -7,7 +7,6 @@
 #include "../AudioIO.h"
 #include "../Dependencies.h"
 #include "../FileNames.h"
-#include "../Menus.h"
 #include "../Project.h"
 #include "../ShuttleGui.h"
 #include "../SplashDialog.h"
@@ -24,31 +23,20 @@ namespace {
 
 void ShowDiagnostics(
    AudacityProject &project, const wxString &info,
-   const wxString &description, const wxString &defaultPath,
-   bool fixedWidth = false)
+   const wxString &description, const wxString &defaultPath)
 {
-   auto &window = ProjectWindow::Get( project );
-   wxDialogWrapper dlg( &window, wxID_ANY, description);
+   wxDialogWrapper dlg(&project, wxID_ANY, description);
    dlg.SetName(dlg.GetTitle());
    ShuttleGui S(&dlg, eIsCreating);
 
    wxTextCtrl *text;
    S.StartVerticalLay();
    {
-      S.SetStyle(wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH);
-      text = S.Id(wxID_STATIC).AddTextWindow("");
-
+      S.SetStyle(wxTE_MULTILINE | wxTE_READONLY);
+      text = S.Id(wxID_STATIC).AddTextWindow(info);
       S.AddStandardButtons(eOkButton | eCancelButton);
    }
    S.EndVerticalLay();
-
-   if (fixedWidth) {
-      auto style = text->GetDefaultStyle();
-      style.SetFontFamily( wxFONTFAMILY_TELETYPE );
-      text->SetDefaultStyle(style);
-   }
-
-   *text << info;
 
    dlg.FindWindowById(wxID_OK)->SetLabel(_("&Save"));
    dlg.SetSize(350, 450);
@@ -64,7 +52,7 @@ void ShowDiagnostics(
          wxT("txt"),
          wxT("*.txt"),
          wxFD_SAVE | wxFD_OVERWRITE_PROMPT | wxRESIZE_BORDER,
-         &window);
+         &project);
       if (!fName.empty())
       {
          if (!text->SaveFile(fName))
@@ -93,7 +81,7 @@ void DoShowLog( AudacityProject & )
 
 void DoHelpWelcome( AudacityProject &project )
 {
-   SplashDialog::Show2( &ProjectWindow::Get( project ) );
+   SplashDialog::Show2( &project );
 }
 
 // Menu handler functions
@@ -103,7 +91,7 @@ struct Handler : CommandHandlerObject {
 void OnQuickFix(const CommandContext &context)
 {
    auto &project = context.project;
-   QuickFixDialog dlg( &ProjectWindow::Get( project ) );
+   QuickFixDialog dlg( &project );
    dlg.ShowModal();
 }
 
@@ -111,7 +99,7 @@ void OnQuickHelp(const CommandContext &context)
 {
    auto &project = context.project;
    HelpSystem::ShowHelp(
-      &ProjectWindow::Get( project ),
+      &project,
       wxT("Quick_Help"));
 }
 
@@ -119,7 +107,7 @@ void OnManual(const CommandContext &context)
 {
    auto &project = context.project;
    HelpSystem::ShowHelp(
-      &ProjectWindow::Get( project ),
+      &project,
       wxT("Main_Page"));
 }
 
@@ -162,52 +150,6 @@ void OnCheckDependencies(const CommandContext &context)
 {
    auto &project = context.project;
    ::ShowDependencyDialogIfNeeded(&project, false);
-}
-
-void OnMenuTree(const CommandContext &context)
-{
-   auto &project = context.project;
-   
-   using namespace MenuTable;
-   struct MyVisitor : Visitor
-   {
-      enum : unsigned { TAB = 3 };
-      void BeginGroup( GroupItem &item, const wxArrayString& ) override
-      {
-         Indent();
-         info += item.name;
-         Return();
-         indentation = wxString{ ' ', TAB * ++level };
-      }
-
-      void EndGroup( GroupItem &, const wxArrayString& ) override
-      {
-         indentation = wxString{ ' ', TAB * --level };
-      }
-
-      void Visit( SingleItem &item, const wxArrayString& ) override
-      {
-         static const wxString separatorName{ '=', 20 };
-
-         Indent();
-         info += dynamic_cast<SeparatorItem*>(&item)
-            ? separatorName
-            : item.name;
-         Return();
-      }
-
-      void Indent() { info += indentation; }
-      void Return() { info += '\n'; }
-
-      unsigned level{};
-      wxString indentation;
-      wxString info;
-   } visitor;
-
-   MenuManager::Visit( visitor, project );
-
-   ShowDiagnostics( project, visitor.info,
-      _("Menu Tree"), wxT("menutree.txt"), true );
 }
 
 void OnCheckForUpdates(const CommandContext &WXUNUSED(context))
@@ -262,16 +204,19 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 // Menu definitions
 
-#define FN(X) (& HelpActions::Handler :: X)
+#define FN(X) findCommandHandler, \
+   static_cast<CommandFunctorPointer>(& HelpActions::Handler :: X)
+#define XXO(X) _(X), wxString{X}.Contains("...")
 
-namespace {
-using namespace MenuTable;
-BaseItemSharedPtr HelpMenu()
+MenuTable::BaseItemPtr HelpMenu( AudacityProject & )
 {
+#ifdef __WXMAC__
+      wxGetApp().s_macHelpMenuTitleName = _("&Help");
+#endif
+
    using namespace MenuTable;
-   static BaseItemSharedPtr menu{
-   FinderScope( findCommandHandler ).Eval(
-   Menu( wxT("Help"), XO("&Help"),
+
+   return Menu( _("&Help"),
       // QuickFix menu item not in Audacity 2.3.1 whilst we discuss further.
 #ifdef EXPERIMENTAL_DA
       // DA: Has QuickFix menu item.
@@ -290,7 +235,7 @@ BaseItemSharedPtr HelpMenu()
 
       Separator(),
 
-      Menu( wxT("Diagnostics"), XO("&Diagnostics"),
+      Menu( _("&Diagnostics"),
          Command( wxT("DeviceInfo"), XXO("Au&dio Device Info..."),
             FN(OnAudioDeviceInfo),
             AudioIONotBusyFlag ),
@@ -308,14 +253,6 @@ BaseItemSharedPtr HelpMenu()
          Command( wxT("CheckDeps"), XXO("Chec&k Dependencies..."),
             FN(OnCheckDependencies),
             AudioIONotBusyFlag )
-
-#ifdef IS_ALPHA
-         ,
-         // Menu explorer.  Perhaps this should become a macro command
-         Command( wxT("MenuTree"), XXO("Menu Tree..."),
-            FN(OnMenuTree),
-            AlwaysEnabledFlag )
-#endif
       ),
 
 #ifndef __WXMAC__
@@ -330,15 +267,8 @@ BaseItemSharedPtr HelpMenu()
 #endif
       Command( wxT("About"), XXO("&About Audacity..."), FN(OnAbout),
          AlwaysEnabledFlag )
-   ) ) };
-   return menu;
+   );
 }
 
-AttachedItem sAttachment1{
-   wxT(""),
-   Shared( HelpMenu() )
-};
-
-}
-
+#undef XXO
 #undef FN

@@ -33,9 +33,6 @@ extern AUDACITY_DLL_API const wxString& GetCustomSubstitution(const wxString& st
 
 // Marks strings for extraction only...must use wxGetTranslation() to translate.
 #define XO(s)  wxT(s)
-// XXO is used instead of XO in some places, for reasons that are
-// no longer important.  The two are equivalent now.
-#define XXO(s)  wxT(s)
 
 #ifdef _
    #undef _

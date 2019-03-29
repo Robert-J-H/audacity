@@ -118,12 +118,8 @@ wxString ImportExportPrefs::HelpPageName()
    return "Import_-_Export_Preferences";
 }
 
-namespace{
-PrefsPanel::Registration sAttachment{ "ImportExport",
-   [](wxWindow *parent, wxWindowID winid)
-   {
-      wxASSERT(parent); // to justify safenew
-      return safenew ImportExportPrefs(parent, winid);
-   }
-};
+PrefsPanel *ImportExportPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+{
+   wxASSERT(parent); // to justify safenew
+   return safenew ImportExportPrefs(parent, winid);
 }

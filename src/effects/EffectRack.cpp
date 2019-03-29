@@ -142,11 +142,10 @@ EffectRack::EffectRack()
       mPanel->SetSizer(bs.release());
    }
 
-   size_t cnt;
-   {
-      wxConfigPathChanger changer{ gPrefs, wxT("/EffectsRack/") };
-      cnt = gPrefs->GetNumberOfEntries();
-   }
+   wxString oldPath = gPrefs->GetPath();
+   gPrefs->SetPath(wxT("/EffectsRack"));
+   size_t cnt = gPrefs->GetNumberOfEntries();
+   gPrefs->SetPath(oldPath);
 
    EffectManager & em = EffectManager::Get();
    for (size_t i = 0; i < cnt; i++)

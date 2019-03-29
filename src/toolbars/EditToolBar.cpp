@@ -19,7 +19,8 @@
   window containing interfaces to commonly-used edit
   functions that are otherwise only available through
   menus. The window can be embedded within a normal project
-  window, or within a ToolBarFrame.
+  window, or within a ToolbarFrame that is managed by a
+  global ToolBarStub called gControlToolBarStub.
 
   All of the controls in this window were custom-written for
   Audacity - they are not native controls on any platform -
@@ -92,7 +93,6 @@ EditToolBar::~EditToolBar()
 void EditToolBar::Create(wxWindow * parent)
 {
    ToolBar::Create(parent);
-   UpdatePrefs();
 }
 
 void EditToolBar::AddSeparator()
@@ -265,7 +265,8 @@ void EditToolBar::ForAllButtons(int Action)
    if( Action & ETBActEnableDisable ){
       p = GetActiveProject();
       if (!p) return;
-      cm = &CommandManager::Get( *p );
+      cm = p->GetCommandManager();
+      if (!cm) return;
 #ifdef OPTION_SYNC_LOCK_BUTTON
       bool bSyncLockTracks;
       gPrefs->Read(wxT("/GUI/SyncLockTracks"), &bSyncLockTracks, false);
@@ -300,11 +301,12 @@ void EditToolBar::OnButton(wxCommandEvent &event)
 
    AudacityProject *p = GetActiveProject();
    if (!p) return;
-   auto &cm = CommandManager::Get( *p );
+   CommandManager* cm = p->GetCommandManager();
+   if (!cm) return;
 
-   auto flags = MenuManager::Get(*p).GetUpdateFlags(*p);
+   auto flags = GetMenuManager(*p).GetUpdateFlags(*p);
    const CommandContext context( *GetActiveProject() );
-   cm.HandleTextualCommand(EditToolbarButtonList[id].commandName, context, flags, NoFlagsSpecified);
+   cm->HandleTextualCommand(EditToolbarButtonList[id].commandName, context, flags, NoFlagsSpecified);
 }
 
 

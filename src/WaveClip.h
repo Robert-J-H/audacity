@@ -14,7 +14,6 @@
 
 #include "Audacity.h"
 
-#include "ClientData.h"
 #include "MemoryX.h"
 #include "SampleFormat.h"
 #include "widgets/ProgressDialog.h"
@@ -35,6 +34,63 @@ class Sequence;
 class SpectrogramSettings;
 class WaveCache;
 class WaveTrackCache;
+
+class SpecCache {
+public:
+
+   // Make invalid cache
+   SpecCache()
+      : algorithm(-1)
+      , pps(-1.0)
+      , start(-1.0)
+      , windowType(-1)
+      , frequencyGain(-1)
+      , dirty(-1)
+   {
+   }
+
+   ~SpecCache()
+   {
+   }
+
+   bool Matches(int dirty_, double pixelsPerSecond,
+      const SpectrogramSettings &settings, double rate) const;
+
+   // Calculate one column of the spectrum
+   bool CalculateOneSpectrum
+      (const SpectrogramSettings &settings,
+       WaveTrackCache &waveTrackCache,
+       const int xx, sampleCount numSamples,
+       double offset, double rate, double pixelsPerSecond,
+       int lowerBoundX, int upperBoundX,
+       const std::vector<float> &gainFactors,
+       float* __restrict scratch,
+       float* __restrict out) const;
+
+   // Grow the cache while preserving the (possibly now invalid!) contents
+   void Grow(size_t len_, const SpectrogramSettings& settings,
+               double pixelsPerSecond, double start_);
+
+   // Calculate the dirty columns at the begin and end of the cache
+   void Populate
+      (const SpectrogramSettings &settings, WaveTrackCache &waveTrackCache,
+       int copyBegin, int copyEnd, size_t numPixels,
+       sampleCount numSamples,
+       double offset, double rate, double pixelsPerSecond);
+
+   size_t       len { 0 }; // counts pixels, not samples
+   int          algorithm;
+   double       pps;
+   double       start;
+   int          windowType;
+   size_t       windowSize { 0 };
+   unsigned     zeroPaddingFactor { 0 };
+   int          frequencyGain;
+   std::vector<float> freq;
+   std::vector<sampleCount> where;
+
+   int          dirty;
+};
 
 class SpecPxCache {
 public:
@@ -113,15 +169,7 @@ public:
    }
 };
 
-struct WaveClipListener
-{
-   virtual ~WaveClipListener() = 0;
-   virtual void MarkChanged() = 0;
-   virtual void Invalidate() = 0;
-};
-
 class AUDACITY_DLL_API WaveClip final : public XMLTagHandler
-   , public ClientData::Site< WaveClip, WaveClipListener >
 {
 private:
    // It is an error to copy a WaveClip without specifying the DirManager.
@@ -130,8 +178,6 @@ private:
    WaveClip& operator= (const WaveClip&) PROHIBITED;
 
 public:
-   using Caches = Site< WaveClip, WaveClipListener >;
-
    // typical constructor
    WaveClip(const std::shared_ptr<DirManager> &projDirManager, sampleFormat format, 
       int rate, int colourIndex);
@@ -198,18 +244,31 @@ public:
    // but use more high-level functions inside WaveClip (or add them if you
    // think they are useful for general use)
    Sequence* GetSequence() { return mSequence.get(); }
-   const Sequence* GetSequence() const { return mSequence.get(); }
 
    /** WaveTrack calls this whenever data in the wave clip changes. It is
     * called automatically when WaveClip has a chance to know that something
     * has changed, like when member functions SetSamples() etc. are called. */
-   void MarkChanged(); // NOFAIL-GUARANTEE
+   void MarkChanged() // NOFAIL-GUARANTEE
+      { mDirty++; }
 
    /** Getting high-level data for screen display and clipping
     * calculations and Contrast */
+   bool GetWaveDisplay(WaveDisplay &display,
+                       double t0, double pixelsPerSecond, bool &isLoadingOD) const;
+   bool GetSpectrogram(WaveTrackCache &cache,
+                       const float *& spectrogram,
+                       const sampleCount *& where,
+                       size_t numPixels,
+                       double t0, double pixelsPerSecond) const;
    std::pair<float, float> GetMinMax(
       double t0, double t1, bool mayThrow = true) const;
    float GetRMS(double t0, double t1, bool mayThrow = true) const;
+
+   // Set/clear/get rectangle that this WaveClip fills on screen. This is
+   // called by TrackArtist while actually drawing the tracks and clips.
+   void ClearDisplayRect() const;
+   void SetDisplayRect(const wxRect& r) const;
+   void GetDisplayRect(wxRect* r);
 
    /** Whenever you do an operation to the sequence that will change the number
     * of samples (that is, the length of the clip), you will want to call this
@@ -279,13 +338,19 @@ public:
    void CloseLock(); //similar to Lock but should be called when the project closes.
    // not balanced by unlocking calls.
 
+   ///Delete the wave cache - force redraw.  Thread-safe
+   void ClearWaveCache();
+
+   ///Adds an invalid region to the wavecache so it redraws that portion only.
+   void AddInvalidRegion(sampleCount startSample, sampleCount endSample);
+
    //
    // XMLTagHandler callback methods for loading and saving
    //
 
    bool HandleXMLTag(const wxChar *tag, const wxChar **attrs) override;
    void HandleXMLEndTag(const wxChar *tag) override;
-   XMLTagHandlerPtr HandleXMLChild(const wxChar *tag) override;
+   XMLTagHandler *HandleXMLChild(const wxChar *tag) override;
    void WriteXML(XMLWriter &xmlFile) const /* not override */;
 
    // AWD, Oct 2009: for pasting whitespace at the end of selection
@@ -295,17 +360,24 @@ public:
    // used by commands which interact with clips using the keyboard
    bool SharesBoundaryWithNextClip(const WaveClip* next) const;
 
-   const SampleBuffer &GetAppendBuffer() const { return mAppendBuffer; }
-   size_t GetAppendBufferLen() const { return mAppendBufferLen; }
+public:
+   // Cache of values to colour pixels of Spectrogram - used by TrackArtist
+   mutable std::unique_ptr<SpecPxCache> mSpecPxCache;
 
 protected:
+   mutable wxRect mDisplayRect {};
+
    double mOffset { 0 };
    int mRate;
+   int mDirty { 0 };
    int mColourIndex;
 
    std::unique_ptr<Sequence> mSequence;
    std::unique_ptr<Envelope> mEnvelope;
 
+   mutable std::unique_ptr<WaveCache> mWaveCache;
+   mutable ODLock       mWaveCacheMutex {};
+   mutable std::unique_ptr<SpecCache> mSpecCache;
    SampleBuffer  mAppendBuffer {};
    size_t        mAppendBufferLen { 0 };
 
@@ -316,4 +388,5 @@ protected:
    // AWD, Oct. 2009: for whitespace-at-end-of-selection pasting
    bool mIsPlaceholder { false };
 };
+
 #endif

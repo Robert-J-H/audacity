@@ -21,7 +21,7 @@ in a background thread.
 #include "ODTask.h"
 
 #include "ODManager.h"
-#include "../tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.h"
+#include "../WaveClip.h"
 #include "../WaveTrack.h"
 #include "../Project.h"
 #include "../UndoManager.h"
@@ -135,7 +135,7 @@ void ODTask::DoSome(float amountWork)
          if(IsTaskAssociatedWithProject(gAudacityProjects[i].get()))
          {
             //mark the changes so that the project can be resaved.
-            UndoManager::Get( *gAudacityProjects[i] ).SetODChangesFlag();
+            gAudacityProjects[i]->GetUndoManager()->SetODChangesFlag();
             break;
          }
       }
@@ -159,10 +159,9 @@ void ODTask::DoSome(float amountWork)
          if(IsTaskAssociatedWithProject(gAudacityProjects[i].get()))
          {
             //this assumes tasks are only associated with one project.
-            ProjectWindow::Get( *gAudacityProjects[i] )
-               .GetEventHandler()->AddPendingEvent(event);
+            gAudacityProjects[i]->GetEventHandler()->AddPendingEvent(event);
             //mark the changes so that the project can be resaved.
-            UndoManager::Get( *gAudacityProjects[i] ).SetODChangesFlag();
+            gAudacityProjects[i]->GetUndoManager()->SetODChangesFlag();
             break;
          }
       }
@@ -176,7 +175,7 @@ void ODTask::DoSome(float amountWork)
 
 bool ODTask::IsTaskAssociatedWithProject(AudacityProject* proj)
 {
-   for (auto tr : TrackList::Get( *proj ).Any<const WaveTrack>())
+   for (auto tr : proj->GetTracks()->Any<const WaveTrack>())
    {
       //go over all tracks in the project
       //look inside our task's track list for one that matches this projects one.
@@ -361,12 +360,4 @@ void ODTask::ReplaceWaveTrack(Track *oldTrack, Track *newTrack)
       }
    }
    mWaveTrackMutex.Unlock();
-}
-
-///Adds an invalid region to the wavecache so it redraws that portion only.
-void ODTask::AddInvalidRegion(
-   const WaveTrack &track, sampleCount startSample, sampleCount endSample)
-{
-   for (const auto &clip : track.GetClips())
-      WaveClipDisplayCache::Get(*clip).AddInvalidRegion(startSample, endSample);
 }

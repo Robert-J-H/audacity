@@ -35,7 +35,6 @@ class wxRadioButton;
 class wxSizeEvent;
 class wxStaticText;
 
-class AudacityProject;
 class SelectionBarListener;
 class NumericTextCtrl;
 
@@ -44,9 +43,6 @@ class SelectionBar final : public ToolBar {
  public:
    SelectionBar();
    virtual ~SelectionBar();
-
-   static SelectionBar &Get( AudacityProject &project );
-   static const SelectionBar &Get( const AudacityProject &project );
 
    void Create(wxWindow *parent) override;
 

@@ -39,8 +39,6 @@
 #include "../SampleFormat.h"
 #include "../Track.h"
 
-#include "../wxFileNameWrapper.h"
-
 // Length check.  Is in part about not supplying malicious strings to file functions.
 bool XMLValueChecker::IsGoodString(const wxString & str)
 {
@@ -69,7 +67,7 @@ bool XMLValueChecker::IsGoodFileName(const FilePath & strFileName, const FilePat
       return false;
 
    // Test the corresponding wxFileName.
-   wxFileNameWrapper fileName(strDirName, strFileName);
+   wxFileName fileName(strDirName, strFileName);
    return (fileName.IsOk() && fileName.FileExists());
 }
 
@@ -97,14 +95,14 @@ bool XMLValueChecker::IsGoodSubdirName(const FilePath & strSubdirName, const Fil
       return false;
 
    // Test the corresponding wxFileName.
-   wxFileNameWrapper fileName{ strDirName, strSubdirName };
+   wxFileName fileName(strDirName, strSubdirName);
    return (fileName.IsOk() && fileName.DirExists());
 }
 
 bool XMLValueChecker::IsGoodPathName(const FilePath & strPathName)
 {
    // Test the corresponding wxFileName.
-   wxFileNameWrapper fileName{ strPathName };
+   wxFileName fileName(strPathName);
    return XMLValueChecker::IsGoodFileName(fileName.GetFullName(), fileName.GetPath(wxPATH_GET_VOLUME));
 }
 
@@ -172,6 +170,11 @@ bool XMLValueChecker::IsGoodInt64(const wxString & strInt)
    return IsGoodIntForRange( strInt, "9223372036854775808" );
 }
 
+bool XMLValueChecker::IsValidChannel(const int nValue)
+{
+   return (nValue >= Track::LeftChannel) && (nValue <= Track::MonoChannel);
+}
+
 #ifdef USE_MIDI
 bool XMLValueChecker::IsValidVisibleChannels(const int nValue)
 {
@@ -218,7 +221,7 @@ void XMLTagHandler::ReadXMLContent(const char *s, int len)
    HandleXMLContent(wxString(s, wxConvUTF8, len));
 }
 
-XMLTagHandlerPtr XMLTagHandler::ReadXMLChild(const char *tag)
+XMLTagHandler *XMLTagHandler::ReadXMLChild(const char *tag)
 {
    return HandleXMLChild(UTF8CTOWX(tag));
 }

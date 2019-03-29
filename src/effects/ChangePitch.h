@@ -35,11 +35,11 @@ class wxCheckBox;
 class wxTextCtrl;
 class ShuttleGui;
 
+#define CHANGEPITCH_PLUGIN_SYMBOL ComponentInterfaceSymbol{ XO("Change Pitch") }
+
 class EffectChangePitch final : public EffectSoundTouch
 {
 public:
-   static const ComponentInterfaceSymbol Symbol;
-
    EffectChangePitch();
    virtual ~EffectChangePitch();
 

@@ -26,8 +26,6 @@ with names like mnod-script-pipe that add NEW features.
 #include "../Prefs.h"
 #include "../Internat.h"
 
-#include "../wxFileNameWrapper.h"
-
 ////////////////////////////////////////////////////////////////////////////////
 
 /* i18n-hint: Modules are optional extensions to Audacity that add NEW features.*/
@@ -148,7 +146,7 @@ int ModulePrefs::GetModuleStatus(const FilePath &fname){
    // Default status is NEW module, and we will ask once.
    int iStatus = kModuleNew;
 
-   auto ShortName = wxFileNameWrapper{ fname }.GetName();
+   wxString ShortName = wxFileName( fname ).GetName();
    wxString PrefName = wxString( wxT("/Module/") ) + ShortName.Lower();
 
    gPrefs->Read( PrefName, &iStatus, kModuleNew );
@@ -159,7 +157,7 @@ int ModulePrefs::GetModuleStatus(const FilePath &fname){
 }
 
 void ModulePrefs::SetModuleStatus(const FilePath &fname, int iStatus){
-   wxString ShortName = wxFileNameWrapper{ fname }.GetName();
+   wxString ShortName = wxFileName( fname ).GetName();
    wxString PrefName = wxString( wxT("/Module/") ) + ShortName.Lower();
    gPrefs->Write( PrefName, iStatus );
    PrefName = wxString( wxT("/ModulePath/") ) + ShortName.Lower();
@@ -172,18 +170,8 @@ wxString ModulePrefs::HelpPageName()
    return "Modules_Preferences";
 }
 
-#ifdef EXPERIMENTAL_MODULE_PREFS
-namespace{
-PrefsPanel::Registration sAttachment{ "Module",
-   [](wxWindow *parent, wxWindowID winid)
-   {
-      wxASSERT(parent); // to justify safenew
-      return safenew ModulePrefs(parent, winid);
-   },
-   false,
-   // Register with an explicit ordering hint because this one is
-   // only conditionally compiled
-   { "", { Registry::OrderingHint::After, "Mouse" } }
-};
+PrefsPanel *ModulePrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+{
+   wxASSERT(parent); // to justify safenew
+   return safenew ModulePrefs(parent, winid);
 }
-#endif

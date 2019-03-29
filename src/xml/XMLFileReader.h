@@ -10,7 +10,6 @@
 
 #include "../Audacity.h"
 
-#include <memory>
 #include <vector>
 #include "expat.h"
 
@@ -22,7 +21,7 @@ class AUDACITY_DLL_API XMLFileReader final {
    XMLFileReader();
    ~XMLFileReader();
 
-   bool Parse(XMLTagHandlerPtr baseHandler,
+   bool Parse(XMLTagHandler *baseHandler,
               const FilePath &fname);
 
    wxString GetErrorStr();
@@ -38,8 +37,8 @@ class AUDACITY_DLL_API XMLFileReader final {
 
  private:
    XML_Parser       mParser;
-   XMLTagHandlerPtr   mBaseHandler;
-   using Handlers = std::vector<XMLTagHandlerPtr>;
+   XMLTagHandler   *mBaseHandler;
+   using Handlers = std::vector<XMLTagHandler*>;
    Handlers mHandler;
    wxString         mErrorStr;
 };

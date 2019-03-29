@@ -112,10 +112,9 @@ void VampEffectsModule::Terminate()
    return;
 }
 
-const FileExtensions &VampEffectsModule::GetFileExtensions()
+FileExtensions VampEffectsModule::GetFileExtensions()
 {
-   static FileExtensions empty;
-   return empty;
+   return {};
 }
 
 bool VampEffectsModule::AutoRegisterPlugins(PluginManagerInterface & WXUNUSED(pm))

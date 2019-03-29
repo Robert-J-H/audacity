@@ -19,7 +19,6 @@
 #include "LegacyBlockFile.h"
 #include "../FileFormats.h"
 #include "../Internat.h"
-#include "../WaveTrack.h"
 
 LegacyAliasBlockFile::LegacyAliasBlockFile(wxFileNameWrapper &&fileName,
                                            wxFileNameWrapper &&aliasedFileName,
@@ -106,14 +105,14 @@ BlockFilePtr LegacyAliasBlockFile::BuildFromXML(const FilePath &projDir, const w
          //v Should this be
          //    dm.AssignFile(summaryFileName, strValue, false);
          // as in PCMAliasBlockFile::BuildFromXML? Test with an old project.
-         summaryFileName = wxFileNameWrapper{ projDir, strValue, wxT("") };
+         summaryFileName.Assign(projDir, strValue, wxT(""));
       else if ( !wxStricmp(attr, wxT("aliaspath")) )
       {
          if (XMLValueChecker::IsGoodPathName(strValue))
             aliasFileName.Assign(strValue);
          else if (XMLValueChecker::IsGoodFileName(strValue, projDir))
             // Allow fallback of looking for the file name, located in the data directory.
-            aliasFileName = wxFileNameWrapper{ projDir, strValue };
+            aliasFileName.Assign(projDir, strValue);
          else if (XMLValueChecker::IsGoodPathString(strValue))
             // If the aliased file is missing, we failed XMLValueChecker::IsGoodPathName()
             // and XMLValueChecker::IsGoodFileName, because both do existence tests,
@@ -130,7 +129,7 @@ BlockFilePtr LegacyAliasBlockFile::BuildFromXML(const FilePath &projDir, const w
       {  // integer parameters
          if (!wxStricmp(attr, wxT("aliaslen")) && (nValue >= 0))
             aliasLen = nValue;
-         else if (!wxStricmp(attr, wxT("aliaschannel")) && WaveTrack::IsValidChannel(aliasChannel))
+         else if (!wxStricmp(attr, wxT("aliaschannel")) && XMLValueChecker::IsValidChannel(aliasChannel))
             aliasChannel = nValue;
          else if (!wxStricmp(attr, wxT("summarylen")) && (nValue > 0))
             summaryLen = nValue;

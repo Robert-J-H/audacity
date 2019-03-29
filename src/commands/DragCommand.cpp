@@ -19,7 +19,6 @@
 #include "../Audacity.h"
 #include "DragCommand.h"
 
-#include "LoadCommands.h"
 #include "../Project.h"
 #include "../Track.h"
 #include "../TrackPanel.h"
@@ -27,11 +26,6 @@
 #include "../Shuttle.h"
 #include "../ShuttleGui.h"
 #include "CommandContext.h"
-
-const ComponentInterfaceSymbol DragCommand::Symbol
-{ XO("Drag") };
-
-namespace{ BuiltinCommandsModule::Registration< DragCommand > reg; }
 
 DragCommand::DragCommand()
 {
@@ -97,7 +91,7 @@ bool DragCommand::Apply(const CommandContext & context)
    if( !bHasToY )
       mToY = 10;
 
-   wxWindow * pWin = &ProjectWindow::Get( context.project );
+   wxWindow * pWin = context.GetProject();
    wxWindow * pWin1 = nullptr;
    wxMouseEvent Evt( wxEVT_MOTION );
    Evt.m_x = mFromX;

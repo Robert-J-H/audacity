@@ -68,39 +68,10 @@
 #include "widgets/ErrorDialog.h"
 #include "Internat.h"
 
-#include "wxFileNameWrapper.h"
-
 std::unique_ptr<AudacityPrefs> ugPrefs {};
 
 AudacityPrefs *gPrefs = NULL;
 int gMenusDirty = 0;
-
-wxDEFINE_EVENT(EVT_PREFS_UPDATE, wxCommandEvent);
-
-PrefsListener::PrefsListener()
-{
-   wxTheApp->Bind(EVT_PREFS_UPDATE, &PrefsListener::OnEvent, this);
-}
-
-PrefsListener::~PrefsListener()
-{
-   // Explicit unbinding is needed because this is not a wxEvtHandler
-   wxTheApp->Unbind(EVT_PREFS_UPDATE, &PrefsListener::OnEvent, this);
-}
-
-void PrefsListener::UpdateSelectedPrefs( int )
-{
-}
-
-void PrefsListener::OnEvent( wxCommandEvent &evt )
-{
-   evt.Skip();
-   auto id = evt.GetId();
-   if (id <= 0)
-      UpdatePrefs();
-   else
-      UpdateSelectedPrefs( id );
-}
 
 #if 0
 // Copy one entry from one wxConfig object to another
@@ -199,7 +170,7 @@ void InitPreferences()
 {
    wxString appName = wxTheApp->GetAppName();
 
-   wxFileNameWrapper configFileName{ FileNames::DataDir(), wxT("audacity.cfg") };
+   wxFileName configFileName(FileNames::DataDir(), wxT("audacity.cfg"));
 
    ugPrefs = std::make_unique<AudacityPrefs>
       (appName, wxEmptyString,
@@ -213,10 +184,9 @@ void InitPreferences()
    wxString langCode = gPrefs->Read(wxT("/Locale/Language"), wxEmptyString);
    bool writeLang = false;
 
-   const wxFileNameWrapper fn{
+   const wxFileName fn(
       FileNames::ResourcesDir(), 
-      wxT("FirstTime.ini")
-   };
+      wxT("FirstTime.ini"));
    if (fn.FileExists())   // it will exist if the (win) installer put it there
    {
       const wxString fullPath{fn.GetFullPath()};
@@ -335,8 +305,9 @@ void InitPreferences()
 
       // "Order" must be adjusted since we're inserting two NEW toolbars
       if (dock > 0) {
-         wxConfigPathChanger changer{ gPrefs, wxT("/GUI/ToolBars/") };
-         
+         wxString oldPath = gPrefs->GetPath();
+         gPrefs->SetPath(wxT("/GUI/ToolBars"));
+
          wxString bar;
          long ndx = 0;
          bool cont = gPrefs->GetFirstGroup(bar, ndx);
@@ -347,6 +318,7 @@ void InitPreferences()
             }
             cont = gPrefs->GetNextGroup(bar, ndx);
          }
+         gPrefs->SetPath(oldPath);
 
          // And override the height
          h = 27;

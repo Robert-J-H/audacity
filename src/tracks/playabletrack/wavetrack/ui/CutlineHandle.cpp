@@ -15,15 +15,14 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "../../../../MemoryX.h"
 
-#include "WaveTrackViewGroupData.h"
 #include "../../../../HitTestResult.h"
 #include "../../../../Project.h"
 #include "../../../../RefreshCode.h"
 #include "../../../../Snap.h" // for kPixelTolerance
 #include "../../../../TrackPanelMouseEvent.h"
 #include "../../../../UndoManager.h"
-#include "../../../../ViewInfo.h"
 #include "../../../../WaveTrack.h"
+#include "../../../../WaveTrackLocation.h"
 #include "../../../../../images/Cursors.h"
 
 CutlineHandle::CutlineHandle
@@ -60,7 +59,7 @@ namespace
    {
       const double tolerance = 0.5 / track->GetRate();
       int ii = 0;
-      for (const auto loc: WaveTrackLocationsCache::Get(*track).Get()) {
+      for (const auto loc: track->GetCachedLocations()) {
          if (loc.typ == WaveTrackLocation::locationMergePoint &&
              fabs(time - loc.pos) < tolerance)
             return ii;
@@ -74,7 +73,7 @@ namespace
        const wxRect &rect, const wxMouseState &state,
        WaveTrackLocation *pmLocation)
    {
-      for (auto loc: WaveTrackLocationsCache::Get(*track).Get())
+      for (auto loc: track->GetCachedLocations())
       {
          const double x = viewInfo.TimeToPosition(loc.pos);
          if (x >= 0 && x < rect.width)
@@ -103,7 +102,7 @@ UIHandlePtr CutlineHandle::HitTest
  const AudacityProject *pProject,
  const std::shared_ptr<WaveTrack> &pTrack)
 {
-      auto &viewInfo = ViewInfo::Get( *pProject );
+   const ViewInfo &viewInfo = pProject->GetViewInfo();
    /// method that tells us if the mouse event landed on an
    /// editable Cutline
 
@@ -129,7 +128,7 @@ UIHandle::Result CutlineHandle::Click
       return Cancelled;
 
    const wxMouseEvent &event = evt.event;
-   auto &viewInfo = ViewInfo::Get( *pProject );
+   ViewInfo &viewInfo = pProject->GetViewInfo();
 
    // Can affect the track by merging clips, expanding a cutline, or
    // deleting a cutline.
@@ -173,8 +172,8 @@ UIHandle::Result CutlineHandle::Click
             // Don't assume correspondence of merge points across channels!
             int idx = FindMergeLine(channel, pos);
             if (idx >= 0) {
-               auto location =
-                  WaveTrackLocationsCache::Get(*channel).Get()[idx];
+               WaveTrack::Location location =
+                  channel->GetCachedLocations()[idx];
                channel->MergeClips(
                   location.clipidx1, location.clipidx2);
             }
@@ -248,8 +247,8 @@ UIHandle::Result CutlineHandle::Cancel(AudacityProject *pProject)
    UIHandle::Result result = RefreshCell;
    pProject->RollbackState();
    if (mOperation == Expand) {
-      AudacityProject &project = *pProject;
-      auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
+      AudacityProject *const project = pProject;
+      auto &selectedRegion = project->GetViewInfo().selectedRegion;
       selectedRegion.setTimes( mStartTime, mEndTime );
       result |= UpdateSelection;
    }

@@ -20,7 +20,6 @@ frequency changes smoothly during the tone.
 
 #include "../Audacity.h"
 #include "ToneGen.h"
-#include "LoadEffects.h"
 
 #include <math.h>
 #include <float.h>
@@ -82,16 +81,6 @@ Param( Interp,    int,     wxT("Interpolation"), 0,       0,       nInterpolatio
 // EffectToneGen
 //
 
-const ComponentInterfaceSymbol EffectChirp::Symbol
-{ XO("Chirp") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectChirp > reg; }
-
-const ComponentInterfaceSymbol EffectTone::Symbol
-{ XO("Tone") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectTone > reg2; }
-
 BEGIN_EVENT_TABLE(EffectToneGen, wxEvtHandler)
     EVT_TEXT(wxID_ANY, EffectToneGen::OnControlUpdate)
 END_EVENT_TABLE();
@@ -127,8 +116,8 @@ EffectToneGen::~EffectToneGen()
 ComponentInterfaceSymbol EffectToneGen::GetSymbol()
 {
    return mChirp
-      ? EffectChirp::Symbol
-      : EffectTone::Symbol;
+      ? CHIRP_PLUGIN_SYMBOL
+      : TONE_PLUGIN_SYMBOL;
 }
 
 wxString EffectToneGen::GetDescription()

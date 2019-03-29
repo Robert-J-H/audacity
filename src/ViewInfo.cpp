@@ -19,23 +19,12 @@ Paul Licameli
 #include "Project.h"
 #include "prefs/GUISettings.h"
 #include "Prefs.h"
-#include "TrackPanel.h" // for EVT_TRACK_PANEL_TIMER
 #include "xml/XMLWriter.h"
 #include "prefs/TracksBehaviorsPrefs.h"
 
 namespace {
 static const double gMaxZoom = 6000000;
 static const double gMinZoom = 0.001;
-}
-
-ZoomInfo &ZoomInfo::Get( AudacityProject &project )
-{
-   return ViewInfo::Get( project );
-}
-
-const ZoomInfo &ZoomInfo::Get( const AudacityProject &project )
-{
-   return Get( const_cast< AudacityProject & >( project ) );
 }
 
 ZoomInfo::ZoomInfo(double start, double pixelsPerSecond)
@@ -143,27 +132,6 @@ void ZoomInfo::FindIntervals
    wxASSERT(!results.empty() && results[0].position == origin);
 }
 
-static const AudacityProject::AttachedObjects::RegisteredFactory key{
-   []( AudacityProject &project ) {
-      auto result =
-         std::make_unique<ViewInfo>(0.0, 1.0, ZoomInfo::GetDefaultZoom());
-      ProjectWindow::Get( project ).Bind(EVT_TRACK_PANEL_TIMER,
-         &ViewInfo::OnTimer,
-         result.get());
-      return std::move( result );
-   }
-};
-
-ViewInfo &ViewInfo::Get( AudacityProject &project )
-{
-   return project.AttachedObjects::Get< ViewInfo >( key );
-}
-
-const ViewInfo &ViewInfo::Get( const AudacityProject &project )
-{
-   return Get( const_cast< AudacityProject & >( project ) );
-}
-
 ViewInfo::ViewInfo(double start, double screenDuration, double pixelsPerSecond)
    : ZoomInfo(start, pixelsPerSecond)
    , selectedRegion()
@@ -180,14 +148,6 @@ ViewInfo::ViewInfo(double start, double screenDuration, double pixelsPerSecond)
    UpdatePrefs();
 }
 
-void ViewInfo::UpdateSelectedPrefs( int id )
-{
-   if (id == UpdateScrollPrefsId())
-      gPrefs->Read(wxT("/GUI/AutoScroll"), &bUpdateTrackIndicator,
-                   true);
-   ZoomInfo::UpdateSelectedPrefs( id );
-}
-
 void ViewInfo::UpdatePrefs()
 {
    ZoomInfo::UpdatePrefs();
@@ -197,8 +157,6 @@ void ViewInfo::UpdatePrefs()
 #endif
    gPrefs->Read(wxT("/GUI/AdjustSelectionEdges"), &bAdjustSelectionEdges,
       true);
-
-   UpdateSelectedPrefs( UpdateScrollPrefsId() );
 }
 
 void ViewInfo::SetBeforeScreenWidth(wxInt64 beforeWidth, wxInt64 screenWidth, double lowerBoundTime)
@@ -249,10 +207,4 @@ void ViewInfo::OnTimer(wxCommandEvent &event)
    event.Skip();
    // Propagate the message to other listeners bound to this
    this->ProcessEvent( event );
-}
-
-int ViewInfo::UpdateScrollPrefsId()
-{
-   static int value = wxNewId();
-   return value;
 }

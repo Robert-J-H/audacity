@@ -44,8 +44,6 @@ On failure the old version is put back in place.
 #include "widgets/ErrorDialog.h"
 #include "xml/XMLWriter.h"
 
-#include "wxFileNameWrapper.h"
-
 static bool ConvertLegacyTrack(wxTextFile *f, XMLFileWriter &xmlFile)
 // may throw
 {
@@ -252,7 +250,7 @@ static bool ConvertLegacyTrack(wxTextFile *f, XMLFileWriter &xmlFile)
       return false;
 }
 
-bool ConvertLegacyProjectFile(const wxFileNameWrapper &filename)
+bool ConvertLegacyProjectFile(const wxFileName &filename)
 {
    wxTextFile f;
 

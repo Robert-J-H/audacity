@@ -30,8 +30,6 @@ with changes in the SelectionBar.
 #include "SelectionBar.h"
 #include "SelectionBarListener.h"
 
-#include "ToolManager.h"
-
 // For compilers that support precompilation, includes "wx/wx.h".
 #include <wx/wxprec.h>
 
@@ -131,21 +129,9 @@ SelectionBar::~SelectionBar()
 {
 }
 
-SelectionBar &SelectionBar::Get( AudacityProject &project )
-{
-   auto &toolManager = ToolManager::Get( project );
-   return *static_cast<SelectionBar*>( toolManager.GetToolBar(SelectionBarID) );
-}
-
-const SelectionBar &SelectionBar::Get( const AudacityProject &project )
-{
-   return Get( const_cast<AudacityProject&>( project )) ;
-}
-
 void SelectionBar::Create(wxWindow * parent)
 {
    ToolBar::Create(parent);
-   UpdatePrefs();
 }
 
 
@@ -518,8 +504,7 @@ void SelectionBar::OnUpdate(wxCommandEvent &evt)
    // Save format name before recreating the controls so they resize properly
    {
       auto format = mStartTime->GetBuiltinName(index);
-      if (mListener)
-         mListener->AS_SetSelectionFormat(format);
+      mListener->AS_SetSelectionFormat(format);
    }
 
    RegenerateTooltips();

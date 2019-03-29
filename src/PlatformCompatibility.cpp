@@ -22,11 +22,12 @@
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
 #include <wx/app.h>
-#include "wxFileNameWrapper.h"
 
 FilePath PlatformCompatibility::GetLongFileName(const FilePath &shortFileName)
 {
-   return wxFileNameWrapper{ shortFileName }.GetLongPath();
+   wxFileName fn(shortFileName);
+
+   return fn.GetLongPath();
 }
 
 const FilePath &PlatformCompatibility::GetExecutablePath()

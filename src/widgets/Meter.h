@@ -23,7 +23,6 @@
 #include <wx/timer.h>
 
 #include "../SampleFormat.h"
-#include "../Prefs.h"
 #include "Ruler.h"
 
 #if wxUSE_ACCESSIBILITY
@@ -31,6 +30,10 @@
 #endif
 
 class AudacityProject;
+
+// Event used to notify all meters of preference changes
+wxDECLARE_EXPORTED_EVENT(AUDACITY_DLL_API,
+                         EVT_METER_PREFERENCES_CHANGED, wxCommandEvent);
 
 // Increase this when we add support for multichannel meters
 // (most of the code is already there)
@@ -96,7 +99,7 @@ class MeterAx;
 \brief MeterPanel is a panel that paints the meter used for monitoring
 or playback.
 ************************************************************************/
-class MeterPanel final : public wxPanelWrapper, private PrefsListener
+class MeterPanel final : public wxPanelWrapper
 {
    DECLARE_DYNAMIC_CLASS(MeterPanel)
 
@@ -126,6 +129,7 @@ class MeterPanel final : public wxPanelWrapper, private PrefsListener
 
    void SetFocusFromKbd() override;
 
+   void UpdatePrefs();
    void Clear();
 
    Style GetStyle() const { return mStyle; }
@@ -193,9 +197,6 @@ class MeterPanel final : public wxPanelWrapper, private PrefsListener
    int GetDBRange() const { return mDB ? mDBRange : -1; }
 
  private:
-   void UpdatePrefs() override;
-   void UpdateSelectedPrefs( int ) override;
-
    static bool s_AcceptsFocus;
    struct Resetter { void operator () (bool *p) const { if(p) *p = false; } };
    using TempAllowFocus = std::unique_ptr<bool, Resetter>;
@@ -236,6 +237,7 @@ class MeterPanel final : public wxPanelWrapper, private PrefsListener
    void ShowMenu(const wxPoint & pos);
    void OnMonitor(wxCommandEvent &evt);
    void OnPreferences(wxCommandEvent &evt);
+   void OnMeterPrefsUpdated(wxCommandEvent &evt);
 
    wxString Key(const wxString & key) const;
 

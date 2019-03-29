@@ -18,7 +18,9 @@
   This class, which is a child of Toolbar, creates the
   window containing the tool selection (ibeam, envelope,
   move, zoom). The window can be embedded within a
-  normal project window, or within a ToolBarFrame.
+  normal project window, or within a ToolbarFrame that is
+  managed by a global ToolBarStub called
+  gToolsToolBarStub.
 
   All of the controls in this window were custom-written for
   Audacity - they are not native controls on any platform -
@@ -32,7 +34,6 @@
 
 #include "../Audacity.h"
 #include "ToolsToolBar.h"
-#include "ToolManager.h"
 
 // For compilers that support precompilation, includes "wx/wx.h".
 #include <wx/wxprec.h>
@@ -46,6 +47,8 @@
 #include <wx/sizer.h>
 #endif
 #include <wx/tooltip.h>
+
+#include "MeterToolBar.h"
 
 #include "../Prefs.h"
 #include "../AllThemeResources.h"
@@ -93,17 +96,6 @@ ToolsToolBar::ToolsToolBar()
 
 ToolsToolBar::~ToolsToolBar()
 {
-}
-
-ToolsToolBar &ToolsToolBar::Get( AudacityProject &project )
-{
-   auto &toolManager = ToolManager::Get( project );
-   return *static_cast<ToolsToolBar*>( toolManager.GetToolBar(ToolsBarID) );
-}
-
-const ToolsToolBar &ToolsToolBar::Get( const AudacityProject &project )
-{
-   return Get( const_cast<AudacityProject&>( project )) ;
 }
 
 void ToolsToolBar::RegenerateTooltips()
@@ -270,10 +262,4 @@ void ToolsToolBar::OnTool(wxCommandEvent & evt)
    gPrefs->Write(wxT("/GUI/ToolBars/Tools/MultiToolActive"),
                  IsDown(multiTool));
    gPrefs->Flush();
-}
-
-void ToolsToolBar::Create(wxWindow * parent)
-{
-   ToolBar::Create(parent);
-   UpdatePrefs();
 }

@@ -173,12 +173,9 @@ wxString PlaybackPrefs::HelpPageName()
    return "Playback_Preferences";
 }
 
-namespace{
-PrefsPanel::Registration sAttachment{ "Playback",
-   [](wxWindow *parent, wxWindowID winid)
-   {
-      wxASSERT(parent); // to justify safenew
-      return safenew PlaybackPrefs(parent, winid);
-   }
-};
+PrefsPanel *PlaybackPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+{
+   wxASSERT(parent); // to justify safenew
+   return safenew PlaybackPrefs(parent, winid);
 }
+

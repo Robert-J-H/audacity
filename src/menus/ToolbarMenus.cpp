@@ -15,10 +15,10 @@ namespace {
 /// Called by handlers that set tools.
 void SetTool(AudacityProject &project, int tool)
 {
-   auto toolbar = &ToolsToolBar::Get( project );
+   ToolsToolBar *toolbar = project.GetToolsToolBar();
    if (toolbar) {
       toolbar->SetCurrentTool(tool);
-      TrackPanel::Get( project ).Refresh(false);
+      project.GetTrackPanel()->Refresh(false);
    }
 }
 
@@ -37,135 +37,135 @@ struct Handler : CommandHandlerObject {
 void OnResetToolBars(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &toolManager = ToolManager::Get( project );
+   auto toolManager = project.GetToolManager();
 
-   toolManager.Reset();
-   MenuManager::Get(project).ModifyToolbarMenus(project);
+   toolManager->Reset();
+   GetMenuManager(project).ModifyToolbarMenus(project);
 }
 
 void OnShowTransportToolBar(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &toolManager = ToolManager::Get( project );
+   auto toolManager = project.GetToolManager();
 
-   toolManager.ShowHide(TransportBarID);
-   MenuManager::Get(project).ModifyToolbarMenus(project);
+   toolManager->ShowHide(TransportBarID);
+   GetMenuManager(project).ModifyToolbarMenus(project);
 }
 
 void OnShowToolsToolBar(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &toolManager = ToolManager::Get( project );
+   auto toolManager = project.GetToolManager();
 
-   toolManager.ShowHide( ToolsBarID );
-   MenuManager::Get(project).ModifyToolbarMenus(project);
+   toolManager->ShowHide( ToolsBarID );
+   GetMenuManager(project).ModifyToolbarMenus(project);
 }
 
 void OnShowRecordMeterToolBar(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &toolManager = ToolManager::Get( project );
+   auto toolManager = project.GetToolManager();
 
-   if( !toolManager.IsVisible( RecordMeterBarID ) )
+   if( !toolManager->IsVisible( RecordMeterBarID ) )
    {
-      toolManager.Expose( MeterBarID, false );
+      toolManager->Expose( MeterBarID, false );
    }
-   toolManager.ShowHide( RecordMeterBarID );
-   MenuManager::Get(project).ModifyToolbarMenus(project);
+   toolManager->ShowHide( RecordMeterBarID );
+   GetMenuManager(project).ModifyToolbarMenus(project);
 }
 
 void OnShowPlayMeterToolBar(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &toolManager = ToolManager::Get( project );
+   auto toolManager = project.GetToolManager();
 
-   if( !toolManager.IsVisible( PlayMeterBarID ) )
+   if( !toolManager->IsVisible( PlayMeterBarID ) )
    {
-      toolManager.Expose( MeterBarID, false );
+      toolManager->Expose( MeterBarID, false );
    }
 
-   toolManager.ShowHide( PlayMeterBarID );
-   MenuManager::Get(project).ModifyToolbarMenus(project);
+   toolManager->ShowHide( PlayMeterBarID );
+   GetMenuManager(project).ModifyToolbarMenus(project);
 }
 
 #if 0
 void OnShowMeterToolBar(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &toolManager = ToolManager::Get( project );
+   auto toolManager = project.GetToolManager();
 
-   if( !toolManager.IsVisible( MeterBarID ) )
+   if( !toolManager->IsVisible( MeterBarID ) )
    {
-      toolManager.Expose( PlayMeterBarID, false );
-      toolManager.Expose( RecordMeterBarID, false );
+      toolManager->Expose( PlayMeterBarID, false );
+      toolManager->Expose( RecordMeterBarID, false );
    }
-   toolManager.ShowHide( MeterBarID );
-   MenuManager::Get(project).ModifyToolbarMenus(project);
+   toolManager->ShowHide( MeterBarID );
+   GetMenuManager(project).ModifyToolbarMenus(project);
 }
 #endif
 
 void OnShowMixerToolBar(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &toolManager = ToolManager::Get( project );
+   auto toolManager = project.GetToolManager();
 
-   toolManager.ShowHide( MixerBarID );
-   MenuManager::Get(project).ModifyToolbarMenus(project);
+   toolManager->ShowHide( MixerBarID );
+   GetMenuManager(project).ModifyToolbarMenus(project);
 }
 
 void OnShowEditToolBar(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &toolManager = ToolManager::Get( project );
+   auto toolManager = project.GetToolManager();
 
-   toolManager.ShowHide( EditBarID );
-   MenuManager::Get(project).ModifyToolbarMenus(project);
+   toolManager->ShowHide( EditBarID );
+   GetMenuManager(project).ModifyToolbarMenus(project);
 }
 
 void OnShowTranscriptionToolBar(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &toolManager = ToolManager::Get( project );
+   auto toolManager = project.GetToolManager();
 
-   toolManager.ShowHide( TranscriptionBarID );
-   MenuManager::Get(project).ModifyToolbarMenus(project);
+   toolManager->ShowHide( TranscriptionBarID );
+   GetMenuManager(project).ModifyToolbarMenus(project);
 }
 
 void OnShowScrubbingToolBar(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &toolManager = ToolManager::Get( project );
+   auto toolManager = project.GetToolManager();
 
-   toolManager.ShowHide( ScrubbingBarID );
-   MenuManager::Get(project).ModifyToolbarMenus(project);
+   toolManager->ShowHide( ScrubbingBarID );
+   GetMenuManager(project).ModifyToolbarMenus(project);
 }
 
 void OnShowDeviceToolBar(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &toolManager = ToolManager::Get( project );
+   auto toolManager = project.GetToolManager();
 
-   toolManager.ShowHide( DeviceBarID );
-   MenuManager::Get(project).ModifyToolbarMenus(project);
+   toolManager->ShowHide( DeviceBarID );
+   GetMenuManager(project).ModifyToolbarMenus(project);
 }
 
 void OnShowSelectionToolBar(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &toolManager = ToolManager::Get( project );
+   auto toolManager = project.GetToolManager();
 
-   toolManager.ShowHide( SelectionBarID );
-   MenuManager::Get(project).ModifyToolbarMenus(project);
+   toolManager->ShowHide( SelectionBarID );
+   GetMenuManager(project).ModifyToolbarMenus(project);
 }
 
 #ifdef EXPERIMENTAL_SPECTRAL_EDITING
 void OnShowSpectralSelectionToolBar(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &toolManager = ToolManager::Get( project );
+   auto toolManager = project.GetToolManager();
 
-   toolManager.ShowHide( SpectralSelectionBarID );
-   MenuManager::Get(project).ModifyToolbarMenus(project);
+   toolManager->ShowHide( SpectralSelectionBarID );
+   GetMenuManager(project).ModifyToolbarMenus(project);
 }
 #endif
 
@@ -206,25 +206,29 @@ void OnMultiTool(const CommandContext &context)
 void OnPrevTool(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &toolbar = ToolsToolBar::Get( project );
-   auto &trackPanel = TrackPanel::Get( project );
+   auto toolbar = project.GetToolsToolBar();
+   auto trackPanel = project.GetTrackPanel();
 
-   // Use GetDownTool() here since GetCurrentTool() can return a value that
-   // doesn't represent the real tool if the Multi-tool is being used.
-   toolbar.SetCurrentTool((toolbar.GetDownTool()+(numTools-1))%numTools);
-   trackPanel.Refresh(false);
+   if (toolbar) {
+      // Use GetDownTool() here since GetCurrentTool() can return a value that
+      // doesn't represent the real tool if the Multi-tool is being used.
+      toolbar->SetCurrentTool((toolbar->GetDownTool()+(numTools-1))%numTools);
+      trackPanel->Refresh(false);
+   }
 }
 
 void OnNextTool(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &toolbar = ToolsToolBar::Get( project );
-   auto &trackPanel = TrackPanel::Get( project );
+   auto toolbar = project.GetToolsToolBar();
+   auto trackPanel = project.GetTrackPanel();
 
-   // Use GetDownTool() here since GetCurrentTool() can return a value that
-   // doesn't represent the real tool if the Multi-tool is being used.
-   toolbar.SetCurrentTool((toolbar.GetDownTool()+1)%numTools);
-   trackPanel.Refresh(false);
+   if (toolbar) {
+      // Use GetDownTool() here since GetCurrentTool() can return a value that
+      // doesn't represent the real tool if the Multi-tool is being used.
+      toolbar->SetCurrentTool((toolbar->GetDownTool()+1)%numTools);
+      trackPanel->Refresh(false);
+   }
 }
 
 }; // struct Handler
@@ -240,19 +244,18 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 // Menu definitions
 
-#define FN(X) (& ToolbarActions::Handler :: X)
+#define FN(X) findCommandHandler, \
+   static_cast<CommandFunctorPointer>(& ToolbarActions::Handler :: X)
+#define XXO(X) _(X), wxString{X}.Contains("...")
 
-// Under /MenuBar/View
-MenuTable::BaseItemSharedPtr ToolbarsMenu()
+MenuTable::BaseItemPtr ToolbarsMenu( AudacityProject& )
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
    
    static const auto checkOff = Options{}.CheckState( false );
 
-   static BaseItemSharedPtr menu{
-   FinderScope( findCommandHandler ).Eval(
-   Menu( wxT("Toolbars"), XO("&Toolbars"),
+   return Menu( _("&Toolbars"),
       /* i18n-hint: (verb)*/
       Command( wxT("ResetToolbars"), XXO("Reset Toolb&ars"),
          FN(OnResetToolBars), AlwaysEnabledFlag ),
@@ -274,14 +277,12 @@ MenuTable::BaseItemSharedPtr ToolbarsMenu()
       /* i18n-hint: Clicking this menu item shows the toolbar
          with the playback level meter*/
       Command( wxT("ShowPlayMeterTB"), XXO("&Playback Meter Toolbar"),
-         FN(OnShowPlayMeterToolBar), AlwaysEnabledFlag, checkOff )
+         FN(OnShowPlayMeterToolBar), AlwaysEnabledFlag, checkOff ),
 
       /* --i18nhint: Clicking this menu item shows the toolbar
          which has sound level meters*/
       //Command( wxT("ShowMeterTB"), XXO("Co&mbined Meter Toolbar"),
       //   FN(OnShowMeterToolBar), AlwaysEnabledFlag, checkOff ),
-
-         ,
 
       /* i18n-hint: Clicking this menu item shows the toolbar
          with the mixer*/
@@ -314,18 +315,13 @@ MenuTable::BaseItemSharedPtr ToolbarsMenu()
          XXO("Spe&ctral Selection Toolbar"),
          FN(OnShowSpectralSelectionToolBar), AlwaysEnabledFlag, checkOff )
 #endif
-   ) ) };
-   return menu;
+   );
 }
 
-namespace {
-using namespace MenuTable;
-BaseItemSharedPtr ExtraToolsMenu()
+MenuTable::BaseItemPtr ExtraToolsMenu( AudacityProject & )
 {
    using namespace MenuTable;
-   static BaseItemSharedPtr menu{
-   FinderScope( findCommandHandler ).Eval(
-   Menu( wxT("Tools"), XO("T&ools"),
+   return Menu( _("T&ools"),
       Command( wxT("SelectTool"), XXO("&Selection Tool"), FN(OnSelectTool),
          AlwaysEnabledFlag, wxT("F1") ),
       Command( wxT("EnvelopeTool"), XXO("&Envelope Tool"),
@@ -342,14 +338,8 @@ BaseItemSharedPtr ExtraToolsMenu()
          AlwaysEnabledFlag, wxT("A") ),
       Command( wxT("NextTool"), XXO("&Next Tool"), FN(OnNextTool),
          AlwaysEnabledFlag, wxT("D") )
-   ) ) };
-   return menu;
+   );
 }
 
-AttachedItem sAttachment2{
-   wxT("Optional/Extra/Part1"),
-   Shared( ExtraToolsMenu() )
-};
-}
-
+#undef XXO
 #undef FN

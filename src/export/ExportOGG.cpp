@@ -171,7 +171,7 @@ ProgressResult ExportOGG::Export(AudacityProject *project,
                        int WXUNUSED(subformat))
 {
    double    rate    = project->GetRate();
-   const auto &tracks = TrackList::Get( *project );
+   const TrackList *tracks = project->GetTracks();
    double    quality = (gPrefs->Read(wxT("/FileFormats/OggExportQuality"), 50)/(float)100.0);
 
    wxLogNull logNo;            // temporarily disable wxWidgets error messages
@@ -275,10 +275,10 @@ ProgressResult ExportOGG::Export(AudacityProject *project,
    }
 
    const WaveTrackConstArray waveTracks =
-      tracks.GetWaveTrackConstArray(selectionOnly, false);
+      tracks->GetWaveTrackConstArray(selectionOnly, false);
    {
       auto mixer = CreateMixer(waveTracks,
-         tracks.GetTimeTrack(),
+         tracks->GetTimeTrack(),
          t0, t1,
          numChannels, SAMPLES_PER_RUN, false,
          rate, floatSample, true, mixerSpec);
@@ -381,7 +381,7 @@ bool ExportOGG::FillComment(AudacityProject *project, vorbis_comment *comment, c
 {
    // Retrieve tags from project if not over-ridden
    if (metadata == NULL)
-      metadata = &Tags::Get( *project );
+      metadata = project->GetTags();
 
    vorbis_comment_init(comment);
 

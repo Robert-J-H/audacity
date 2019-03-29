@@ -1,16 +1,16 @@
 #include "../Audacity.h"
 #include "../Experimental.h"
 
+#include "../HistoryWindow.h"
+#include "../LyricsWindow.h"
 #include "../Menus.h"
+#include "../MixerBoard.h"
 #include "../Prefs.h"
 #include "../Project.h"
 #include "../TrackPanel.h"
-#include "../ViewInfo.h"
 #include "../commands/CommandContext.h"
 #include "../commands/CommandManager.h"
 #include "../prefs/TracksPrefs.h"
-#include "../tracks/ui/TrackView.h"
-#include "../tracks/ui/TrackViewGroupData.h"
 
 #ifdef EXPERIMENTAL_EFFECTS_RACK
 #include "../effects/EffectManager.h"
@@ -23,13 +23,12 @@ namespace {
 
 double GetZoomOfSelection( const AudacityProject &project )
 {
-   auto &viewInfo = ViewInfo::Get( project );
-   auto &trackPanel = TrackPanel::Get( project );
-   auto &window = ProjectWindow::Get( project );
+   const auto &viewInfo = project.GetViewInfo();
+   const auto &trackPanel = *project.GetTrackPanel();
 
    const double lowerBound =
       std::max(viewInfo.selectedRegion.t0(),
-         window.ScrollingLowerBoundTime());
+         project.ScrollingLowerBoundTime());
    const double denom =
       viewInfo.selectedRegion.t1() - lowerBound;
    if (denom <= 0.0)
@@ -60,52 +59,51 @@ double GetZoomOfPreset( const AudacityProject &project, int preset )
 
    double result = 1.0;
    double zoomToFit = ViewActions::GetZoomOfToFit( project );
-   using namespace WaveTrackViewConstants;
    switch( preset ){
       default:
-      case kZoomDefault:
+      case WaveTrack::kZoomDefault:
          result = ZoomInfo::GetDefaultZoom();
          break;
-      case kZoomToFit:
+      case WaveTrack::kZoomToFit:
          result = zoomToFit;
          break;
-      case kZoomToSelection:
+      case WaveTrack::kZoomToSelection:
          result = GetZoomOfSelection( project );
          break;
-      case kZoomMinutes:
+      case WaveTrack::kZoomMinutes:
          result = pixelsPerUnit * 1.0/60;
          break;
-      case kZoomSeconds:
+      case WaveTrack::kZoomSeconds:
          result = pixelsPerUnit * 1.0;
          break;
-      case kZoom5ths:
+      case WaveTrack::kZoom5ths:
          result = pixelsPerUnit * 5.0;
          break;
-      case kZoom10ths:
+      case WaveTrack::kZoom10ths:
          result = pixelsPerUnit * 10.0;
          break;
-      case kZoom20ths:
+      case WaveTrack::kZoom20ths:
          result = pixelsPerUnit * 20.0;
          break;
-      case kZoom50ths:
+      case WaveTrack::kZoom50ths:
          result = pixelsPerUnit * 50.0;
          break;
-      case kZoom100ths:
+      case WaveTrack::kZoom100ths:
          result = pixelsPerUnit * 100.0;
          break;
-      case kZoom500ths:
+      case WaveTrack::kZoom500ths:
          result = pixelsPerUnit * 500.0;
          break;
-      case kZoomMilliSeconds:
+      case WaveTrack::kZoomMilliSeconds:
          result = pixelsPerUnit * 1000.0;
          break;
-      case kZoomSamples:
+      case WaveTrack::kZoomSamples:
          result = 44100.0;
          break;
-      case kZoom4To1:
+      case WaveTrack::kZoom4To1:
          result = 44100.0 * 4;
          break;
-      case kMaxZoom:
+      case WaveTrack::kMaxZoom:
          result = ZoomInfo::GetMaxZoom();
          break;
    };
@@ -116,18 +114,15 @@ double GetZoomOfPreset( const AudacityProject &project, int preset )
 
 }
 
-// to do: hide this
-#include "TrackArtist.h"
-
 namespace ViewActions {
 
 // exported helper functions
 
 double GetZoomOfToFit( const AudacityProject &project )
 {
-   auto &tracks = TrackList::Get( project );
-   auto &viewInfo = ViewInfo::Get( project );
-   auto &trackPanel = TrackPanel::Get( project );
+   const auto &tracks = *project.GetTracks();
+   const auto &viewInfo = project.GetViewInfo();
+   const auto &trackPanel = *project.GetTrackPanel();
 
    const double end = tracks.GetEndTime();
    const double start = viewInfo.bScrollBeyondZero
@@ -146,48 +141,43 @@ double GetZoomOfToFit( const AudacityProject &project )
 
 void DoZoomFit(AudacityProject &project)
 {
-   auto &viewInfo = ViewInfo::Get( project );
-   auto &tracks = TrackList::Get( project );
-   auto &window = ProjectWindow::Get( project );
+   auto &viewInfo = project.GetViewInfo();
+   auto tracks = project.GetTracks();
 
    const double start = viewInfo.bScrollBeyondZero
-      ? std::min(tracks.GetStartTime(), 0.0)
+      ? std::min(tracks->GetStartTime(), 0.0)
       : 0;
 
-   window.Zoom( GetZoomOfToFit( project ) );
-   window.TP_ScrollWindow(start);
+   project.Zoom( GetZoomOfToFit( project ) );
+   project.TP_ScrollWindow(start);
 }
 
 void DoZoomFitV(AudacityProject &project)
 {
-   auto &trackPanel = TrackPanel::Get( project );
-   auto &tracks = TrackList::Get( project );
+   auto trackPanel = project.GetTrackPanel();
+   auto tracks = project.GetTracks();
 
    // Only nonminimized audio tracks will be resized
-   auto range = tracks.Any<AudioTrack>()
-      - [](const Track *pTrack){
-         return TrackViewGroupData::Get( *pTrack ).GetMinimized(); };
+   auto range = tracks->Any<AudioTrack>() - &Track::GetMinimized;
    auto count = range.size();
    if (count == 0)
       return;
 
    // Find total height to apportion
    int height;
-   trackPanel.GetTracksUsableArea(NULL, &height);
+   trackPanel->GetTracksUsableArea(NULL, &height);
    height -= 28;
    
    // The height of minimized and non-audio tracks cannot be apportioned
-   const auto GetHeight = []( const Track *track )
-      { return TrackView::Get( *track ).GetHeight(); };
    height -=
-      tracks.Any().sum( GetHeight ) - range.sum( GetHeight );
+      tracks->Any().sum( &Track::GetHeight ) - range.sum( &Track::GetHeight );
    
    // Give each resized track the average of the remaining height
    height = height / count;
    height = std::max( (int)TrackInfo::MinimumTrackHeight(), height );
 
    for (auto t : range)
-      TrackView::Get( *t ).SetHeight(height);
+      t->SetHeight(height);
 }
 
 // Menu handler functions
@@ -197,43 +187,38 @@ struct Handler : CommandHandlerObject {
 void OnZoomIn(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &window = ProjectWindow::Get( project );
-   window.ZoomInByFactor( 2.0 );
+   project.ZoomInByFactor( 2.0 );
 }
 
 void OnZoomNormal(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &trackPanel = TrackPanel::Get( project );
-   auto &window = ProjectWindow::Get( project );
+   auto trackPanel = project.GetTrackPanel();
 
-   window.Zoom(ZoomInfo::GetDefaultZoom());
-   trackPanel.Refresh(false);
+   project.Zoom(ZoomInfo::GetDefaultZoom());
+   trackPanel->Refresh(false);
 }
 
 void OnZoomOut(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &window = ProjectWindow::Get( project );
-   window.ZoomOutByFactor( 1 /2.0 );
+   project.ZoomOutByFactor( 1 /2.0 );
 }
 
 void OnZoomSel(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
-   auto &window = ProjectWindow::Get( project );
+   auto &selectedRegion = project.GetViewInfo().selectedRegion;
 
-   window.Zoom( GetZoomOfSelection( project ) );
-   window.TP_ScrollWindow(selectedRegion.t0());
+   project.Zoom( GetZoomOfSelection( project ) );
+   project.TP_ScrollWindow(selectedRegion.t0());
 }
 
 void OnZoomToggle(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &viewInfo = ViewInfo::Get( project );
-   auto &trackPanel = TrackPanel::Get( project );
-   auto &window = ProjectWindow::Get( project );
+   auto &viewInfo = project.GetViewInfo();
+   auto trackPanel = project.GetTrackPanel();
 
 //   const double origLeft = viewInfo.h;
 //   const double origWidth = GetScreenEndTime() - origLeft;
@@ -245,8 +230,8 @@ void OnZoomToggle(const CommandContext &context)
    double ChosenZoom =
       fabs(log(Zoom1 / Z)) > fabs(log( Z / Zoom2)) ? Zoom1:Zoom2;
 
-   window.Zoom(ChosenZoom);
-   trackPanel.Refresh(false);
+   project.Zoom(ChosenZoom);
+   trackPanel->Refresh(false);
 //   const double newWidth = GetScreenEndTime() - viewInfo.h;
 //   const double newh = origLeft + (origWidth - newWidth) / 2;
 //   TP_ScrollWindow(newh);
@@ -260,111 +245,130 @@ void OnZoomFit(const CommandContext &context)
 void OnZoomFitV(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &window = ProjectWindow::Get( project );
 
    DoZoomFitV(project);
 
-   window.GetVerticalScrollBar().SetThumbPosition(0);
-   window.RedrawProject();
+   project.GetVerticalScrollBar().SetThumbPosition(0);
+   project.RedrawProject();
    project.ModifyState(true);
 }
 
 void OnAdvancedVZoom(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &commandManager = CommandManager::Get( project );
+   auto commandManager = project.GetCommandManager();
 
    bool checked = !gPrefs->Read(wxT("/GUI/VerticalZooming"), 0L);
    gPrefs->Write(wxT("/GUI/VerticalZooming"), checked);
    gPrefs->Flush();
-   commandManager.Check(wxT("AdvancedVZoom"), checked);
+   commandManager->Check(wxT("AdvancedVZoom"), checked);
    MenuCreator::RebuildAllMenuBars();
 }
 
 void OnCollapseAllTracks(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &tracks = TrackList::Get( project );
-   auto &window = ProjectWindow::Get( project );
+   auto tracks = project.GetTracks();
 
-   for (auto group : tracks.Any().ByGroups())
-      TrackViewGroupData::Get( *group.data ).SetMinimized(true);
+   for (auto t : tracks->Any())
+      t->SetMinimized(true);
 
    project.ModifyState(true);
-   window.RedrawProject();
+   project.RedrawProject();
 }
 
 void OnExpandAllTracks(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &tracks = TrackList::Get( project );
-   auto &window = ProjectWindow::Get( project );
+   auto tracks = project.GetTracks();
 
-   for (auto group : tracks.Any().ByGroups())
-      TrackViewGroupData::Get( *group.data ).SetMinimized(false);
+   for (auto t : tracks->Any())
+      t->SetMinimized(false);
 
    project.ModifyState(true);
-   window.RedrawProject();
+   project.RedrawProject();
 }
 
 void OnGoSelStart(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &viewInfo = ViewInfo::Get( project );
+   auto &viewInfo = project.GetViewInfo();
    auto &selectedRegion = viewInfo.selectedRegion;
-   auto &trackPanel = TrackPanel::Get( project );
-   auto &window = ProjectWindow::Get( project );
+   auto &trackPanel = *project.GetTrackPanel();
 
    if (selectedRegion.isPoint())
       return;
 
-   window.TP_ScrollWindow(
+   project.TP_ScrollWindow(
       selectedRegion.t0() - ((trackPanel.GetScreenEndTime() - viewInfo.h) / 2));
 }
 
 void OnGoSelEnd(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &viewInfo = ViewInfo::Get( project );
+   auto &viewInfo = project.GetViewInfo();
    auto &selectedRegion = viewInfo.selectedRegion;
-   auto &trackPanel = TrackPanel::Get( project );
-   auto &window = ProjectWindow::Get( project );
+   auto &trackPanel = *project.GetTrackPanel();
 
    if (selectedRegion.isPoint())
       return;
 
-   window.TP_ScrollWindow(
+   project.TP_ScrollWindow(
       selectedRegion.t1() - ((trackPanel.GetScreenEndTime() - viewInfo.h) / 2));
+}
+
+void OnHistory(const CommandContext &context)
+{
+   auto &project = context.project;
+
+   auto historyWindow = project.GetHistoryWindow(true);
+   historyWindow->Show();
+   historyWindow->Raise();
+}
+
+void OnKaraoke(const CommandContext &context)
+{
+   auto &project = context.project;
+
+   auto lyricsWindow = project.GetLyricsWindow(true);
+   lyricsWindow->Show();
+   lyricsWindow->Raise();
+}
+
+void OnMixerBoard(const CommandContext &context)
+{
+   auto &project = context.project;
+
+   auto mixerBoardFrame = project.GetMixerBoardFrame(true);
+   mixerBoardFrame->Show();
+   mixerBoardFrame->Raise();
+   mixerBoardFrame->SetFocus();
 }
 
 void OnShowExtraMenus(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &commandManager = CommandManager::Get( project );
+   auto commandManager = project.GetCommandManager();
 
    bool checked = !gPrefs->Read(wxT("/GUI/ShowExtraMenus"), 0L);
    gPrefs->Write(wxT("/GUI/ShowExtraMenus"), checked);
    gPrefs->Flush();
-   commandManager.Check(wxT("ShowExtraMenus"), checked);
+   commandManager->Check(wxT("ShowExtraMenus"), checked);
    MenuCreator::RebuildAllMenuBars();
 }
 
 void OnShowClipping(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &commandManager = CommandManager::Get( project );
-   auto &trackPanel = TrackPanel::Get( project );
+   auto commandManager = project.GetCommandManager();
+   auto trackPanel = project.GetTrackPanel();
 
    bool checked = !gPrefs->Read(wxT("/GUI/ShowClipping"), 0L);
    gPrefs->Write(wxT("/GUI/ShowClipping"), checked);
    gPrefs->Flush();
-   commandManager.Check(wxT("ShowClipping"), checked);
-
-   // to do: hide the emission of this event inside a PrefsVariable object
-   wxTheApp->AddPendingEvent(wxCommandEvent{
-      EVT_PREFS_UPDATE, TrackArtist::ShowClippingPrefsId() });
-
-   trackPanel.Refresh(false);
+   commandManager->Check(wxT("ShowClipping"), checked);
+   trackPanel->UpdatePrefs();
+   trackPanel->Refresh(false);
 }
 
 #if defined(EXPERIMENTAL_EFFECTS_RACK)
@@ -387,24 +391,21 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 // Menu definitions
 
-#define FN(X) (& ViewActions::Handler :: X)
+#define FN(X) findCommandHandler, \
+   static_cast<CommandFunctorPointer>(& ViewActions::Handler :: X)
+#define XXO(X) _(X), wxString{X}.Contains("...")
 
-MenuTable::BaseItemSharedPtr ToolbarsMenu();
+MenuTable::BaseItemPtr ToolbarsMenu( AudacityProject& );
 
-// Under /MenuBar
-namespace {
-using namespace MenuTable;
-BaseItemSharedPtr ViewMenu()
+MenuTable::BaseItemPtr ViewMenu( AudacityProject& )
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
 
    static const auto checkOff = Options{}.CheckState( false );
 
-   static BaseItemSharedPtr menu{
-   FinderScope( findCommandHandler ).Eval(
-   Menu( wxT("View"), XO("&View"),
-      Menu( wxT("Zoom"), XO("&Zoom"),
+   return Menu( _("&View"),
+      Menu( _("&Zoom"),
          Command( wxT("ZoomIn"), XXO("Zoom &In"), FN(OnZoomIn),
             ZoomInAvailableFlag, wxT("Ctrl+1") ),
          Command( wxT("ZoomNormal"), XXO("Zoom &Normal"), FN(OnZoomNormal),
@@ -418,10 +419,10 @@ BaseItemSharedPtr ViewMenu()
          Separator(),
          Command( wxT("AdvancedVZoom"), XXO("Advanced &Vertical Zooming"),
             FN(OnAdvancedVZoom), AlwaysEnabledFlag,
-            Options{}.CheckTest( wxT("/GUI/VerticalZooming"), false ) )
+            Options{}.CheckState( gPrefs->Read(wxT("/GUI/VerticalZooming"), 0L) ) )
       ),
 
-      Menu( wxT("TrackSize"), XO("T&rack Size"),
+      Menu( _("T&rack Size"),
          Command( wxT("FitInWindow"), XXO("&Fit to Width"), FN(OnZoomFit),
             TracksExistFlag, wxT("Ctrl+F") ),
          Command( wxT("FitV"), XXO("Fit to &Height"), FN(OnZoomFitV),
@@ -432,48 +433,84 @@ BaseItemSharedPtr ViewMenu()
             FN(OnExpandAllTracks), TracksExistFlag, wxT("Ctrl+Shift+X") )
       ),
 
-      Menu( wxT("SkipTo"), XO("Sk&ip to"),
+      Menu( _("Sk&ip to"),
          Command( wxT("SkipSelStart"), XXO("Selection Sta&rt"),
             FN(OnGoSelStart), TimeSelectedFlag,
-            Options{ wxT("Ctrl+["), XO("Skip to Selection Start") } ),
+            Options{ wxT("Ctrl+["), _("Skip to Selection Start") } ),
          Command( wxT("SkipSelEnd"), XXO("Selection En&d"), FN(OnGoSelEnd),
             TimeSelectedFlag,
-            Options{ wxT("Ctrl+]"), XO("Skip to Selection End") } )
+            Options{ wxT("Ctrl+]"), _("Skip to Selection End") } )
       ),
 
       Separator(),
 
-      // Site for attachment of externally registered menu items:
-      Items( wxT("Windows") ),
+      // History window should be available either for UndoAvailableFlag
+      // or RedoAvailableFlag,
+      // but we can't make the AddItem flags and mask have both,
+      // because they'd both have to be true for the
+      // command to be enabled.
+      //    If user has Undone the entire stack, RedoAvailableFlag is on
+      //    but UndoAvailableFlag is off.
+      //    If user has done things but not Undone anything,
+      //    RedoAvailableFlag is off but UndoAvailableFlag is on.
+      // So in either of those cases,
+      // (AudioIONotBusyFlag | UndoAvailableFlag | RedoAvailableFlag) mask
+      // would fail.
+      // The only way to fix this in the current architecture
+      // is to hack in special cases for RedoAvailableFlag
+      // in AudacityProject::UpdateMenus() (ugly)
+      // and CommandManager::HandleCommandEntry() (*really* ugly --
+      // shouldn't know about particular command names and flags).
+      // Here's the hack that would be necessary in
+      // AudacityProject::UpdateMenus(), if somebody decides to do it:
+      //    // Because EnableUsingFlags requires all the flag bits match the
+      //    // corresponding mask bits,
+      //    // "UndoHistory" specifies only
+      //    // AudioIONotBusyFlag | UndoAvailableFlag, because that
+      //    // covers the majority of cases where it should be enabled.
+      //    // If history is not empty but we've Undone the whole stack,
+      //    // we also want to enable,
+      //    // to show the Redo's on stack.
+      //    // "UndoHistory" might already be enabled,
+      //    // but add this check for RedoAvailableFlag.
+      //    if (flags & RedoAvailableFlag)
+      //       GetCommandManager()->Enable(wxT("UndoHistory"), true);
+      // So for now, enable the command regardless of stack.
+      // It will just show empty sometimes.
+      // FOR REDESIGN,
+      // clearly there are some limitations with the flags/mask bitmaps.
+
+      /* i18n-hint: Clicking this menu item shows the various editing steps
+         that have been taken.*/
+      Command( wxT("UndoHistory"), XXO("&History..."), FN(OnHistory),
+         AudioIONotBusyFlag ),
+
+      Command( wxT("Karaoke"), XXO("&Karaoke..."), FN(OnKaraoke),
+         LabelTracksExistFlag ),
+      Command( wxT("MixerBoard"), XXO("&Mixer Board..."), FN(OnMixerBoard),
+         PlayableTracksExistFlag ),
 
       Separator(),
 
       //////////////////////////////////////////////////////////////////////////
 
-      ToolbarsMenu(),
+      ToolbarsMenu,
 
       Separator(),
 
       Command( wxT("ShowExtraMenus"), XXO("&Extra Menus (on/off)"),
          FN(OnShowExtraMenus), AlwaysEnabledFlag,
-         Options{}.CheckTest( wxT("/GUI/ShowExtraMenus"), false ) ),
+         Options{}.CheckState( gPrefs->Read(wxT("/GUI/ShowExtraMenus"), 0L) ) ),
       Command( wxT("ShowClipping"), XXO("&Show Clipping (on/off)"),
          FN(OnShowClipping), AlwaysEnabledFlag,
-         Options{}.CheckTest( wxT("/GUI/ShowClipping"), false ) )
+         Options{}.CheckState( gPrefs->Read(wxT("/GUI/ShowClipping"), 0L) ) )
 #if defined(EXPERIMENTAL_EFFECTS_RACK)
       ,
       Command( wxT("ShowEffectsRack"), XXO("Show Effects Rack"),
          FN(OnShowEffectsRack), AlwaysEnabledFlag, checkOff )
 #endif
-   ) ) };
-   return menu;
-   
+   );
 }
 
-AttachedItem sAttachment1{
-   wxT(""),
-   Shared( ViewMenu() )
-};
-}
-
+#undef XXO
 #undef FN

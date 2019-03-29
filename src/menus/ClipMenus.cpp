@@ -2,7 +2,6 @@
 #include "../TrackPanel.h"
 #include "../UndoManager.h"
 #include "../WaveClip.h"
-#include "../ViewInfo.h"
 #include "../WaveTrack.h"
 #include "../commands/CommandContext.h"
 #include "../commands/CommandManager.h"
@@ -18,8 +17,7 @@ struct FoundTrack {
 
    wxString ComposeTrackName() const
    {
-      const auto &data = waveTrack->GetGroupData();
-      auto name = data.GetName();
+      auto name = waveTrack->GetName();
       auto shortName = name == waveTrack->GetDefaultName()
          /* i18n-hint: compose a name identifying an unnamed track by number */
          ? wxString::Format( _("Track %d"), trackNum )
@@ -250,10 +248,10 @@ int FindClipBoundaries
 (AudacityProject &project,
  double time, bool next, std::vector<FoundClipBoundary>& finalResults)
 {
-   auto &tracks = TrackList::Get( project );
+   auto tracks = project.GetTracks();
    finalResults.clear();
 
-   bool anyWaveTracksSelected{ tracks.Selected< const WaveTrack >() };
+   bool anyWaveTracksSelected{ tracks->Selected< const WaveTrack >() };
 
 
    // first search the tracks individually
@@ -261,7 +259,7 @@ int FindClipBoundaries
    std::vector<FoundClipBoundary> results;
 
    int nTracksSearched = 0;
-   auto leaders = tracks.Leaders();
+   auto leaders = tracks->Leaders();
    auto rangeLeaders = leaders.Filter<const WaveTrack>();
    if (anyWaveTracksSelected)
       rangeLeaders = rangeLeaders + &Track::GetSelected;
@@ -374,8 +372,8 @@ wxString ClipBoundaryMessage(const std::vector<FoundClipBoundary>& results)
 
 void DoSelectClipBoundary(AudacityProject &project, bool next)
 {
-   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
-   auto &trackPanel = TrackPanel::Get( project );
+   auto &selectedRegion = project.GetViewInfo().selectedRegion;
+   auto trackPanel = project.GetTrackPanel();
 
    std::vector<FoundClipBoundary> results;
    FindClipBoundaries(project, next ? selectedRegion.t1() :
@@ -390,10 +388,10 @@ void DoSelectClipBoundary(AudacityProject &project, bool next)
          selectedRegion.setT0(results[0].time);
 
       project.ModifyState(false);
-      trackPanel.Refresh(false);
+      trackPanel->Refresh(false);
 
       wxString message = ClipBoundaryMessage(results);
-      trackPanel.MessageForScreenReader(message);
+      trackPanel->MessageForScreenReader(message);
    }
 }
 
@@ -483,17 +481,17 @@ int FindClips
 (AudacityProject &project,
  double t0, double t1, bool next, std::vector<FoundClip>& finalResults)
 {
-   auto &tracks = TrackList::Get( project );
+   const auto tracks = project.GetTracks();
    finalResults.clear();
 
-   bool anyWaveTracksSelected{ tracks.Selected< const WaveTrack >() };
+   bool anyWaveTracksSelected{ tracks->Selected< const WaveTrack >() };
 
    // first search the tracks individually
 
    std::vector<FoundClip> results;
 
    int nTracksSearched = 0;
-   auto leaders = tracks.Leaders();
+   auto leaders = tracks->Leaders();
    auto rangeLeaders = leaders.Filter<const WaveTrack>();
    if (anyWaveTracksSelected)
       rangeLeaders = rangeLeaders + &Track::GetSelected;
@@ -559,8 +557,8 @@ int FindClips
 
 void DoSelectClip(AudacityProject &project, bool next)
 {
-   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
-   auto &trackPanel = TrackPanel::Get( project );
+   auto &selectedRegion = project.GetViewInfo().selectedRegion;
+   auto trackPanel = project.GetTrackPanel();
 
    std::vector<FoundClip> results;
    FindClips(project, selectedRegion.t0(),
@@ -573,8 +571,8 @@ void DoSelectClip(AudacityProject &project, bool next)
       double t1 = results[0].endTime;
       selectedRegion.setTimes(t0, t1);
       project.ModifyState(false);
-      trackPanel.ScrollIntoView(selectedRegion.t0());
-      trackPanel.Refresh(false);
+      trackPanel->ScrollIntoView(selectedRegion.t0());
+      trackPanel->Refresh(false);
 
       // create and send message to screen reader
       wxString message;
@@ -599,15 +597,15 @@ void DoSelectClip(AudacityProject &project, bool next)
          else
             message = wxString::Format(_("%s, %s"), message, str);
       }
-      trackPanel.MessageForScreenReader(message);
+      trackPanel->MessageForScreenReader(message);
    }
 }
 
 void DoCursorClipBoundary
 (AudacityProject &project, bool next)
 {
-   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
-   auto &trackPanel = TrackPanel::Get( project );
+   auto &selectedRegion = project.GetViewInfo().selectedRegion;
+   auto trackPanel = project.GetTrackPanel();
 
    std::vector<FoundClipBoundary> results;
    FindClipBoundaries(project, next ? selectedRegion.t1() :
@@ -619,11 +617,11 @@ void DoCursorClipBoundary
       double time = results[0].time;
       selectedRegion.setTimes(time, time);
       project.ModifyState(false);
-      trackPanel.ScrollIntoView(selectedRegion.t0());
-      trackPanel.Refresh(false);
+      trackPanel->ScrollIntoView(selectedRegion.t0());
+      trackPanel->Refresh(false);
 
       wxString message = ClipBoundaryMessage(results);
-      trackPanel.MessageForScreenReader(message);
+      trackPanel->MessageForScreenReader(message);
    }
 }
 
@@ -692,24 +690,25 @@ double DoClipMove
 void DoClipLeftOrRight
 (AudacityProject &project, bool right, bool keyUp )
 {
-   auto &undoManager = UndoManager::Get( project );
+   auto &undoManager = *project.GetUndoManager();
 
    if (keyUp) {
       undoManager.StopConsolidating();
       return;
    }
 
-   auto &trackPanel = TrackPanel::Get( project );
-   auto &viewInfo = ViewInfo::Get( project );
+   auto &panel = *project.GetTrackPanel();
+   auto &viewInfo = project.GetViewInfo();
    auto &selectedRegion = viewInfo.selectedRegion;
-   auto &tracks = TrackList::Get( project );
+   auto tracks = project.GetTracks();
    auto isSyncLocked = project.IsSyncLocked();
 
-   auto amount = DoClipMove( viewInfo, trackPanel.GetFocusedTrack(),
-        tracks, isSyncLocked, right );
+   auto amount = DoClipMove
+      ( viewInfo, panel.GetFocusedTrack(),
+        *tracks, isSyncLocked, right );
 
-   trackPanel.ScrollIntoView(selectedRegion.t0());
-   trackPanel.Refresh(false);
+   panel.ScrollIntoView(selectedRegion.t0());
+   panel.Refresh(false);
 
    if (amount != 0.0) {
       wxString message = right? _("Time shifted clips to the right") :
@@ -723,7 +722,7 @@ void DoClipLeftOrRight
    }
 
    if ( amount == 0.0 )
-      trackPanel.MessageForScreenReader( _("clip not moved"));
+      panel.MessageForScreenReader( _("clip not moved"));
 }
 
 }
@@ -817,21 +816,16 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 // Menu definitions
 
-#define FN(X) (& ClipActions::Handler :: X)
+#define FN(X) findCommandHandler, \
+   static_cast<CommandFunctorPointer>(& ClipActions::Handler :: X)
+#define XXO(X) _(X), wxString{X}.Contains("...")
 
-namespace {
-using namespace MenuTable;
-
-// Register menu items
-
-BaseItemSharedPtr ClipSelectMenu()
+MenuTable::BaseItemPtr ClipSelectMenu( AudacityProject& )
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
 
-   static BaseItemSharedPtr menu {
-   FinderScope( findCommandHandler ).Eval(
-   Menu( wxT("Clip"), XO("Clip B&oundaries"),
+   return Menu( _("Clip B&oundaries"),
       Command( wxT("SelPrevClipBoundaryToCursor"),
          XXO("Pre&vious Clip Boundary to Cursor"),
          FN(OnSelectPrevClipBoundaryToCursor),
@@ -842,63 +836,41 @@ BaseItemSharedPtr ClipSelectMenu()
          WaveTracksExistFlag ),
       Command( wxT("SelPrevClip"), XXO("Previo&us Clip"),
          FN(OnSelectPrevClip), WaveTracksExistFlag,
-         Options{ wxT("Alt+,"), XO("Select Previous Clip") } ),
+         Options{ wxT("Alt+,"), _("Select Previous Clip") } ),
       Command( wxT("SelNextClip"), XXO("N&ext Clip"), FN(OnSelectNextClip),
          WaveTracksExistFlag,
-         Options{ wxT("Alt+."), XO("Select Next Clip") } )
-   ) ) };
-   return menu;
+         Options{ wxT("Alt+."), _("Select Next Clip") } )
+   );
 }
-AttachedItem sAttachment1{
-   { wxT("Select"),
-     { OrderingHint::After, wxT("Spectral") } },
-   Shared( ClipSelectMenu() )
-};
 
-BaseItemSharedPtr ClipCursorItems()
+MenuTable::BaseItemPtr ClipCursorItems( AudacityProject & )
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
 
-   static BaseItemSharedPtr items{
-   FinderScope( findCommandHandler ).Eval(
-   Items( wxT("Clip"),
+   return Items(
       Command( wxT("CursPrevClipBoundary"), XXO("Pre&vious Clip Boundary"),
          FN(OnCursorPrevClipBoundary),
          WaveTracksExistFlag,
-         Options{}.LongName( XO("Cursor to Prev Clip Boundary") ) ),
+         Options{}.LongName( _("Cursor to Prev Clip Boundary") ) ),
       Command( wxT("CursNextClipBoundary"), XXO("Ne&xt Clip Boundary"),
          FN(OnCursorNextClipBoundary),
          WaveTracksExistFlag,
-         Options{}.LongName( XO("Cursor to Next Clip Boundary") ) )
-   ) ) };
-   return items;
+         Options{}.LongName( _("Cursor to Next Clip Boundary") ) )
+   );
 }
-AttachedItem sAttachment2{
-   { wxT("Transport/Cursor"),
-     { OrderingHint::Before, wxT("CursProjectStart") } },
-   Shared( ClipCursorItems() )
-};
 
-BaseItemSharedPtr ExtraClipCursorItems()
+MenuTable::BaseItemPtr ExtraClipCursorItems( AudacityProject & )
 {
    using namespace MenuTable;
 
-   static BaseItemSharedPtr items{
-   FinderScope( findCommandHandler ).Eval(
-   Items( wxT("Clip"),
+   return Items(
       Command( wxT("ClipLeft"), XXO("Clip L&eft"), FN(OnClipLeft),
          TracksExistFlag | TrackPanelHasFocus, wxT("\twantKeyup") ),
       Command( wxT("ClipRight"), XXO("Clip Rig&ht"), FN(OnClipRight),
          TracksExistFlag | TrackPanelHasFocus, wxT("\twantKeyup") )
-   ) ) };
-   return items;
-}
-AttachedItem sAttachment3{
-  { wxT("Optional/Extra/Part2/Cursor"), { OrderingHint::End, {} } },
-  Shared( ExtraClipCursorItems() )
-};
-
+   );
 }
 
+#undef XXO
 #undef FN

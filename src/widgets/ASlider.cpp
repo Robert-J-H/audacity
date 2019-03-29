@@ -1011,12 +1011,11 @@ bool LWSlider::DoShowDialog(wxPoint pos)
 
 void LWSlider::OnMouseEvent(wxMouseEvent & event)
 {
-   auto &window = ProjectWindow::Get( *GetActiveProject() );
    if (event.Entering())
    {
       // Display the tooltip in the status bar
       wxString tip = GetTip(mCurrentValue);
-      window.TP_DisplayStatusMessage(tip);
+      GetActiveProject()->TP_DisplayStatusMessage(tip);
       Refresh();
    }
    else if (event.Leaving())
@@ -1025,7 +1024,7 @@ void LWSlider::OnMouseEvent(wxMouseEvent & event)
       {
          ShowTip(false);
       }
-      window.TP_DisplayStatusMessage(wxT(""));
+      GetActiveProject()->TP_DisplayStatusMessage(wxT(""));
       Refresh();
    }
 

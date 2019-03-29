@@ -44,13 +44,13 @@ wxString MuteButtonHandle::Tip(const wxMouseState &) const
    auto name = _("Mute");
    auto project = ::GetActiveProject();
    auto focused =
-      TrackPanel::Get( *project ).GetFocusedTrack() == GetTrack().get();
+      project->GetTrackPanel()->GetFocusedTrack() == GetTrack().get();
    if (!focused)
       return name;
 
-   auto &commandManager = CommandManager::Get( *project );
+   auto commandManager = project->GetCommandManager();
    TranslatedInternalString command{ wxT("TrackMute"), name };
-   return commandManager.DescribeCommandsAndShortcuts(&command, 1u);
+   return commandManager->DescribeCommandsAndShortcuts(&command, 1u);
 }
 
 UIHandlePtr MuteButtonHandle::HitTest
@@ -100,13 +100,13 @@ wxString SoloButtonHandle::Tip(const wxMouseState &) const
    auto name = _("Solo");
    auto project = ::GetActiveProject();
    auto focused =
-      TrackPanel::Get( *project ).GetFocusedTrack() == GetTrack().get();
+      project->GetTrackPanel()->GetFocusedTrack() == GetTrack().get();
    if (!focused)
       return name;
 
-   auto &commandManager = CommandManager::Get( *project );
+   auto commandManager = project->GetCommandManager();
    TranslatedInternalString command{ wxT("TrackSolo"), name };
-   return commandManager.DescribeCommandsAndShortcuts( &command, 1u );
+   return commandManager->DescribeCommandsAndShortcuts( &command, 1u );
 }
 
 UIHandlePtr SoloButtonHandle::HitTest

@@ -18,7 +18,6 @@
 
 #include "../Audacity.h" // for rint from configwin.h
 #include "Normalize.h"
-#include "LoadEffects.h"
 
 #include "../Experimental.h"
 
@@ -48,11 +47,6 @@ Param( LUFSLevel,   double,  wxT("LUFSLevel"),           -23.0,   -145.0,  0.0, 
 Param( UseLoudness, bool,    wxT("UseLoudness"),         false,   false,   true, 1  );
 #endif
 
-const ComponentInterfaceSymbol EffectNormalize::Symbol
-{ XO("Normalize") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectNormalize > reg; }
-
 BEGIN_EVENT_TABLE(EffectNormalize, wxEvtHandler)
    EVT_CHECKBOX(wxID_ANY, EffectNormalize::OnUpdateUI)
    EVT_TEXT(wxID_ANY, EffectNormalize::OnUpdateUI)
@@ -80,7 +74,7 @@ EffectNormalize::~EffectNormalize()
 
 ComponentInterfaceSymbol EffectNormalize::GetSymbol()
 {
-   return Symbol;
+   return NORMALIZE_PLUGIN_SYMBOL;
 }
 
 wxString EffectNormalize::GetDescription()
@@ -259,7 +253,7 @@ bool EffectNormalize::Process()
 
       // Process only if the right marker is to the right of the left marker
       if (mCurT1 > mCurT0) {
-         wxString trackName = track->GetGroupData().GetName();
+         wxString trackName = track->GetName();
 
          float extent;
 #ifdef EXPERIMENTAL_R128_NORM

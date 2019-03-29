@@ -29,8 +29,8 @@ namespace {
 
 void DoMacMinimize(AudacityProject *project)
 {
-   if (project) {
-      auto window = &ProjectWindow::Get( *project );
+   auto window = project;
+   if (window) {
 #ifdef USE_COCOA
       // Adapted from mbarman.mm in wxWidgets 3.0.2
       auto peer = window->GetPeer();
@@ -45,7 +45,7 @@ void DoMacMinimize(AudacityProject *project)
 #endif
 
       // So that the Minimize menu command disables
-      MenuManager::Get(*project).UpdateMenus(*project);
+      GetMenuManager(*project).UpdateMenus(*project);
    }
 }
 
@@ -68,7 +68,7 @@ void OnMacMinimize(const CommandContext &context)
 
 void OnMacZoom(const CommandContext &context)
 {
-   auto window = &ProjectWindow::Get( context.project );
+   auto window = &context.project;
    auto topWindow = static_cast<wxTopLevelWindow*>(window);
    auto maximized = topWindow->IsMaximized();
    if (window) {
@@ -90,8 +90,9 @@ void OnMacBringAllToFront(const CommandContext &)
 {
    // Reall this de-miniaturizes all, which is not exactly the standard
    // behavior.
-   for (const auto project : gAudacityProjects)
-      ProjectWindow::Get( *project ).Raise();
+   for (const auto project : gAudacityProjects) {
+      project->Raise();
+   }
 }
 
 void OnMacMinimizeAll(const CommandContext &)
@@ -114,19 +115,17 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 // Menu definitions
 
-#define FN(X) (& WindowActions::Handler :: X)
+#define FN(X) findCommandHandler, \
+   static_cast<CommandFunctorPointer>(& WindowActions::Handler :: X)
+#define XXO(X) _(X), wxString{X}.Contains("...")
 
-namespace {
-using namespace MenuTable;
-BaseItemSharedPtr WindowMenu()
+MenuTable::BaseItemPtr WindowMenu( AudacityProject & )
 {
       //////////////////////////////////////////////////////////////////////////
       // poor imitation of the Mac Windows Menu
       //////////////////////////////////////////////////////////////////////////
    using namespace MenuTable;
-   static BaseItemSharedPtr menu{
-   FinderScope( findCommandHandler ).Eval(
-   Menu( wxT("Window"), XO("&Window"),
+   return Menu( _("&Window"),
       /* i18n-hint: Standard Macintosh Window menu item:  Make (the current
        * window) shrink to an icon on the dock */
       Command( wxT("MacMinimize"), XXO("&Minimize"), FN(OnMacMinimize),
@@ -142,37 +141,23 @@ BaseItemSharedPtr WindowMenu()
        * windows un-hidden */
       Command( wxT("MacBringAllToFront"), XXO("&Bring All to Front"),
          FN(OnMacBringAllToFront), AlwaysEnabledFlag )
-   ) ) };
-   return menu;
+   );
 }
 
-AttachedItem sAttachment1{
-   wxT(""),
-   Shared( WindowMenu() )
-};
-
-MenuTable::BaseItemSharedPtr ExtraWindowItems()
+MenuTable::BaseItemPtr ExtraWindowItems( AudacityProject & )
 {
    using namespace MenuTable;
-   static BaseItemSharedPtr items{
-   FinderScope( findCommandHandler ).Eval(
-   Items( wxT("MacWindows"),
+
+   return Items(
       /* i18n-hint: Shrink all project windows to icons on the Macintosh
          tooldock */
       Command( wxT("MacMinimizeAll"), XXO("Minimize All Projects"),
          FN(OnMacMinimizeAll),
          AlwaysEnabledFlag, wxT("Ctrl+Alt+M") )
-   ) ) };
-   return items;
+   );
 }
 
-AttachedItem sAttachment2{
-   wxT("Optional/Extra/Part2/Misc"),
-   Shared( ExtraWindowItems() )
-};
-
-}
-
+#undef XXO
 #undef FN
 
 // One more Objective C++ function for another class scope, kept in this file
@@ -182,6 +167,19 @@ void AudacityApp::MacActivateApp()
    id app = [NSApplication sharedApplication];
    if ( [app respondsToSelector:@selector(activateIgnoringOtherApps:)] )
       [app activateIgnoringOtherApps:YES];
+}
+
+#else
+
+// Not WXMAC.  Stub functions.
+MenuTable::BaseItemPtr WindowMenu( AudacityProject & )
+{
+   return nullptr;
+}
+
+MenuTable::BaseItemPtr ExtraWindowItems( AudacityProject & )
+{
+   return nullptr;
 }
 
 #endif

@@ -341,7 +341,7 @@ bool ExportFFmpeg::Init(const char *shortname, AudacityProject *project, const T
       return false;
 
    if (metadata == NULL)
-      metadata = &Tags::Get( *project );
+      metadata = project->GetTags();
 
    // Add metadata BEFORE writing the header.
    // At the moment that works with ffmpeg-git and ffmpeg-0.5 for MP4.
@@ -873,7 +873,7 @@ ProgressResult ExportFFmpeg::Export(AudacityProject *project,
       return ProgressResult::Cancelled;
    }
    mName = fName;
-   const auto &tracks = TrackList::Get( *project );
+   const TrackList *tracks = project->GetTracks();
    bool ret = true;
 
    if (mSubFormat >= FMT_LAST) {
@@ -897,9 +897,9 @@ ProgressResult ExportFFmpeg::Export(AudacityProject *project,
    size_t pcmBufferSize = 1024;
 
    const WaveTrackConstArray waveTracks =
-      tracks.GetWaveTrackConstArray(selectionOnly, false);
+      tracks->GetWaveTrackConstArray(selectionOnly, false);
    auto mixer = CreateMixer(waveTracks,
-      tracks.GetTimeTrack(),
+      tracks->GetTimeTrack(),
       t0, t1,
       channels, pcmBufferSize, true,
       mSampleRate, int16Sample, true, mixerSpec);

@@ -321,8 +321,7 @@ void ODManager::Start()
          ODLocker locker{ &AudacityProject::AllProjectDeleteMutex() };
          AudacityProject* proj = GetActiveProject();
          if(proj)
-            ProjectWindow::Get( *proj )
-               .GetEventHandler()->AddPendingEvent(event);
+            proj->GetEventHandler()->AddPendingEvent(event);
       }
       mTerminateMutex.Lock();
    }

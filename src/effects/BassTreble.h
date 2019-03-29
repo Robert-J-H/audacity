@@ -19,6 +19,8 @@ class wxCheckBox;
 class wxTextCtrl;
 class ShuttleGui;
 
+#define BASSTREBLE_PLUGIN_SYMBOL ComponentInterfaceSymbol{ XO("Bass and Treble") }
+
 class EffectBassTrebleState
 {
 public:
@@ -36,8 +38,6 @@ public:
 class EffectBassTreble final : public Effect
 {
 public:
-   static const ComponentInterfaceSymbol Symbol;
-
    EffectBassTreble();
    virtual ~EffectBassTreble();
 

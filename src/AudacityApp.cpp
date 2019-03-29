@@ -73,6 +73,7 @@ It handles initialization and termination by subclassing wxApp.
 #include "commands/CommandHandler.h"
 #include "commands/AppCommandEvent.h"
 #include "commands/CommandContext.h"
+#include "effects/Contrast.h"
 #include "widgets/ASlider.h"
 #include "FFmpeg.h"
 #include "Internat.h"
@@ -301,11 +302,11 @@ void QuitAudacity(bool bForce)
          // of deletion from gAudacityProjects
          if (bForce)
          {
-            ProjectWindow::Get( *gAudacityProjects[0] ).Close(true);
+            gAudacityProjects[0]->Close(true);
          }
          else
          {
-            if (!ProjectWindow::Get( *gAudacityProjects[0] ).Close())
+            if (!gAudacityProjects[0]->Close())
             {
                gIsQuitting = false;
                return;
@@ -349,15 +350,14 @@ void SaveWindowSize()
       return;
    }
    bool validWindowForSaveWindowSize = FALSE;
-   ProjectWindow * validProject = nullptr;
+   AudacityProject * validProject = NULL;
    bool foundIconizedProject = FALSE;
    size_t numProjects = gAudacityProjects.size();
    for (size_t i = 0; i < numProjects; i++)
    {
-      auto &window = ProjectWindow::Get( *gAudacityProjects[i] );
-      if (!window.IsIconized()) {
+      if (!gAudacityProjects[i]->IsIconized()) {
          validWindowForSaveWindowSize = TRUE;
-         validProject = &window;
+         validProject = gAudacityProjects[i].get();
          i = numProjects;
       }
       else
@@ -383,7 +383,7 @@ void SaveWindowSize()
    else
    {
       if (foundIconizedProject) {
-         validProject = &ProjectWindow::Get( *gAudacityProjects[0].get() );
+         validProject = gAudacityProjects[0].get();
          bool wndMaximized = validProject->IsMaximized();
          wxRect normalRect = validProject->GetNormalizedWindowState();
          // store only the normal rectangle because the itemized rectangle
@@ -797,7 +797,7 @@ bool AudacityApp::MRUOpen(const FilePath &fullPathStr) {
          // there are no tracks, but there's an Undo history, etc, then
          // bad things can happen, including data files moving to the NEW
          // project directory, etc.
-         if (proj && (proj->GetDirty() || !TrackList::Get( *proj ).empty()))
+         if (proj && (proj->GetDirty() || !proj->GetTracks()->empty()))
             proj = nullptr;
          // This project is clean; it's never been touched.  Therefore
          // all relevant member variables are in their initial state,
@@ -861,10 +861,9 @@ void AudacityApp::OnTimer(wxTimerEvent& WXUNUSED(event))
                // Get the users attention
                AudacityProject *project = GetActiveProject();
                if (project) {
-                  auto &window = ProjectWindow::Get( *project );
-                  window.Maximize();
-                  window.Raise();
-                  window.RequestUserAttention();
+                  project->Maximize();
+                  project->Raise();
+                  project->RequestUserAttention();
                }
                continue;
             }
@@ -900,9 +899,8 @@ void AudacityApp::OnTimer(wxTimerEvent& WXUNUSED(event))
 
       // if there are no projects open, don't show the warning (user has closed it)
       if (offendingProject) {
-         auto &window = ProjectWindow::Get( *offendingProject );
-         window.Iconize(false);
-         window.Raise();
+         offendingProject->Iconize(false);
+         offendingProject->Raise();
 
          wxString errorMessage = wxString::Format(_(
 "One or more external audio files could not be found.\n\
@@ -935,7 +933,7 @@ void AudacityApp::MarkAliasedFilesMissingWarning(const AliasBlockFile *b)
    size_t numProjects = gAudacityProjects.size();
       for (size_t ii = 0; ii < numProjects; ++ii) {
          // search each project for the blockfile
-         if ( DirManager::Get( *gAudacityProjects[ii] ).ContainsBlockFile(b)) {
+         if (gAudacityProjects[ii]->GetDirManager()->ContainsBlockFile(b)) {
             m_LastMissingBlockFileProject = gAudacityProjects[ii];
             break;
          }
@@ -1073,10 +1071,6 @@ wxString AudacityApp::SetLang( const wxString & lang )
    // we're not using them yet...
    wxString future1 = _("Master Gain Control");
 
-#ifdef __WXMAC__
-      wxGetApp().s_macHelpMenuTitleName = _("&Help");
-#endif
-
    return result;
 }
 
@@ -1128,9 +1122,9 @@ bool AudacityApp::OnExceptionInMainLoop()
             pProject->RollbackState();
 
             // Forget pending changes in the TrackList
-            TrackList::Get( *pProject ).ClearPendingTracks();
+            pProject->GetTracks()->ClearPendingTracks();
 
-            ProjectWindow::Get( *pProject ).RedrawProject();
+            pProject->RedrawProject();
          }
 
          // Give the user an alert
@@ -1161,7 +1155,7 @@ void AudacityApp::GenerateCrashReport(wxDebugReport::Context ctx)
    wxDebugReportCompress rpt;
    rpt.AddAll(ctx);
 
-   wxFileNameWrapper fn{ FileNames::DataDir(), wxT("audacity.cfg") };
+   wxFileName fn(FileNames::DataDir(), wxT("audacity.cfg"));
    rpt.AddFile(fn.GetFullPath(), _TS("Audacity Configuration"));
    rpt.AddFile(FileNames::PluginRegistry(), wxT("Plugin Registry"));
    rpt.AddFile(FileNames::PluginSettings(), wxT("Plugin Settings"));
@@ -1622,9 +1616,8 @@ bool AudacityApp::OnInit()
       wxWindow * pWnd = MakeHijackPanel();
       if (pWnd)
       {
-         auto &window = ProjectWindow::Get( *project );
-         window.Show(false);
-         pWnd->SetParent( &window );
+         project->Show(false);
+         pWnd->SetParent(project);
          SetTopWindow(pWnd);
          pWnd->Show(true);
       }
@@ -1719,7 +1712,7 @@ void AudacityApp::OnKeyDown(wxKeyEvent &event)
       // Stop play, including scrub, but not record
       auto project = ::GetActiveProject();
       auto token = project->GetAudioIOToken();
-      auto &scrubber = Scrubber::Get( *project );
+      auto &scrubber = project->GetScrubber();
       auto scrubbing = scrubber.HasMark();
       if (scrubbing)
          scrubber.Cancel();
@@ -1831,8 +1824,9 @@ bool AudacityApp::InitTempDir()
       }
 
       // Only want one page of the preferences
+      DirectoriesPrefsFactory directoriesPrefsFactory;
       PrefsDialog::Factories factories;
-      factories.push_back(DirectoriesPrefsFactory());
+      factories.push_back(&directoriesPrefsFactory);
       GlobalPrefsDialog dialog(NULL, factories);
       dialog.ShowModal();
 
@@ -2113,12 +2107,12 @@ std::unique_ptr<wxCmdLineParser> AudacityApp::ParseCommandLine()
 void AudacityApp::AddUniquePathToPathList(const FilePath &pathArg,
                                           FilePaths &pathList)
 {
-   wxFileNameWrapper pathNorm { pathArg };
+   wxFileName pathNorm = pathArg;
    pathNorm.Normalize();
    const wxString newpath{ pathNorm.GetFullPath() };
 
-   for(const auto &path : pathList) {
-      if (pathNorm == wxFileNameWrapper{ path })
+   for(unsigned int i=0; i<pathList.size(); i++) {
+      if (wxFileName(newpath) == wxFileName(pathList[i]))
          return;
    }
 
@@ -2149,7 +2143,7 @@ void AudacityApp::FindFilesInPathList(const wxString & pattern,
       return;
    }
 
-   wxFileNameWrapper ff;
+   wxFileName ff;
 
    for(size_t i = 0; i < pathList.size(); i++) {
       ff = pathList[i] + wxFILE_SEP_PATH + pattern;
@@ -2181,11 +2175,10 @@ void AudacityApp::OnEndSession(wxCloseEvent & event)
       while (gAudacityProjects.size()) {
          // Closing the project has side-effect of
          // deletion from gAudacityProjects
-         auto &window = ProjectWindow::Get( *gAudacityProjects[0] );
          if (force) {
-            window.Close(true);
+            gAudacityProjects[0]->Close(true);
          }
-         else if (!window.Close()) {
+         else if (!gAudacityProjects[0]->Close()) {
             gIsQuitting = false;
             event.Veto();
             break;

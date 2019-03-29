@@ -9,8 +9,6 @@
 #include "../Prefs.h"
 #include "../Printing.h"
 #include "../Project.h"
-#include "../TrackPanel.h"
-#include "../ViewInfo.h"
 #include "../WaveTrack.h"
 #include "../commands/CommandContext.h"
 #include "../commands/CommandManager.h"
@@ -30,13 +28,13 @@ namespace {
 void DoExport
 (AudacityProject &project, const wxString & Format )
 {
-   auto &tracks = TrackList::Get( project );
+   auto tracks = project.GetTracks();
 
    Exporter e;
 
    wxGetApp().SetMissingAliasedFileWarningShouldShow(true);
    double t0 = 0.0;
-   double t1 = tracks.GetEndTime();
+   double t1 = tracks->GetEndTime();
 
    // Prompt for file name and/or extension?
    bool bPromptingRequired =
@@ -110,21 +108,21 @@ namespace FileActions {
 AudacityProject *DoImportMIDI(
    AudacityProject *pProject, const FilePath &fileName)
 {
-   auto &tracks = TrackList::Get( *pProject );
+   auto tracks = pProject->GetTracks();
 
    AudacityProject *pNewProject {};
    if ( !pProject )
       pProject = pNewProject = CreateNewAudacityProject();
    auto cleanup = finally( [&]
-      { if ( pNewProject ) ProjectWindow::Get( *pNewProject ).Close(true); } );
+      { if ( pNewProject ) pNewProject->Close(true); } );
 
-   auto newTrack = TrackFactory::Get( *pProject ).NewNoteTrack();
+   auto newTrack = pProject->GetTrackFactory()->NewNoteTrack();
 
    if (::ImportMIDI(fileName, newTrack.get())) {
 
       pProject->SelectNone();
-      auto pTrack = tracks.Add( newTrack, true );
-      pTrack->GetGroupData().SetSelected(true);
+      auto pTrack = tracks->Add( newTrack );
+      pTrack->SetSelected(true);
 
       pProject->PushState(wxString::Format(_("Imported MIDI from '%s'"),
          fileName), _("Import MIDI"));
@@ -172,9 +170,8 @@ void OnProjectReset(const CommandContext &context)
 void OnClose(const CommandContext &context )
 {
    auto &project = context.project;
-   auto &window = ProjectWindow::Get( project );
    project.SetMenuClose(true);
-   window.Close();
+   project.Close();
 }
 
 void OnSave(const CommandContext &context )
@@ -230,7 +227,7 @@ void OnExportAudio(const CommandContext &context)
 void OnExportSelection(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
+   auto &selectedRegion = project.GetViewInfo().selectedRegion;
    Exporter e;
 
    wxGetApp().SetMissingAliasedFileWarningShouldShow(true);
@@ -242,12 +239,11 @@ void OnExportSelection(const CommandContext &context)
 void OnExportLabels(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &tracks = TrackList::Get( project );
-   auto &window = ProjectWindow::Get( project );
+   auto tracks = project.GetTracks();
 
    /* i18n-hint: filename containing exported text from label tracks */
    wxString fName = _("labels.txt");
-   auto trackRange = tracks.Any<const LabelTrack>();
+   auto trackRange = tracks->Any<const LabelTrack>();
    auto numLabelTracks = trackRange.size();
 
    if (numLabelTracks == 0) {
@@ -255,7 +251,7 @@ void OnExportLabels(const CommandContext &context)
       return;
    }
    else
-      fName = (*trackRange.rbegin())->GetGroupData().GetName();
+      fName = (*trackRange.rbegin())->GetName();
 
    fName = FileNames::SelectFile(FileNames::Operation::Export,
                         _("Export Labels As:"),
@@ -264,7 +260,7 @@ void OnExportLabels(const CommandContext &context)
                         wxT("txt"),
                         wxT("*.txt"),
                         wxFD_SAVE | wxFD_OVERWRITE_PROMPT | wxRESIZE_BORDER,
-                        &window);
+                        &project);
 
    if (fName.empty())
       return;
@@ -314,12 +310,11 @@ void OnExportMultiple(const CommandContext &context)
 void OnExportMIDI(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &tracks = TrackList::Get( project );
-   auto &window = ProjectWindow::Get( project );
+   auto tracks = project.GetTracks();
 
    // Make sure that there is
    // exactly one NoteTrack selected.
-   const auto range = tracks.Selected< const NoteTrack >();
+   const auto range = tracks->Selected< const NoteTrack >();
    const auto numNoteTracksSelected = range.size();
 
    if(numNoteTracksSelected > 1) {
@@ -350,7 +345,7 @@ void OnExportMIDI(const CommandContext &context)
          wxT(".mid|.gro"),
          _("MIDI file (*.mid)|*.mid|Allegro file (*.gro)|*.gro"),
          wxFD_SAVE | wxFD_OVERWRITE_PROMPT | wxRESIZE_BORDER,
-         &window);
+         &project);
 
       if (fName.empty())
          return;
@@ -397,7 +392,6 @@ void OnExportMIDI(const CommandContext &context)
 void OnImport(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &window = ProjectWindow::Get( project );
 
    // An import trigger for the alias missing dialog might not be intuitive, but
    // this serves to track the file if the users zooms in and such.
@@ -425,7 +419,7 @@ void OnImport(const CommandContext &context)
 
       gPrefs->Flush();
 
-      window.HandleResize(); // Adjust scrollers for NEW track sizes.
+      project.HandleResize(); // Adjust scrollers for NEW track sizes.
    } );
 
    for (size_t ff = 0; ff < selectedFiles.size(); ff++) {
@@ -442,9 +436,8 @@ void OnImport(const CommandContext &context)
 void OnImportLabels(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &trackFactory = TrackFactory::Get( project );
-   auto &tracks = TrackList::Get( project );
-   auto &window = ProjectWindow::Get( project );
+   auto trackFactory = project.GetTrackFactory();
+   auto tracks = project.GetTracks();
 
    wxString fileName =
        FileNames::SelectFile(FileNames::Operation::Open,
@@ -454,7 +447,7 @@ void OnImportLabels(const CommandContext &context)
                     wxT(".txt"),   // Extension
                     _("Text files (*.txt)|*.txt|All files|*"),
                     wxRESIZE_BORDER,        // Flags
-                    &window);    // Parent
+                    &project);    // Parent
 
    if (!fileName.empty()) {
       wxTextFile f;
@@ -466,16 +459,16 @@ void OnImportLabels(const CommandContext &context)
          return;
       }
 
-      auto newTrack = trackFactory.NewLabelTrack();
+      auto newTrack = trackFactory->NewLabelTrack();
       wxString sTrackName;
       wxFileName::SplitPath(fileName, NULL, NULL, &sTrackName, NULL);
-      newTrack->GetGroupData().SetName(sTrackName);
+      newTrack->SetName(sTrackName);
 
       newTrack->Import(f);
 
       project.SelectNone();
-      newTrack->GetGroupData().SetSelected(true);
-      tracks.Add( newTrack, true);
+      newTrack->SetSelected(true);
+      tracks->Add( newTrack );
 
       project.PushState(wxString::
                 Format(_("Imported labels from '%s'"), fileName),
@@ -488,7 +481,6 @@ void OnImportLabels(const CommandContext &context)
 void OnImportMIDI(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &window = ProjectWindow::Get( project );
 
    wxString fileName = FileNames::SelectFile(FileNames::Operation::Open,
       _("Select a MIDI file"),
@@ -497,7 +489,7 @@ void OnImportMIDI(const CommandContext &context)
       wxT(""),       // Extension
       _("MIDI and Allegro files (*.mid;*.midi;*.gro)|*.mid;*.midi;*.gro|MIDI files (*.mid;*.midi)|*.mid;*.midi|Allegro files (*.gro)|*.gro|All files|*"),
       wxRESIZE_BORDER,        // Flags
-      &window);    // Parent
+      &project);    // Parent
 
    if (!fileName.empty())
       DoImportMIDI(&project, fileName);
@@ -507,8 +499,7 @@ void OnImportMIDI(const CommandContext &context)
 void OnImportRaw(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &trackFactory = TrackFactory::Get( project );
-   auto &window = ProjectWindow::Get( project );
+   auto trackFactory = project.GetTrackFactory();
 
    wxString fileName =
        FileNames::SelectFile(FileNames::Operation::Open,
@@ -518,36 +509,34 @@ void OnImportRaw(const CommandContext &context)
                     wxT(""),       // Extension
                     _("All files|*"),
                     wxRESIZE_BORDER,        // Flags
-                    &window);    // Parent
+                    &project);    // Parent
 
    if (fileName.empty())
       return;
 
    TrackHolders newTracks;
 
-   ::ImportRaw(&window, fileName, &trackFactory, newTracks);
+   ::ImportRaw(&project, fileName, trackFactory, newTracks);
 
    if (newTracks.size() <= 0)
       return;
 
    project.AddImportedTracks(fileName, std::move(newTracks));
-   window.HandleResize(); // Adjust scrollers for NEW track sizes.
+   project.HandleResize(); // Adjust scrollers for NEW track sizes.
 }
 
 void OnPageSetup(const CommandContext &context)
 {
    auto &project = context.project;
-   auto &window = ProjectWindow::Get( project );
-   HandlePageSetup(&window);
+   HandlePageSetup(&project);
 }
 
 void OnPrint(const CommandContext &context)
 {
    auto &project = context.project;
    auto name = project.GetName();
-   auto &tracks = TrackList::Get( project );
-   auto &window = ProjectWindow::Get( project );
-   HandlePrint(&window, name, &tracks, TrackPanel::Get( project ));
+   auto tracks = project.GetTracks();
+   HandlePrint(&project, name, tracks, *project.GetTrackPanel());
 }
 
 void OnExit(const CommandContext &WXUNUSED(context) )
@@ -568,16 +557,15 @@ static CommandHandlerObject &findCommandHandler(AudacityProject &) {
 
 // Menu definitions
 
-#define FN(X) (& FileActions::Handler :: X)
+#define FN(X) findCommandHandler, \
+   static_cast<CommandFunctorPointer>(& FileActions::Handler :: X)
+#define XXO(X) _(X), wxString{X}.Contains("...")
 
-namespace {
-using namespace MenuTable;
-
-BaseItemSharedPtr FileMenu()
+MenuTable::BaseItemPtr FileMenu( AudacityProject& )
 {
-   static BaseItemSharedPtr menu{
-   FinderScope( findCommandHandler ).Eval(
-   Menu( wxT("File"), XO("&File"),
+   using namespace MenuTable;
+
+   return Menu( _("&File"),
       /*i18n-hint: "New" is an action (verb) to create a NEW project*/
       Command( wxT("New"), XXO("&New"), FN(OnNew),
          AudioIONotBusyFlag, wxT("Ctrl+N") ),
@@ -597,17 +585,16 @@ BaseItemSharedPtr FileMenu()
 
 /////////////////////////////////////////////////////////////////////////////
 
-      Menu( wxT("Recent"),
+      Menu(
 #ifdef __WXMAC__
          /* i18n-hint: This is the name of the menu item on Mac OS X only */
-         XO("Open Recent")
+         _("Open Recent")
 #else
          /* i18n-hint: This is the name of the menu item on Windows and Linux */
-         XO("Recent &Files")
+         _("Recent &Files")
 #endif
          ,
-         Special( wxT("PopulateRecentFilesStep"),
-         [](AudacityProject &, wxMenu &theMenu){
+         Special( [](AudacityProject &, wxMenu &theMenu){
             // Recent Files and Recent Projects menus
             wxGetApp().GetRecentFiles()->UseMenu( &theMenu );
             wxGetApp().GetRecentFiles()->AddFilesToMenu( &theMenu );
@@ -635,7 +622,7 @@ BaseItemSharedPtr FileMenu()
 
       Separator(),
 
-      Menu( wxT("Save"), XO("&Save Project"),
+      Menu( _("&Save Project"),
          Command( wxT("Save"), XXO("&Save Project"), FN(OnSave),
             AudioIONotBusyFlag | UnsavedChangesFlag, wxT("Ctrl+S") ),
          Command( wxT("SaveAs"), XXO("Save Project &As..."), FN(OnSaveAs),
@@ -653,7 +640,7 @@ BaseItemSharedPtr FileMenu()
 
       Separator(),
 
-      Menu( wxT("Export"), XO("&Export"),
+      Menu( _("&Export"),
          // Enable Export audio commands only when there are audio tracks.
          Command( wxT("ExportMp3"), XXO("Export as MP&3"), FN(OnExportMp3),
             AudioIONotBusyFlag | WaveTracksExistFlag ),
@@ -686,7 +673,7 @@ BaseItemSharedPtr FileMenu()
 #endif
       ),
 
-      Menu( wxT("Import"), XO("&Import"),
+      Menu( _("&Import"),
          Command( wxT("ImportAudio"), XXO("&Audio..."), FN(OnImport),
             AudioIONotBusyFlag, wxT("Ctrl+Shift+I") ),
          Command( wxT("ImportLabels"), XXO("&Labels..."), FN(OnImportLabels),
@@ -717,14 +704,8 @@ BaseItemSharedPtr FileMenu()
       /* i18n-hint: (verb) It's item on a menu. */
       Command( wxT("Exit"), XXO("E&xit"), FN(OnExit),
          AlwaysEnabledFlag, wxT("Ctrl+Q") )
-   ) ) };
-   return menu;
+   );
 }
 
-AttachedItem sAttachment1{
-   wxT(""),
-   Shared( FileMenu() )
-};
-}
-
+#undef XXO
 #undef FN

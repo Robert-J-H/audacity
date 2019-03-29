@@ -48,7 +48,7 @@ public:
 	* duplicate that testing, so use wxString::ToLong after IsGoodInt, not just
 	* atoi.
 	* @param strInt The string to test
-	* @return true if the string is convertible, false if not
+	* @return true if the string is convertable, false if not
 	*/
    static bool IsGoodInt(const wxString & strInt);
    /** @brief Check that the supplied string can be converted to a 64bit
@@ -58,19 +58,18 @@ public:
 	* doesn't duplicate that testing, so use wxString::ToLongLong after IsGoodInt64
 	* not just atoll.
 	* @param strInt The string to test
-	* @return true if the string is convertible, false if not
+	* @return true if the string is convertable, false if not
 	*/
    static bool IsGoodInt64(const wxString & strInt);
    static bool IsGoodIntForRange(const wxString & strInt, const wxString & strMAXABS);
 
+   static bool IsValidChannel(const int nValue);
 #ifdef USE_MIDI
    static bool IsValidVisibleChannels(const int nValue);
 #endif
    static bool IsValidSampleFormat(const int nValue); // true if nValue is one sampleFormat enum values
 };
 
-
-struct XMLTagHandlerPtr;
 
 class AUDACITY_DLL_API XMLTagHandler /* not final */ {
  public:
@@ -85,12 +84,6 @@ class AUDACITY_DLL_API XMLTagHandler /* not final */ {
    // tag and the attribute-value pairs (null-terminated), and
    // return true on success, and false on failure.  If you return
    // false, you will not get any calls about children.
-   // False return should happen only for bad values that can't be sensibly
-   // interpreted, or when a necessary attribute is absent.
-   // To allow forward compatibility, do NOT return false in case of
-   // unrecognized attribute names, which might have been written by future
-   // versions of Audacity.  Just ignore them if there is some consistent way
-   // for this version to interpret the attributes that it does recognize.
    virtual bool HandleXMLTag(const wxChar *tag, const wxChar **attrs) = 0;
 
    // This method will be called when a closing tag is encountered.
@@ -107,30 +100,14 @@ class AUDACITY_DLL_API XMLTagHandler /* not final */ {
    // object for the child, insert it into your own local data
    // structures, and then return it.  If you do not wish to
    // handle this child, return NULL and it will be ignored.
-   virtual XMLTagHandlerPtr HandleXMLChild(const wxChar *tag) = 0;
+   virtual XMLTagHandler *HandleXMLChild(const wxChar *tag) = 0;
 
    // These functions recieve data from expat.  They do charset
    // conversion and then pass the data to the handlers above.
    bool ReadXMLTag(const char *tag, const char **attrs);
    void ReadXMLEndTag(const char *tag);
    void ReadXMLContent(const char *s, int len);
-   XMLTagHandlerPtr ReadXMLChild(const char *tag);
-};
-
-struct XMLTagHandlerPtr : std::shared_ptr<XMLTagHandler>
-{
-   // usual constructor, when the handler object's lifetime need not be managed
-   // by XMLFileReader
-   XMLTagHandlerPtr( XMLTagHandler *pHandler = nullptr )
-      // make a shared_ptr with a vacuous deleter
-      : std::shared_ptr<XMLTagHandler>( pHandler, [](void*){} )
-   {}
-
-   // constructor in case the handler object is a short-lived helper
-   // that was allocated with std::make_shared
-   XMLTagHandlerPtr( const std::shared_ptr<XMLTagHandler> &pHandler )
-   : std::shared_ptr<XMLTagHandler>( pHandler )
-   {}
+   XMLTagHandler *ReadXMLChild(const char *tag);
 };
 
 #endif // define __AUDACITY_XML_TAG_HANDLER__

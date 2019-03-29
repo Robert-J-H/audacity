@@ -52,4 +52,11 @@ class DevicePrefs final : public PrefsPanel
    DECLARE_EVENT_TABLE()
 };
 
+/// A PrefsPanelFactory that creates one DevicePrefs panel.
+class DevicePrefsFactory final : public PrefsPanelFactory
+{
+public:
+   PrefsPanel *operator () (wxWindow *parent, wxWindowID winid) override;
+};
+
 #endif

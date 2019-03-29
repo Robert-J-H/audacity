@@ -103,8 +103,7 @@ void ODDecodeTask::DoSomeInternal()
          for(size_t i=0;i<mWaveTracks.size();i++)
          {
             if(mWaveTracks[i])
-               AddInvalidRegion(
-                  *mWaveTracks[i], blockStartSample,blockEndSample);
+               mWaveTracks[i]->AddInvalidRegion(blockStartSample,blockEndSample);
          }
          mWaveTrackMutex.Unlock();
       }

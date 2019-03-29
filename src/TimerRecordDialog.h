@@ -138,7 +138,7 @@ private:
 
    // Variables for the Auto Save/Export
    bool m_bAutoSaveEnabled;
-   wxFileNameWrapper m_fnAutoSaveFile;
+   wxFileName m_fnAutoSaveFile;
    bool m_bAutoExportEnabled;
    wxFileName m_fnAutoExportFile;
    int m_iAutoExportFormat;

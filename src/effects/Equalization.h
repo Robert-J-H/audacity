@@ -36,6 +36,13 @@
 #include "../RealFFTf.h"
 #include "../SampleFormat.h"
 
+#define EQUALIZATION_PLUGIN_SYMBOL \
+ComponentInterfaceSymbol{ XO("Equalization") }
+#define GRAPHICEQ_PLUGIN_SYMBOL \
+ComponentInterfaceSymbol{ wxT("GraphicEQ"), XO("Graphic EQ") }
+#define FILTERCURVE_PLUGIN_SYMBOL \
+ComponentInterfaceSymbol{ wxT("FilterCurve"), XO("Filter Curve") }
+
 // Flags to specialise the UI
 const int kEqOptionGraphic =1;
 const int kEqOptionCurve   =1<<1;
@@ -53,8 +60,6 @@ class wxStaticText;
 class Envelope;
 class EnvelopeEditor;
 class EqualizationPanel;
-
-class wxFileNameWrapper;
 
 //
 // One point in a curve
@@ -102,14 +107,11 @@ using EQCurveArray = std::vector<EQCurve>;
 class EffectEqualization48x;
 #endif
 
-class EffectEqualization : public Effect,
+class EffectEqualization final : public Effect,
                            public XMLTagHandler
 {
 public:
-   static const ComponentInterfaceSymbol Symbol;
-
-   EffectEqualization(int Options = kEqLegacy);
-   
+   EffectEqualization(int Options);
    virtual ~EffectEqualization();
 
    // ComponentInterface implementation
@@ -175,11 +177,11 @@ private:
    void setCurve(int currentCurve);
    void setCurve(const wxString &curveName);
    void setCurve(void);
-   bool GetDefaultFileName(wxFileNameWrapper &fileName);
+   bool GetDefaultFileName(wxFileName &fileName);
    
    // XMLTagHandler callback methods for loading and saving
    bool HandleXMLTag(const wxChar *tag, const wxChar **attrs) override;
-   XMLTagHandlerPtr HandleXMLChild(const wxChar *tag) override;
+   XMLTagHandler *HandleXMLChild(const wxChar *tag) override;
    void WriteXML(XMLWriter &xmlFile) const;
 
    void UpdateCurves();
@@ -289,22 +291,6 @@ private:
 
    friend class EqualizationPanel;
    friend class EditCurvesDialog;
-};
-
-class EffectEqualizationCurve final : public EffectEqualization
-{
-public:
-   static const ComponentInterfaceSymbol Symbol;
-
-   EffectEqualizationCurve() : EffectEqualization( kEqOptionCurve ) {}
-};
-
-class EffectEqualizationGraphic final : public EffectEqualization
-{
-public:
-   static const ComponentInterfaceSymbol Symbol;
-
-   EffectEqualizationGraphic() : EffectEqualization( kEqOptionGraphic ) {}
 };
 
 class EqualizationPanel final : public wxPanelWrapper

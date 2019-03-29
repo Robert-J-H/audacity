@@ -482,7 +482,7 @@ bool BlockFile::Read64K(float *buffer,
 
 size_t BlockFile::CommonReadData(
    bool mayThrow,
-   const wxFileNameWrapper &fileName, bool &mSilentLog,
+   const wxFileName &fileName, bool &mSilentLog,
    const AliasBlockFile *pAliasFile, sampleCount origin, unsigned channel,
    samplePtr data, sampleFormat format, size_t start, size_t len,
    const sampleFormat *pLegacyFormat, size_t legacyLen)

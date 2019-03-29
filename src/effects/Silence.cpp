@@ -15,17 +15,11 @@
 
 #include "../Audacity.h"
 #include "Silence.h"
-#include "LoadEffects.h"
 
 #include <wx/intl.h>
 
 #include "../ShuttleGui.h"
 #include "../WaveTrack.h"
-
-const ComponentInterfaceSymbol EffectSilence::Symbol
-{ XO("Silence") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectSilence > reg; }
 
 EffectSilence::EffectSilence()
 {
@@ -40,7 +34,7 @@ EffectSilence::~EffectSilence()
 
 ComponentInterfaceSymbol EffectSilence::GetSymbol()
 {
-   return Symbol;
+   return SILENCE_PLUGIN_SYMBOL;
 }
 
 wxString EffectSilence::GetDescription()

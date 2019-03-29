@@ -16,7 +16,6 @@
 
 #include "../Audacity.h"
 #include "Reverb.h"
-#include "LoadEffects.h"
 
 #include <wx/arrstr.h>
 #include <wx/checkbox.h>
@@ -89,11 +88,6 @@ struct Reverb_priv_t
 // EffectReverb
 //
 
-const ComponentInterfaceSymbol EffectReverb::Symbol
-{ XO("Reverb") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectReverb > reg; }
-
 BEGIN_EVENT_TABLE(EffectReverb, wxEvtHandler)
 
 #define SpinSliderEvent(n) \
@@ -140,7 +134,7 @@ EffectReverb::~EffectReverb()
 
 ComponentInterfaceSymbol EffectReverb::GetSymbol()
 {
-   return Symbol;
+   return REVERB_PLUGIN_SYMBOL;
 }
 
 wxString EffectReverb::GetDescription()

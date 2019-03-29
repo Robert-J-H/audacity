@@ -204,12 +204,8 @@ wxString MousePrefs::HelpPageName()
    return "Mouse_Preferences";
 }
 
-namespace{
-PrefsPanel::Registration sAttachment{ "Mouse",
-   [](wxWindow *parent, wxWindowID winid)
-   {
-      wxASSERT(parent); // to justify safenew
-      return safenew MousePrefs(parent, winid);
-   }
-};
+PrefsPanel *MousePrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+{
+   wxASSERT(parent); // to justify safenew
+   return safenew MousePrefs(parent, winid);
 }

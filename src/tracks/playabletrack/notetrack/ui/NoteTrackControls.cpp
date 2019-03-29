@@ -15,7 +15,6 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../../../Experimental.h"
 
 #include "NoteTrackButtonHandle.h"
-#include "NoteTrackView.h"
 
 #include "../../ui/PlayableTrackButtonHandles.h"
 #include "NoteTrackSliderHandles.h"
@@ -115,9 +114,8 @@ void NoteTrackMenuTable::OnChangeOctave(wxCommandEvent &event)
       || event.GetId() == OnDownOctaveID);
 
    const bool bDown = (OnDownOctaveID == event.GetId());
-   auto &view = NoteTrackView::Get( *pTrack );
-   view.SetBottomNote
-      (view.GetBottomNote() + ((bDown) ? -12 : 12));
+   pTrack->SetBottomNote
+      (pTrack->GetBottomNote() + ((bDown) ? -12 : 12));
 
    AudacityProject *const project = ::GetActiveProject();
    project->ModifyState(true);
@@ -139,153 +137,4 @@ PopupMenuTable *NoteTrackControls::GetMenuExtension(Track *)
 #endif
 }
 
-#include "../../../../TrackPanel.h"
-
-using TCPLine = TrackControls::TCPLine;
-using TCPLines = TrackControls::TCPLines;
-#define RANGE(array) (array), (array) + WXSIZEOF(array)
-
-#define MUTE_SOLO_ITEMS(extra) \
-{ TCPLine::kItemMute, kTrackInfoBtnSize + 1, 1, \
-&TrackInfo::WideMuteDrawFunction }, \
-{ TCPLine::kItemSolo, kTrackInfoBtnSize + 1, extra, \
-&TrackInfo::WideSoloDrawFunction },
-
-const TCPLine defaultNoteTrackTCPLines[] = {
-#ifdef EXPERIMENTAL_MIDI_OUT
-   MUTE_SOLO_ITEMS(0)
-   { TCPLine::kItemMidiControlsRect, kMidiCellHeight * 4, 0,
-      &TrackInfo::MidiControlsDrawFunction },
-   { TCPLine::kItemVelocity, kTrackInfoSliderHeight, kTrackInfoSliderExtra,
-      &TrackInfo::VelocitySliderDrawFunction },
 #endif
-};
-
-const TCPLines noteTrackTCPLines{ RANGE(defaultNoteTrackTCPLines) };
-
-unsigned NoteTrackControls::DefaultNoteTrackHeight()
-{
-   return FindDefaultTrackHeight( noteTrackTCPLines );
-}
-
-extern std::pair< int, int > CalcItemY( const TCPLines &lines, unsigned iItem );
-
-void TrackInfo::GetMidiControlsHorizontalBounds
-( const wxRect &rect, wxRect &dest )
-{
-   dest.x = rect.x + 1; // To center slightly
-   // PRL: TODO: kMidiCellWidth is defined in terms of the other constant
-   // kTrackInfoWidth but I am trying to avoid use of that constant.
-   // Can cell width be computed from dest.width instead?
-   dest.width = kMidiCellWidth * 4;
-}
-
-void TrackInfo::GetMidiControlsRect(const wxRect & rect, wxRect & dest)
-{
-   GetMidiControlsHorizontalBounds( rect, dest );
-   auto results =
-   CalcItemY( noteTrackTCPLines, TCPLine::kItemMidiControlsRect );
-   dest.y = rect.y + results.first;
-   dest.height = results.second;
-}
-
-const TCPLines &NoteTrackControls::GetControlLines() const
-{
-   static const struct Lines : TCPLines {
-      // Visit this constructor once only
-      Lines( const TrackControls &controls )
-         : TCPLines{ controls.TrackControls::GetControlLines() }
-      {
-         insert( end(),
-            defaultNoteTrackTCPLines,
-            defaultNoteTrackTCPLines + WXSIZEOF( defaultNoteTrackTCPLines )
-         );
-      }
-   } result( *this );
-
-   return result;
-}
-
-#endif
-
-#ifdef EXPERIMENTAL_MIDI_OUT
-#include "../../../../TrackPanel.h"
-using TCPLine = TrackControls::TCPLine;
-
-void NoteTrackControls::GetVelocityRect(const wxPoint &topleft, wxRect & dest)
-{
-   TrackInfo::GetSliderHorizontalBounds( topleft, dest );
-   auto results = CalcItemY( noteTrackTCPLines, TCPLine::kItemVelocity );
-   dest.y = topleft.y + results.first;
-   dest.height = results.second;
-}
-#endif
-
-#ifdef EXPERIMENTAL_MIDI_OUT
-LWSlider *TrackPanel::VelocitySlider( const NoteTrack *nt )
-{
-   auto pControls = &TrackControls::Get( *nt );
-   auto rect = FindRect( *pControls );
-   wxRect sliderRect;
-   NoteTrackControls::GetVelocityRect( rect.GetTopLeft(), sliderRect );
-   return NoteTrackControls::VelocitySlider(sliderRect, nt, false, this);
-}
-#endif
-
-#ifdef EXPERIMENTAL_MIDI_OUT
-
-#include "../../../../widgets/ASlider.h"
-
-namespace {
-std::unique_ptr<LWSlider>
-     gVelocityCaptured
-   , gVelocity
-   ;
-}
-
-LWSlider * NoteTrackControls::VelocitySlider
-(const wxRect &sliderRect, const NoteTrack *t, bool captured, wxWindow *pParent)
-{
-   wxPoint pos = sliderRect.GetPosition();
-   float velocity = t ? t->GetVelocity() : 0.0;
-   
-   gVelocity->Move(pos);
-   gVelocity->Set(velocity);
-   gVelocityCaptured->Move(pos);
-   gVelocityCaptured->Set(velocity);
-   
-   auto slider = (captured ? gVelocityCaptured : gVelocity).get();
-   slider->SetParent( pParent ? pParent :
-      &ProjectWindow::Get( *::GetActiveProject() ) );
-   return slider;
-}
-#endif
-
-void NoteTrackControls::ReCreateSliders( wxWindow *pParent )
-{
-#ifdef USE_MIDI
-
-#ifdef EXPERIMENTAL_MIDI_OUT
-
-   const wxPoint point{ 0, 0 };
-   wxRect sliderRect;
-
-   GetVelocityRect(point, sliderRect);
-
-   /* i18n-hint: Title of the Velocity slider, used to adjust the volume of note tracks */
-   gVelocity = std::make_unique<LWSlider>(pParent, _("Velocity"),
-      wxPoint(sliderRect.x, sliderRect.y),
-      wxSize(sliderRect.width, sliderRect.height),
-      VEL_SLIDER);
-   gVelocity->SetDefaultValue(0.0);
-   gVelocityCaptured = std::make_unique<LWSlider>(pParent, _("Velocity"),
-      wxPoint(sliderRect.x, sliderRect.y),
-      wxSize(sliderRect.width, sliderRect.height),
-      VEL_SLIDER);
-   gVelocityCaptured->SetDefaultValue(0.0);
-#endif
-
-#else
-   (void)pParent;
-#endif
-}

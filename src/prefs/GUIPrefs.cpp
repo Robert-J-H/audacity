@@ -258,12 +258,8 @@ wxString GUIPrefs::HelpPageName()
    return "Interface_Preferences";
 }
 
-namespace{
-PrefsPanel::Registration sAttachment{ "GUI",
-   [](wxWindow *parent, wxWindowID winid)
-   {
-      wxASSERT(parent); // to justify safenew
-      return safenew GUIPrefs(parent, winid);
-   }
-};
+PrefsPanel *GUIPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+{
+   wxASSERT(parent); // to justify safenew
+   return safenew GUIPrefs(parent, winid);
 }

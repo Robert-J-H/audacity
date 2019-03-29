@@ -20,8 +20,6 @@ class wxArrayString;
 class wxFileNameWrapper : public wxFileName
 {
 public:
-   using wxFileName::wxFileName;
-
    explicit
       wxFileNameWrapper(const wxFileName &that)
       : wxFileName(that)

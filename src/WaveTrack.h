@@ -20,8 +20,17 @@
 #include <wx/longlong.h>
 #include <wx/thread.h>
 
+#include "WaveTrackLocation.h"
+
+class SpectrogramSettings;
+class WaveformSettings;
 class TimeWarper;
 
+class CutlineHandle;
+class SampleHandle;
+class EnvelopeHandle;
+
+class Sequence;
 class WaveClip;
 
 // Array of pointers that assume ownership
@@ -58,11 +67,8 @@ using Regions = std::vector < Region >;
 
 class Envelope;
 
-class AUDACITY_DLL_API WaveTrack final : public PlayableTrack
-   , public ClientData::Site< WaveTrack >
-{
+class AUDACITY_DLL_API WaveTrack final : public PlayableTrack {
 public:
-   using Caches = Site< WaveTrack >;
 
    //
    // Constructor / Destructor / Duplicator
@@ -80,65 +86,27 @@ public:
 private:
    void Init(const WaveTrack &orig);
 
-   Track::Holder Clone() const override;
+   Track::Holder Duplicate() const override;
 
    friend class TrackFactory;
 
  public:
 
-   struct GroupData final : PlayableTrack::GroupData
-   {
-      GroupData( const Track &representative )
-         : PlayableTrack::GroupData( representative )
-      {}
-      ~GroupData();
-      std::shared_ptr< TrackGroupData > Clone() const override;
-
-      // Multiplicative factor.  Only converted to dB for display.
-      float GetGain() const { return mGain; }
-      void SetGain(float newGain);
-
-      // -1.0 (left) -> 1.0 (right)
-      float GetPan() const { return mPan; }
-      void SetPan(float newPan);
-
-      int GetWaveColorIndex() const { return mWaveColorIndex; }
-      void SetWaveColorIndex( int colorIndex, bool setClips );
-
-   private:
-      float         mGain { 1.0f };
-      float         mPan  { 0.0f };
-
-      int           mWaveColorIndex{ 0 };
-   };
-
-   // overload inherited GetGroupData with more specific return type
-   GroupData &GetGroupData()
-      { return Track::GetGroupData< GroupData >(); }
-   const GroupData &GetGroupData() const
-      { return Track::GetGroupData< const GroupData >(); }
-
+   typedef WaveTrackLocation Location;
    using Holder = std::shared_ptr<WaveTrack>;
 
-   ~WaveTrack() override;
-   
-   wxString GetDefaultName() const override;
+   virtual ~WaveTrack();
+
+   std::vector<UIHandlePtr> DetailedHitTest
+      (const TrackPanelMouseState &state,
+       const AudacityProject *pProject, int currentTool, bool bMultiTool)
+      override;
 
    double GetOffset() const override;
    void SetOffset(double o) override;
-
-   enum ChannelType
-   {
-      LeftChannel = 0,
-      RightChannel = 1,
-      MonoChannel = 2
-   };
-
-   // Used for loading and storing ChannelType values in XML
-   static bool IsValidChannel(const int nValue);
-
-   ChannelType GetChannelIgnoringPan() const;
-   ChannelType GetChannel() const;
+   virtual ChannelType GetChannelIgnoringPan() const;
+   ChannelType GetChannel() const override;
+   virtual void SetPanFromChannelType() override;
 
    /** @brief Get the time at which the first clip in the track starts
     *
@@ -164,6 +132,14 @@ private:
    double GetRate() const;
    void SetRate(double newRate);
 
+   // Multiplicative factor.  Only converted to dB for display.
+   float GetGain() const;
+   void SetGain(float newGain);
+
+   // -1.0 (left) -> 1.0 (right)
+   float GetPan() const;
+   void SetPan(float newPan) override;
+
    // Takes gain and pan into account
    float GetChannelGain(int channel) const;
 
@@ -172,9 +148,24 @@ private:
    float GetOldChannelGain(int channel) const;
    void SetOldChannelGain(int channel, float gain);
 
+   void DoSetMinimized(bool isMinimized) override;
+
+   int GetWaveColorIndex() const { return mWaveColorIndex; };
+   void SetWaveColorIndex(int colorIndex);
+
    sampleFormat GetSampleFormat() const { return mFormat; }
    void ConvertToSampleFormat(sampleFormat format);
 
+   const SpectrogramSettings &GetSpectrogramSettings() const;
+   SpectrogramSettings &GetSpectrogramSettings();
+   SpectrogramSettings &GetIndependentSpectrogramSettings();
+   void SetSpectrogramSettings(std::unique_ptr<SpectrogramSettings> &&pSettings);
+
+   const WaveformSettings &GetWaveformSettings() const;
+   WaveformSettings &GetWaveformSettings();
+   WaveformSettings &GetIndependentWaveformSettings();
+   void SetWaveformSettings(std::unique_ptr<WaveformSettings> &&pSettings);
+   void UseSpectralPrefs( bool bUse=true );
    //
    // High-level editing
    //
@@ -254,6 +245,12 @@ private:
    ///gets an int with OD flags so that we can determine which ODTasks should be run on this track after save/open, etc.
    unsigned int GetODFlags() const;
 
+   ///Invalidates all clips' wavecaches.  Careful, This may not be threadsafe.
+   void ClearWaveCaches();
+
+   ///Adds an invalid region to the wavecache so it redraws that portion only.
+   void  AddInvalidRegion(sampleCount startSample, sampleCount endSample);
+
    ///
    /// MM: Now that each wave track can contain multiple clips, we don't
    /// have a continous space of samples anymore, but we simulate it,
@@ -281,6 +278,16 @@ private:
    // May assume precondition: t0 <= t1
    float GetRMS(double t0, double t1, bool mayThrow = true) const;
 
+   //
+   // MM: We now have more than one sequence and envelope per track, so
+   // instead of GetSequence() and GetEnvelope() we have the following
+   // function which give the sequence and envelope which is under the
+   // given X coordinate of the mouse pointer.
+   //
+   WaveClip* GetClipAtX(int xcoord);
+   Sequence* GetSequenceAtX(int xcoord);
+   Envelope* GetEnvelopeAtX(int xcoord);
+
    WaveClip* GetClipAtSample(sampleCount sample);
    WaveClip* GetClipAtTime(double time);
 
@@ -303,7 +310,7 @@ private:
 
    bool HandleXMLTag(const wxChar *tag, const wxChar **attrs) override;
    void HandleXMLEndTag(const wxChar *tag) override;
-   XMLTagHandlerPtr HandleXMLChild(const wxChar *tag) override;
+   XMLTagHandler *HandleXMLChild(const wxChar *tag) override;
    void WriteXML(XMLWriter &xmlFile) const override;
 
    // Returns true if an error occurred while reading from XML
@@ -469,18 +476,28 @@ private:
    std::shared_ptr<WaveClip> RemoveAndReturnClip(WaveClip* clip);
 
    // Append a clip to the track
-   void AddClip(const std::shared_ptr<WaveClip> &clip);
+   void AddClip(std::shared_ptr<WaveClip> &&clip); // Call using std::move
 
    // Merge two clips, that is append data from clip2 to clip1,
    // then remove clip2 from track.
    // clipidx1 and clipidx2 are indices into the clip list.
    void MergeClips(int clipidx1, int clipidx2);
 
+   // Cache special locations (e.g. cut lines) for later speedy access
+   void UpdateLocationsCache() const;
+
+   // Get cached locations
+   const std::vector<Location> &GetCachedLocations() const { return mDisplayLocationsCache; }
+
    // Expand cut line (that is, re-insert audio, then DELETE audio saved in cut line)
    void ExpandCutLine(double cutLinePosition, double* cutlineStart = NULL, double* cutlineEnd = NULL);
 
    // Remove cut line, without expanding the audio in it
    bool RemoveCutLine(double cutLinePosition);
+
+   // This track has been merged into a stereo track.  Copy shared parameters
+   // from the NEW partner.
+   void Merge(const Track &orig) override;
 
    // Resample track (i.e. all clips in the track)
    void Resample(int rate, ProgressDialog *progress = NULL);
@@ -493,6 +510,87 @@ private:
    // Set the unique autosave ID
    void SetAutoSaveIdent(int id);
 
+   //
+   // The following code will eventually become part of a GUIWaveTrack
+   // and will be taken out of the WaveTrack class:
+   //
+
+
+   typedef int WaveTrackDisplay;
+   enum WaveTrackDisplayValues : int {
+
+      // DO NOT REORDER OLD VALUES!  Replace obsoletes with placeholders.
+
+      Waveform = 0,
+      MinDisplay = Waveform,
+
+      obsoleteWaveformDBDisplay,
+
+      Spectrum,
+
+      obsolete1, // was SpectrumLogDisplay
+      obsolete2, // was SpectralSelectionDisplay
+      obsolete3, // was SpectralSelectionLogDisplay
+      obsolete4, // was PitchDisplay
+
+      // Add values here, and update MaxDisplay.
+
+      MaxDisplay = Spectrum,
+
+      NoDisplay,            // Preview track has no display
+   };
+
+   // Only two types of sample display for now, but
+   // others (eg sinc interpolation) may be added later.
+   enum SampleDisplay {
+      LinearInterpolate = 0,
+      StemPlot
+   };
+
+   // Various preset zooming levels.
+   enum ZoomPresets {
+      kZoomToFit = 0,
+      kZoomToSelection,
+      kZoomDefault,
+      kZoomMinutes,
+      kZoomSeconds,
+      kZoom5ths,
+      kZoom10ths,
+      kZoom20ths,
+      kZoom50ths,
+      kZoom100ths,
+      kZoom500ths,
+      kZoomMilliSeconds,
+      kZoomSamples,
+      kZoom4To1,
+      kMaxZoom,
+   };
+
+   // Handle remapping of enum values from 2.1.0 and earlier
+   static WaveTrackDisplay ConvertLegacyDisplayValue(int oldValue);
+
+   // Handle restriction of range of values of the enum from future versions
+   static WaveTrackDisplay ValidateWaveTrackDisplay(WaveTrackDisplay display);
+
+   int GetLastScaleType() const { return mLastScaleType; }
+   void SetLastScaleType() const;
+
+   int GetLastdBRange() const { return mLastdBRange; }
+   void SetLastdBRange() const;
+
+   WaveTrackDisplay GetDisplay() const { return mDisplay; }
+   void SetDisplay(WaveTrackDisplay display) { mDisplay = display; }
+
+   void GetDisplayBounds(float *min, float *max) const;
+   void SetDisplayBounds(float min, float max) const;
+   void GetSpectrumBounds(float *min, float *max) const;
+   void SetSpectrumBounds(float min, float max) const;
+
+   // For display purposes, calculate the y coordinate where the midline of
+   // the wave should be drawn, if display minimum and maximum map to the
+   // bottom and top.  Maybe that is out of bounds.
+   int ZeroLevelYCoordinate(wxRect rect) const;
+
  protected:
    //
    // Protected variables
@@ -502,8 +600,25 @@ private:
 
    sampleFormat  mFormat;
    int           mRate;
+   float         mGain;
+   float         mPan;
+   int           mWaveColorIndex;
    float         mOldGain[2];
 
+
+   //
+   // Data that should be part of GUIWaveTrack
+   // and will be taken out of the WaveTrack class:
+   //
+   mutable float         mDisplayMin;
+   mutable float         mDisplayMax;
+   mutable float         mSpectrumMin;
+   mutable float         mSpectrumMax;
+
+   WaveTrackDisplay mDisplay;
+   mutable int   mLastScaleType; // last scale type choice
+   mutable int           mLastdBRange;
+   mutable std::vector <Location> mDisplayLocationsCache;
 
    //
    // Protected methods
@@ -513,20 +628,25 @@ private:
 
    TrackKind GetKind() const override { return TrackKind::Wave; }
 
-   std::shared_ptr< TrackGroupData > CreateGroupData() const override;
-
    //
    // Private variables
    //
 
    wxCriticalSection mFlushCriticalSection;
    wxCriticalSection mAppendCriticalSection;
-   double mLegacyProjectFileOffset{ 0 };
+   double mLegacyProjectFileOffset;
    int mAutoSaveIdent;
 
+   std::unique_ptr<SpectrogramSettings> mpSpectrumSettings;
+   std::unique_ptr<WaveformSettings> mpWaveformSettings;
+
+   std::weak_ptr<CutlineHandle> mCutlineHandle;
+   std::weak_ptr<SampleHandle> mSampleHandle;
+   std::weak_ptr<EnvelopeHandle> mEnvelopeHandle;
+
 protected:
-   std::shared_ptr<TrackView> DoGetView() override;
    std::shared_ptr<TrackControls> DoGetControls() override;
+   std::shared_ptr<TrackVRulerControls> DoGetVRulerControls() override;
 };
 
 // This is meant to be a short-lived object, during whose lifetime,

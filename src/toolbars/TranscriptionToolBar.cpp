@@ -16,7 +16,6 @@
 
 #include "../Audacity.h"
 #include "TranscriptionToolBar.h"
-#include "ToolManager.h"
 
 #include "../Experimental.h"
 
@@ -33,13 +32,12 @@
 
 #include "../Envelope.h"
 
+#include "ControlToolBar.h"
 #include "../AllThemeResources.h"
 #include "../AudioIO.h"
 #include "../ImageManipulation.h"
 #include "../Project.h"
 #include "../TimeTrack.h"
-#include "../TransportState.h"
-#include "../ViewInfo.h"
 #include "../WaveTrack.h"
 #include "../widgets/AButton.h"
 #include "../widgets/ASlider.h"
@@ -103,17 +101,6 @@ TranscriptionToolBar::TranscriptionToolBar()
 
 TranscriptionToolBar::~TranscriptionToolBar()
 {
-}
-
-TranscriptionToolBar &TranscriptionToolBar::Get( AudacityProject &project )
-{
-   auto &toolManager = ToolManager::Get( project );
-   return *static_cast<TranscriptionToolBar*>( toolManager.GetToolBar(TranscriptionBarID) );
-}
-
-const TranscriptionToolBar &TranscriptionToolBar::Get( const AudacityProject &project )
-{
-   return Get( const_cast<AudacityProject&>( project )) ;
 }
 
 void TranscriptionToolBar::Create(wxWindow * parent)
@@ -427,7 +414,7 @@ void TranscriptionToolBar::GetSamples(
    //First, get the current selection. It is part of the mViewInfo, which is
    //part of the project
 
-   const auto &selectedRegion = ViewInfo::Get( *p ).selectedRegion;
+   const auto &selectedRegion = p->GetViewInfo().selectedRegion;
    double start = selectedRegion.t0();
    double end = selectedRegion.t1();
 
@@ -466,7 +453,7 @@ void TranscriptionToolBar::PlayAtSpeed(bool looped, bool cutPreview)
    // VariSpeed play reuses Scrubbing.
    bool bFixedSpeedPlay = !gPrefs->ReadBool(wxT("/AudioIO/VariSpeedPlay"), true);
    // Scrubbing doesn't support note tracks, but the fixed-speed method using time tracks does.
-   if ( TrackList::Get( *p ).Any< NoteTrack >() )
+   if (p->GetTracks()->Any<NoteTrack>())
       bFixedSpeedPlay = true;
 
    // Scrubbing only supports straight through play.
@@ -476,7 +463,7 @@ void TranscriptionToolBar::PlayAtSpeed(bool looped, bool cutPreview)
    {
       // Create a TimeTrack if we haven't done so already
       if (!mTimeTrack) {
-         mTimeTrack = TrackFactory::Get( *p ).NewTimeTrack();
+         mTimeTrack = p->GetTrackFactory()->NewTimeTrack();
          if (!mTimeTrack) {
             return;
          }
@@ -492,35 +479,38 @@ void TranscriptionToolBar::PlayAtSpeed(bool looped, bool cutPreview)
 
    // If IO is busy, abort immediately
    if (gAudioIO->IsBusy()) {
-      TransportState::StopPlaying();
+      p->GetControlToolBar()->StopPlaying();
    }
 
    // Get the current play region
-   auto &viewInfo = ViewInfo::Get( *p );
-   const auto &playRegion = viewInfo.playRegion;
+   double playRegionStart, playRegionEnd;
+   p->GetPlayRegion(&playRegionStart, &playRegionEnd);
 
    // Start playing
-   if (playRegion.GetStart() < 0)
+   if (playRegionStart < 0)
       return;
    if (bFixedSpeedPlay)
    {
-      auto options = AudioIOStartStreamOptions::PlayDefaults( *p );
+      AudioIOStartStreamOptions options(p->GetDefaultPlayOptions());
       options.playLooped = looped;
       // No need to set cutPreview options.
+      // Due to a rather hacky approach, the appearance is used
+      // to signal use of cutpreview to code below.
       options.timeTrack = mTimeTrack.get();
-      auto mode =
-         cutPreview ? PlayMode::cutPreviewPlay
-         : options.playLooped ? PlayMode::loopedPlay
-         : PlayMode::normalPlay;
-      TransportState::PlayPlayRegion(
-         SelectedRegion(playRegion.GetStart(), playRegion.GetEnd()),
-            options, mode);
+      ControlToolBar::PlayAppearance appearance =
+         cutPreview ? ControlToolBar::PlayAppearance::CutPreview
+         : looped ? ControlToolBar::PlayAppearance::Looped
+         : ControlToolBar::PlayAppearance::Straight;
+      p->GetControlToolBar()->PlayPlayRegion
+         (SelectedRegion(playRegionStart, playRegionEnd),
+            options,
+            PlayMode::normalPlay,
+            appearance);
    }
    else
    {
-      auto &scrubber = Scrubber::Get( *p );
-      scrubber.StartSpeedPlay(GetPlaySpeed(),
-         playRegion.GetStart(), playRegion.GetEnd());
+      Scrubber &Scrubber = p->GetScrubber();
+      Scrubber.StartSpeedPlay(GetPlaySpeed(), playRegionStart, playRegionEnd);
    }
 }
 

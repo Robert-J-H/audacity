@@ -25,7 +25,6 @@
 
 #include "../ondemand/ODManager.h"
 #include "../AudioIO.h"
-#include "../WaveTrack.h"
 
 extern AudioIO *gAudioIO;
 
@@ -155,7 +154,7 @@ BlockFilePtr PCMAliasBlockFile::BuildFromXML(DirManager &dm, const wxChar **attr
             aliasFileName.Assign(strValue);
          else if (XMLValueChecker::IsGoodFileName(strValue, dm.GetProjectDataDir()))
             // Allow fallback of looking for the file name, located in the data directory.
-            aliasFileName = wxFileNameWrapper{ dm.GetProjectDataDir(), strValue };
+            aliasFileName.Assign(dm.GetProjectDataDir(), strValue);
          else if (XMLValueChecker::IsGoodPathString(strValue))
             // If the aliased file is missing, we failed XMLValueChecker::IsGoodPathName()
             // and XMLValueChecker::IsGoodFileName, because both do existence tests,
@@ -172,8 +171,7 @@ BlockFilePtr PCMAliasBlockFile::BuildFromXML(DirManager &dm, const wxChar **attr
       {  // integer parameters
          if (!wxStricmp(attr, wxT("aliaslen")) && (nValue >= 0))
             aliasLen = nValue;
-         else if (!wxStricmp(attr, wxT("aliaschannel")) &&
-            WaveTrack::IsValidChannel(aliasChannel))
+         else if (!wxStricmp(attr, wxT("aliaschannel")) && XMLValueChecker::IsValidChannel(aliasChannel))
             aliasChannel = nValue;
          else if (!wxStricmp(attr, wxT("min")))
             min = nValue;

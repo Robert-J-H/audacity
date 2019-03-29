@@ -57,8 +57,6 @@ src/BlockFile.h
 src/CellularPanel.cpp
 src/CellularPanel.h
 src/ClassicThemeAsCeeCode.h
-src/ClientData.h
-src/ClientDataHelpers.h
 src/CrossFade.cpp
 src/CrossFade.h
 src/DarkThemeAsCeeCode.h
@@ -183,8 +181,6 @@ src/SoundActivatedRecord.cpp
 src/SoundActivatedRecord.h
 src/Spectrum.cpp
 src/Spectrum.h
-src/SpectrumAnalyst.cpp
-src/SpectrumAnalyst.h
 src/SplashDialog.cpp
 src/SplashDialog.h
 src/SseMathFuncs.cpp
@@ -209,7 +205,6 @@ src/TrackPanel.h
 src/TrackPanelAx.cpp
 src/TrackPanelAx.h
 src/TrackPanelCell.h
-src/TrackPanelDrawable.h
 src/TrackPanelDrawingContext.h
 src/TrackPanelListener.h
 src/TrackPanelMouseEvent.h
@@ -218,8 +213,6 @@ src/TrackPanelResizeHandle.h
 src/TrackPanelResizerCell.cpp
 src/TrackPanelResizerCell.h
 src/TranslatableStringArray.h
-src/TransportState.cpp
-src/TransportState.h
 src/UIHandle.cpp
 src/UIHandle.h
 src/UndoManager.cpp
@@ -623,8 +616,7 @@ src/tracks/labeltrack/ui/LabelTextHandle.cpp
 src/tracks/labeltrack/ui/LabelTextHandle.h
 src/tracks/labeltrack/ui/LabelTrackControls.cpp
 src/tracks/labeltrack/ui/LabelTrackControls.h
-src/tracks/labeltrack/ui/LabelTrackView.cpp
-src/tracks/labeltrack/ui/LabelTrackView.h
+src/tracks/labeltrack/ui/LabelTrackUI.cpp
 src/tracks/labeltrack/ui/LabelTrackVRulerControls.cpp
 src/tracks/labeltrack/ui/LabelTrackVRulerControls.h
 src/tracks/playabletrack/notetrack/ui/NoteTrackButtonHandle.cpp
@@ -633,8 +625,7 @@ src/tracks/playabletrack/notetrack/ui/NoteTrackControls.cpp
 src/tracks/playabletrack/notetrack/ui/NoteTrackControls.h
 src/tracks/playabletrack/notetrack/ui/NoteTrackSliderHandles.cpp
 src/tracks/playabletrack/notetrack/ui/NoteTrackSliderHandles.h
-src/tracks/playabletrack/notetrack/ui/NoteTrackView.cpp
-src/tracks/playabletrack/notetrack/ui/NoteTrackView.h
+src/tracks/playabletrack/notetrack/ui/NoteTrackUI.cpp
 src/tracks/playabletrack/notetrack/ui/NoteTrackVRulerControls.cpp
 src/tracks/playabletrack/notetrack/ui/NoteTrackVRulerControls.h
 src/tracks/playabletrack/notetrack/ui/NoteTrackVZoomHandle.cpp
@@ -651,16 +642,14 @@ src/tracks/playabletrack/wavetrack/ui/WaveTrackControls.cpp
 src/tracks/playabletrack/wavetrack/ui/WaveTrackControls.h
 src/tracks/playabletrack/wavetrack/ui/WaveTrackSliderHandles.cpp
 src/tracks/playabletrack/wavetrack/ui/WaveTrackSliderHandles.h
-src/tracks/playabletrack/wavetrack/ui/WaveTrackView.cpp
-src/tracks/playabletrack/wavetrack/ui/WaveTrackView.h
+src/tracks/playabletrack/wavetrack/ui/WaveTrackUI.cpp
 src/tracks/playabletrack/wavetrack/ui/WaveTrackVRulerControls.cpp
 src/tracks/playabletrack/wavetrack/ui/WaveTrackVRulerControls.h
 src/tracks/playabletrack/wavetrack/ui/WaveTrackVZoomHandle.cpp
 src/tracks/playabletrack/wavetrack/ui/WaveTrackVZoomHandle.h
 src/tracks/timetrack/ui/TimeTrackControls.cpp
 src/tracks/timetrack/ui/TimeTrackControls.h
-src/tracks/timetrack/ui/TimeTrackView.cpp
-src/tracks/timetrack/ui/TimeTrackView.h
+src/tracks/timetrack/ui/TimeTrackUI.cpp
 src/tracks/timetrack/ui/TimeTrackVRulerControls.cpp
 src/tracks/timetrack/ui/TimeTrackVRulerControls.h
 src/tracks/ui/BackgroundCell.cpp
@@ -689,8 +678,7 @@ src/tracks/ui/TrackControls.cpp
 src/tracks/ui/TrackControls.h
 src/tracks/ui/TrackSelectHandle.cpp
 src/tracks/ui/TrackSelectHandle.h
-src/tracks/ui/TrackView.cpp
-src/tracks/ui/TrackView.h
+src/tracks/ui/TrackUI.cpp
 src/tracks/ui/TrackVRulerControls.cpp
 src/tracks/ui/TrackVRulerControls.h
 src/tracks/ui/ZoomHandle.cpp

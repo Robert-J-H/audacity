@@ -93,10 +93,10 @@ class PROFILE_DLL_API BlockFile /* not final, abstract */ {
    /// as you have only a reference.  Thus, this wrapper object that guarantees release
    /// of any lock when it goes out of scope.  Call mLocker.reset() to unlock it sooner.
    struct GetFileNameResult {
-      const wxFileNameWrapper &name;
+      const wxFileName &name;
       ODLocker mLocker;
 
-      GetFileNameResult(const wxFileNameWrapper &name_, ODLocker &&locker = ODLocker{})
+      GetFileNameResult(const wxFileName &name_, ODLocker &&locker = ODLocker{})
       : name{ name_ }, mLocker{ std::move(locker) } {}
 
       GetFileNameResult(const GetFileNameResult&) PROHIBITED;
@@ -218,7 +218,7 @@ class PROFILE_DLL_API BlockFile /* not final, abstract */ {
 
    static size_t CommonReadData(
       bool mayThrow,
-      const wxFileNameWrapper &fileName, bool &mSilentLog,
+      const wxFileName &fileName, bool &mSilentLog,
       const AliasBlockFile *pAliasFile, sampleCount origin, unsigned channel,
       samplePtr data, sampleFormat format, size_t start, size_t len,
       const sampleFormat *pLegacyFormat = nullptr, size_t legacyLen = 0);
@@ -272,7 +272,7 @@ class AliasBlockFile /* not final */ : public BlockFile
    //
    // These methods are for advanced use only!
    //
-   const wxFileNameWrapper &GetAliasedFileName() const { return mAliasedFileName; }
+   const wxFileName &GetAliasedFileName() const { return mAliasedFileName; }
    void ChangeAliasedFileName(wxFileNameWrapper &&newAliasedFile);
    bool IsAlias() const override { return true; }
 

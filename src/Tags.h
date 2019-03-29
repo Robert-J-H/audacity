@@ -34,7 +34,6 @@
 #include "widgets/Grid.h"
 #include "xml/XMLTagHandler.h"
 
-#include "ClientData.h"
 #include "MemoryX.h"
 #include <utility>
 #include <wx/hashmap.h>
@@ -42,9 +41,7 @@
 
 #include "widgets/wxPanelWrapper.h"
 
-#include <memory>
 #include <unordered_map>
-#include "audacity/Types.h"
 
 class wxArrayString;
 class wxComboBox;
@@ -52,7 +49,6 @@ class wxGridCellChoiceEditor;
 class wxRadioButton;
 class wxTextCtrl;
 
-class AudacityProject;
 class Grid;
 class ShuttleGui;
 class TagsEditor;
@@ -70,19 +66,9 @@ using TagMap = std::unordered_map< wxString, wxString >;
 #define TAG_SOFTWARE wxT("Software")
 #define TAG_COPYRIGHT wxT("Copyright")
 
-class AUDACITY_DLL_API Tags final
-   : public XMLTagHandler
-   , public std::enable_shared_from_this< Tags >
-   , public ClientData::Base
-{
+class AUDACITY_DLL_API Tags final : public XMLTagHandler {
 
  public:
-
-   static Tags &Get( AudacityProject &project );
-   static const Tags &Get( const AudacityProject &project );
-   static Tags &Set(
-      AudacityProject &project, const std::shared_ptr<Tags> &tags );
-
    Tags();  // constructor
    Tags( const Tags& ) = default;
    //Tags( Tags && ) = default;
@@ -95,7 +81,7 @@ class AUDACITY_DLL_API Tags final
    bool ShowEditDialog(wxWindow *parent, const wxString &title, bool force = false);
 
    bool HandleXMLTag(const wxChar *tag, const wxChar **attrs) override;
-   XMLTagHandlerPtr HandleXMLChild(const wxChar *tag) override;
+   XMLTagHandler *HandleXMLChild(const wxChar *tag) override;
    void WriteXML(XMLWriter &xmlFile) const /* not override */;
 
    void AllowEditTitle(bool editTitle);

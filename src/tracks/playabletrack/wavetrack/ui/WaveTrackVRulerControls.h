@@ -22,8 +22,8 @@ class WaveTrackVRulerControls final : public TrackVRulerControls
 
 public:
    explicit
-   WaveTrackVRulerControls( std::shared_ptr<TrackView> pTrackView )
-      : TrackVRulerControls( pTrackView ) {}
+   WaveTrackVRulerControls( std::shared_ptr<Track> pTrack )
+      : TrackVRulerControls( pTrack ) {}
    ~WaveTrackVRulerControls();
 
    std::vector<UIHandlePtr> HitTest
@@ -33,16 +33,8 @@ public:
    unsigned HandleWheelRotation
       (const TrackPanelMouseEvent &event,
        AudacityProject *pProject) override;
-
+   void DoZoomPreset( int i);
 private:
-   // TrackPanelDrawable implementation
-   void Draw(
-      TrackPanelDrawingContext &context,
-      const wxRect &rect, unsigned iPass ) override;
-
-   // TrackVRulerControls implementation
-   void UpdateRuler( const wxRect &rect ) override;
-
    std::weak_ptr<WaveTrackVZoomHandle> mVZoomHandle;
 };
 

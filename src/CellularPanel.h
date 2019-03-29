@@ -18,7 +18,6 @@ class ViewInfo;
 class AudacityProject;
 
 class TrackPanelCell;
-struct TrackPanelDrawingContext;
 class TrackPanelGroup;
 class TrackPanelNode;
 struct TrackPanelMouseEvent;
@@ -109,12 +108,6 @@ public:
    wxCoord MostRecentXCoord() const;
    
    void HandleCursorForPresentMouseState(bool doHit = true);
-
-   // Visit the Draw functions of all cells that intersect the panel area,
-   // and of handles associated with such cells,
-   // and of all groups of cells,
-   // repeatedly with a pass count from 0 to nPasses - 1
-   void Draw( TrackPanelDrawingContext &context, unsigned nPasses );
    
 protected:
    bool HasEscape();

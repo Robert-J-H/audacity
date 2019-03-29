@@ -241,7 +241,7 @@ BlockFilePtr LegacyBlockFile::BuildFromXML(const FilePath &projDir, const wxChar
          //v Should this be
          //    dm.AssignFile(fileName, strValue, false);
          // as in PCMAliasBlockFile::BuildFromXML? Test with an old project.
-         fileName = wxFileNameWrapper{ projDir, strValue };
+         fileName.Assign(projDir, strValue);
       else if (XMLValueChecker::IsGoodInt(strValue) && strValue.ToLong(&nValue))
       {  // integer parameters
          if (!wxStrcmp(attr, wxT("len")) && (nValue >= 0))

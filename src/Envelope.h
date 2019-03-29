@@ -60,7 +60,7 @@ public:
          return false;
    }
 
-   XMLTagHandlerPtr HandleXMLChild(const wxChar * WXUNUSED(tag)) override
+   XMLTagHandler *HandleXMLChild(const wxChar * WXUNUSED(tag)) override
    {
       return NULL;
    }
@@ -114,7 +114,7 @@ public:
 #endif
    // Newfangled XML file I/O
    bool HandleXMLTag(const wxChar *tag, const wxChar **attrs) override;
-   XMLTagHandlerPtr HandleXMLChild(const wxChar *tag) override;
+   XMLTagHandler *HandleXMLChild(const wxChar *tag) override;
    void WriteXML(XMLWriter &xmlFile) const /* not override */;
 
    void DrawPoints(

@@ -36,7 +36,6 @@ SetTrackAudioCommand and SetTrackVisualsCommand.
 #include "../Audacity.h"
 #include "SetTrackInfoCommand.h"
 
-#include "LoadCommands.h"
 #include "../Project.h"
 #include "../Track.h"
 #include "../TrackPanel.h"
@@ -45,8 +44,6 @@ SetTrackAudioCommand and SetTrackVisualsCommand.
 #include "../prefs/SpectrogramSettings.h"
 #include "../Shuttle.h"
 #include "../ShuttleGui.h"
-#include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
-#include "../tracks/ui/TrackView.h"
 #include "CommandContext.h"
 
 SetTrackBase::SetTrackBase(){
@@ -56,6 +53,14 @@ SetTrackBase::SetTrackBase(){
 //Define for the old scheme, where SetTrack defines its own track selection.
 //rather than using the current selection.
 //#define USE_OWN_TRACK_SELECTION
+
+
+bool SetTrackBase::ApplyInner( const CommandContext &context, Track *t  )
+{
+      static_cast<void>(&context);
+      static_cast<void>(&t);
+      return true;
+};
 
 
 bool SetTrackBase::DefineParams( ShuttleParams & S)
@@ -89,8 +94,8 @@ bool SetTrackBase::Apply(const CommandContext & context  )
 {
    long i = 0;// track counter
    long j = 0;// channel counter
-   auto &tracks = TrackList::Get( context.project );
-   for ( auto t : tracks.Leaders() )
+   auto tracks = context.GetProject()->GetTracks();
+   for ( auto t : tracks->Leaders() )
    {
       auto channels = TrackList::Channels(t);
       for ( auto channel : channels ) {
@@ -113,12 +118,7 @@ bool SetTrackBase::Apply(const CommandContext & context  )
    return true;
 }
 
-const ComponentInterfaceSymbol SetTrackStatusCommand::Symbol
-{ XO("Set Track Status") };
-
-namespace{ BuiltinCommandsModule::Registration< SetTrackStatusCommand > reg; }
-
-bool SetTrackStatusCommand::DefineParams( ShuttleParams & S ){
+bool SetTrackStatusCommand::DefineParams( ShuttleParams & S ){ 
    SetTrackBase::DefineParams( S );
    S.OptionalN( bHasTrackName      ).Define(     mTrackName,      wxT("Name"),       _("Unnamed") );
    // There is also a select command.  This is an alternative.
@@ -150,33 +150,30 @@ bool SetTrackStatusCommand::ApplyInner(const CommandContext & context, Track * t
    //auto wt = dynamic_cast<WaveTrack *>(t);
    //auto pt = dynamic_cast<PlayableTrack *>(t);
 
+   // You can get some intriguing effects by setting R and L channels to 
+   // different values.
    if( bHasTrackName )
-      t->GetGroupData().SetName(mTrackName);
+      t->SetName(mTrackName);
 
    // In stereo tracks, both channels need selecting/deselecting.
    if( bHasSelected )
-      t->GetGroupData().SetSelected(bSelected);
+      t->SetSelected(bSelected);
 
    // These ones don't make sense on the second channel of a stereo track.
    if( !bIsSecondChannel ){
       if( bHasFocused )
       {
-         auto &panel = TrackPanel::Get( context.project );
+         TrackPanel *panel = context.GetProject()->GetTrackPanel();
          if( bFocused)
-            panel.SetFocusedTrack( t );
-         else if( t== panel.GetFocusedTrack() )
-            panel.SetFocusedTrack( nullptr );
+            panel->SetFocusedTrack( t );
+         else if( t== panel->GetFocusedTrack() )
+            panel->SetFocusedTrack( nullptr );
       }
    }
    return true;
 }
 
 
-
-const ComponentInterfaceSymbol SetTrackAudioCommand::Symbol
-{ XO("Set Track Audio") };
-
-namespace{ BuiltinCommandsModule::Registration< SetTrackAudioCommand > reg2; }
 
 bool SetTrackAudioCommand::DefineParams( ShuttleParams & S ){ 
    SetTrackBase::DefineParams( S );
@@ -214,27 +211,21 @@ bool SetTrackAudioCommand::ApplyInner(const CommandContext & context, Track * t 
    auto pt = dynamic_cast<PlayableTrack *>(t);
 
    if( wt && bHasGain )
-      wt->GetGroupData().SetGain(DB_TO_LINEAR(mGain));
+      wt->SetGain(DB_TO_LINEAR(mGain));
    if( wt && bHasPan )
-      wt->GetGroupData().SetPan(mPan/100.0);
+      wt->SetPan(mPan/100.0);
 
    // These ones don't make sense on the second channel of a stereo track.
    if( !bIsSecondChannel ){
-      auto groupData = pt->GetGroupData();
       if( pt && bHasSolo )
-         groupData.SetSolo(bSolo);
+         pt->SetSolo(bSolo);
       if( pt && bHasMute )
-         groupData.SetMute(bMute);
+         pt->SetMute(bMute);
    }
    return true;
 }
 
 
-
-const ComponentInterfaceSymbol SetTrackVisualsCommand::Symbol
-{ XO("Set Track Visuals") };
-
-namespace{ BuiltinCommandsModule::Registration< SetTrackVisualsCommand > reg3; }
 
 enum kColours
 {
@@ -347,27 +338,26 @@ void SetTrackVisualsCommand::PopulateOrExchange(ShuttleGui & S)
 bool SetTrackVisualsCommand::ApplyInner(const CommandContext & context, Track * t )
 {
    static_cast<void>(context);
-   const auto wt = dynamic_cast<WaveTrack *>(t);
-   auto &data = WaveTrackViewGroupData::Get( *wt );
+   auto wt = dynamic_cast<WaveTrack *>(t);
    //auto pt = dynamic_cast<PlayableTrack *>(t);
    static const double ZOOMLIMIT = 0.001f;
 
    // You can get some intriguing effects by setting R and L channels to 
    // different values.
    if( wt && bHasColour )
-      wt->GetGroupData().SetWaveColorIndex( mColour, true );
+      wt->SetWaveColorIndex( mColour );
 
    if( t && bHasHeight )
-      TrackView::Get( *t ).SetHeight( mHeight );
+      t->SetHeight( mHeight );
 
    if( wt && bHasDisplayType  )
-      data.SetDisplay(
+      wt->SetDisplay(
          (mDisplayType == kWaveform) ?
-            WaveTrackViewConstants::Waveform
-            : WaveTrackViewConstants::Spectrum
+            WaveTrack::WaveTrackDisplayValues::Waveform
+            : WaveTrack::WaveTrackDisplayValues::Spectrum
          );
    if( wt && bHasScaleType )
-      data.GetIndependentWaveformSettings().scaleType =
+      wt->GetIndependentWaveformSettings().scaleType = 
          (mScaleType==kLinear) ? 
             WaveformSettings::stLinear
             : WaveformSettings::stLogarithmic;
@@ -375,15 +365,15 @@ bool SetTrackVisualsCommand::ApplyInner(const CommandContext & context, Track * 
    if( wt && bHasVZoom ){
       switch( mVZoom ){
          default:
-         case kReset: data.SetDisplayBounds(-1,1); break;
-         case kTimes2: data.SetDisplayBounds(-2,2); break;
-         case kHalfWave: data.SetDisplayBounds(0,1); break;
+         case kReset: wt->SetDisplayBounds(-1,1); break;
+         case kTimes2: wt->SetDisplayBounds(-2,2); break;
+         case kHalfWave: wt->SetDisplayBounds(0,1); break;
       }
    }
 
    if ( wt && (bHasVZoomTop || bHasVZoomBottom) && !bHasVZoom){
       float vzmin, vzmax;
-      data.GetDisplayBounds(&vzmin, &vzmax);
+      wt->GetDisplayBounds(&vzmin, &vzmax);
 
       if ( !bHasVZoomTop ){
          mVZoomTop = vzmax;
@@ -404,29 +394,24 @@ bool SetTrackVisualsCommand::ApplyInner(const CommandContext & context, Track * 
          mVZoomBottom = c - ZOOMLIMIT / 2.0;
          mVZoomTop = c + ZOOMLIMIT / 2.0;
       }
-      data.SetDisplayBounds(mVZoomBottom, mVZoomTop);
-      auto &tp = TrackPanel::Get( *::GetActiveProject() );
-      tp.UpdateVRulers();
+      wt->SetDisplayBounds(mVZoomBottom, mVZoomTop);
+      TrackPanel *const tp = ::GetActiveProject()->GetTrackPanel();
+      tp->UpdateVRulers();
    }
 
    if( wt && bHasUseSpecPrefs   ){
-      data.UseSpectralPrefs( bUseSpecPrefs );
+      wt->UseSpectralPrefs( bUseSpecPrefs );
    }
    if( wt && bHasSpectralSelect ){
-      data.GetSpectrogramSettings().spectralSelection = bSpectralSelect;
+      wt->GetSpectrogramSettings().spectralSelection = bSpectralSelect;
    }
    if( wt && bHasGrayScale ){
-      data.GetSpectrogramSettings().isGrayscale = bGrayScale;
+      wt->GetSpectrogramSettings().isGrayscale = bGrayScale;
    }
 
    return true;
 }
 
-
-const ComponentInterfaceSymbol SetTrackCommand::Symbol
-{ XO("Set Track") };
-
-namespace{ BuiltinCommandsModule::Registration< SetTrackCommand > reg4; }
 
 SetTrackCommand::SetTrackCommand()
 {

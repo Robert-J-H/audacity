@@ -254,14 +254,14 @@ void Theme::ApplyUpdatedImages()
 
    for (size_t i = 0; i < gAudacityProjects.size(); i++) {
       AudacityProject *p = gAudacityProjects[i].get();
-      ProjectWindow::Get( *p ).ApplyUpdatedTheme();
+      p->ApplyUpdatedTheme();
       for( int ii = 0; ii < ToolBarCount; ++ii )
       {
-         ToolBar *pToolBar = ToolManager::Get( *p ).GetToolBar(ii);
+         ToolBar *pToolBar = p->GetToolManager()->GetToolBar(ii);
          if( pToolBar )
             pToolBar->ReCreateButtons();
       }
-      AdornedRulerPanel::Get( *p ).ReCreateButtons();
+      p->GetRulerPanel()->ReCreateButtons();
    }
 }
 

@@ -295,12 +295,8 @@ wxString RecordingPrefs::HelpPageName()
    return "Recording_Preferences";
 }
 
-namespace{
-PrefsPanel::Registration sAttachment{ "Recording",
-   [](wxWindow *parent, wxWindowID winid)
-   {
-      wxASSERT(parent); // to justify safenew
-      return safenew RecordingPrefs(parent, winid);
-   }
-};
+PrefsPanel *RecordingPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+{
+   wxASSERT(parent); // to justify safenew
+   return safenew RecordingPrefs(parent, winid);
 }

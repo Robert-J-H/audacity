@@ -19,7 +19,6 @@
 #include <wx/frame.h> // to inherit
 #include <wx/timer.h>
 
-#include "../ClientData.h"
 #include "ToolDock.h"
 #include "ToolBar.h"
 
@@ -37,30 +36,22 @@ class wxTimerEvent;
 class wxWindow;
 
 class AudacityProject;
-using ProjectWindow = AudacityProject;
 class ToolFrame;
 
 ////////////////////////////////////////////////////////////
 /// class ToolManager
 ////////////////////////////////////////////////////////////
 
-class ToolManager final
-   : public wxEvtHandler
-   , public wxEventFilter
-   , public ClientData::Base
+class ToolManager final : public wxEvtHandler, public wxEventFilter
 {
 
  public:
-
-   static ToolManager *Find( AudacityProject &project );
-   static ToolManager &Get( AudacityProject &project );
-   static const ToolManager &Get( const AudacityProject &project );
-   static void Reset( AudacityProject &project );
 
    ToolManager( AudacityProject *parent, wxWindow *topDockParent );
    ~ToolManager();
 
    void LayoutToolBars();
+   void UpdatePrefs();
 
    bool IsDocked( int type );
 
@@ -189,7 +180,7 @@ public:
 
    void Resize( const wxSize &size );
 
-   ProjectWindow *GetParent() const;
+   AudacityProject *GetParent() const { return mParent; }
 
 private:
 

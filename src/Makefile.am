@@ -103,7 +103,6 @@ audacity_SOURCES = \
 	AdornedRulerPanel.cpp \
 	AdornedRulerPanel.h \
 	AllThemeResources.h \
-	AttachedVirtualFunction.h \
 	Audacity.h \
 	AudacityApp.cpp \
 	AudacityApp.h \
@@ -126,8 +125,6 @@ audacity_SOURCES = \
 	Benchmark.h \
 	CellularPanel.cpp \
 	CellularPanel.h \
-	ClientData.h \
-	ClientDataHelpers.h \
 	Dependencies.cpp \
 	Dependencies.h \
 	DeviceChange.cpp \
@@ -230,8 +227,6 @@ audacity_SOURCES = \
 	SoundActivatedRecord.h \
 	Spectrum.cpp \
 	Spectrum.h \
-	SpectrumAnalyst.cpp \
-	SpectrumAnalyst.h \
 	SplashDialog.cpp \
 	SplashDialog.h \
 	SseMathFuncs.cpp \
@@ -256,7 +251,6 @@ audacity_SOURCES = \
 	TrackPanelAx.cpp \
 	TrackPanelAx.h \
 	TrackPanelCell.h \
-	TrackPanelDrawable.h \
 	TrackPanelDrawingContext.h \
 	TrackPanelListener.h \
 	TrackPanelMouseEvent.h \
@@ -265,8 +259,6 @@ audacity_SOURCES = \
 	TrackPanelResizerCell.cpp \
 	TrackPanelResizerCell.h \
 	TranslatableStringArray.h \
-	TransportState.cpp \
-	TransportState.h \
 	UIHandle.h \
 	UIHandle.cpp \
 	UndoManager.cpp \
@@ -281,6 +273,7 @@ audacity_SOURCES = \
 	WaveClip.h \
 	WaveTrack.cpp \
 	WaveTrack.h \
+	WaveTrackLocation.h \
 	WrappedType.cpp \
 	WrappedType.h \
 	wxFileNameWrapper.h \
@@ -602,8 +595,7 @@ audacity_SOURCES = \
 	tracks/labeltrack/ui/LabelTextHandle.h \
 	tracks/labeltrack/ui/LabelTrackControls.cpp \
 	tracks/labeltrack/ui/LabelTrackControls.h \
-	tracks/labeltrack/ui/LabelTrackView.cpp \
-	tracks/labeltrack/ui/LabelTrackView.h \
+	tracks/labeltrack/ui/LabelTrackUI.cpp \
 	tracks/labeltrack/ui/LabelTrackVRulerControls.cpp \
 	tracks/labeltrack/ui/LabelTrackVRulerControls.h \
 	tracks/playabletrack/notetrack/ui/NoteTrackButtonHandle.cpp \
@@ -612,8 +604,7 @@ audacity_SOURCES = \
 	tracks/playabletrack/notetrack/ui/NoteTrackControls.h \
 	tracks/playabletrack/notetrack/ui/NoteTrackSliderHandles.cpp \
 	tracks/playabletrack/notetrack/ui/NoteTrackSliderHandles.h \
-	tracks/playabletrack/notetrack/ui/NoteTrackView.cpp \
-	tracks/playabletrack/notetrack/ui/NoteTrackView.h \
+	tracks/playabletrack/notetrack/ui/NoteTrackUI.cpp \
 	tracks/playabletrack/notetrack/ui/NoteTrackVRulerControls.cpp \
 	tracks/playabletrack/notetrack/ui/NoteTrackVRulerControls.h \
 	tracks/playabletrack/notetrack/ui/NoteTrackVZoomHandle.cpp \
@@ -626,27 +617,18 @@ audacity_SOURCES = \
 	tracks/playabletrack/wavetrack/ui/CutlineHandle.h \
 	tracks/playabletrack/wavetrack/ui/SampleHandle.cpp \
 	tracks/playabletrack/wavetrack/ui/SampleHandle.h \
-	tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.cpp \
-	tracks/playabletrack/wavetrack/ui/WaveClipDisplayCache.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackControls.cpp \
 	tracks/playabletrack/wavetrack/ui/WaveTrackControls.h \
-	tracks/playabletrack/wavetrack/ui/WaveTrackLocation.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackSliderHandles.cpp \
 	tracks/playabletrack/wavetrack/ui/WaveTrackSliderHandles.h \
-	tracks/playabletrack/wavetrack/ui/WaveTrackView.cpp \
-	tracks/playabletrack/wavetrack/ui/WaveTrackView.h \
-	tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.cpp \
-	tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.h \
-	tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.cpp \
-	tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackVRulerControls.cpp \
 	tracks/playabletrack/wavetrack/ui/WaveTrackVRulerControls.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackVZoomHandle.cpp \
 	tracks/playabletrack/wavetrack/ui/WaveTrackVZoomHandle.h \
+	tracks/playabletrack/wavetrack/ui/WaveTrackUI.cpp \
 	tracks/timetrack/ui/TimeTrackControls.cpp \
 	tracks/timetrack/ui/TimeTrackControls.h \
-	tracks/timetrack/ui/TimeTrackView.cpp \
-	tracks/timetrack/ui/TimeTrackView.h \
+	tracks/timetrack/ui/TimeTrackUI.cpp \
 	tracks/timetrack/ui/TimeTrackVRulerControls.cpp \
 	tracks/timetrack/ui/TimeTrackVRulerControls.h \
 	tracks/ui/BackgroundCell.cpp \
@@ -675,10 +657,7 @@ audacity_SOURCES = \
 	tracks/ui/TrackControls.h \
 	tracks/ui/TrackSelectHandle.cpp \
 	tracks/ui/TrackSelectHandle.h \
-	tracks/ui/TrackView.cpp \
-	tracks/ui/TrackView.h \
-	tracks/ui/TrackViewGroupData.cpp \
-	tracks/ui/TrackViewGroupData.h \
+	tracks/ui/TrackUI.cpp \
 	tracks/ui/TrackVRulerControls.cpp \
 	tracks/ui/TrackVRulerControls.h \
 	tracks/ui/ZoomHandle.cpp \

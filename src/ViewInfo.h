@@ -11,14 +11,13 @@
 #ifndef __AUDACITY_VIEWINFO__
 #define __AUDACITY_VIEWINFO__
 
-#include <utility>
 #include <vector>
 #include <wx/event.h> // inherit wxEvtHandler
-#include "ClientData.h"
 #include "SelectedRegion.h"
 #include "MemoryX.h"
-#include "Prefs.h"
 
+
+class Track;
 
 #ifdef __GNUC__
 #define CONST
@@ -26,21 +25,14 @@
 #define CONST const
 #endif
 
-class AudacityProject;
-
 // The subset of ViewInfo information (other than selection)
 // that is sufficient for purposes of TrackArtist,
 // and for computing conversions between track times and pixel positions.
 class AUDACITY_DLL_API ZoomInfo /* not final */
    // Note that ViewInfo inherits from ZoomInfo but there are no virtual functions.
    // That's okay if we pass always by reference and never copy, suffering "slicing."
-: protected PrefsListener
-   , public ClientData::Base
 {
 public:
-   static ZoomInfo &Get( AudacityProject &project );
-   static const ZoomInfo &Get( const AudacityProject &project );
-
    ZoomInfo(double start, double pixelsPerSecond);
    ~ZoomInfo();
 
@@ -48,7 +40,7 @@ public:
    ZoomInfo(const ZoomInfo&) PROHIBITED;
    ZoomInfo& operator= (const ZoomInfo&) PROHIBITED;
 
-   void UpdatePrefs() override;
+   void UpdatePrefs();
 
    int vpos;                    // vertical scroll pos
 
@@ -148,43 +140,13 @@ public:
    {return 0;} // stub
 };
 
-class PlayRegion
-{
-public:
-   PlayRegion() = default;
-
-   bool Locked() const { return mLocked; }
-   void SetLocked( bool locked ) { mLocked = locked; }
-
-   bool Empty() const { return GetStart() == GetEnd(); }
-   double GetStart() const { return std::min( mStart, mEnd ); }
-   double GetEnd() const { return std::max( mStart, mEnd ); }
-   std::pair< double, double > GetTimes() const { return { mStart, mEnd }; }
-
-   void SetStart( double start ) { mStart = start; }
-   void SetEnd( double end ) { mEnd = end; }
-   void SetTimes( double start, double end ) { mStart = start, mEnd = end; }
-
-private:
-   // Times:
-   double mStart{ -1.0 };
-   double mEnd{ -1.0 };
-
-   bool mLocked{ false };
-};
-
 class AUDACITY_DLL_API ViewInfo final
    : public wxEvtHandler, public ZoomInfo
 {
 public:
-   static ViewInfo &Get( AudacityProject &project );
-   static const ViewInfo &Get( const AudacityProject &project );
-
    ViewInfo(double start, double screenDuration, double pixelsPerSecond);
 
-   static int UpdateScrollPrefsId();
-   void UpdatePrefs() override;
-   void UpdateSelectedPrefs( int id ) override;
+   void UpdatePrefs();
 
    double GetBeforeScreenWidth() const
    {
@@ -198,7 +160,6 @@ public:
    // Current selection
 
    SelectedRegion selectedRegion;
-   PlayRegion playRegion;
 
    // Scroll info
 

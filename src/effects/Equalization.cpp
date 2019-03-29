@@ -54,7 +54,6 @@
 
 #include "../Audacity.h"
 #include "Equalization.h"
-#include "LoadEffects.h"
 
 #include "../Experimental.h"
 
@@ -99,7 +98,6 @@
 #include "../Project.h"
 #include "../TrackArtist.h"
 #include "../WaveClip.h"
-#include "../ViewInfo.h"
 #include "../WaveTrack.h"
 #include "../widgets/Ruler.h"
 #include "../xml/XMLFileReader.h"
@@ -186,21 +184,6 @@ Param( dBMax,        float,   wxT(""),                   30.0,    0.0,     60.0,
 ///----------------------------------------------------------------------------
 // EffectEqualization
 //----------------------------------------------------------------------------
-
-const ComponentInterfaceSymbol EffectEqualization::Symbol
-{ XO("Equalization") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectEqualization > reg; }
-
-const ComponentInterfaceSymbol EffectEqualizationCurve::Symbol
-{ wxT("FilterCurve"), XO("Filter Curve") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectEqualizationCurve > reg2; }
-
-const ComponentInterfaceSymbol EffectEqualizationGraphic::Symbol
-{ wxT("GraphicEQ"), XO("Graphic EQ") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectEqualizationGraphic > reg3; }
 
 BEGIN_EVENT_TABLE(EffectEqualization, wxEvtHandler)
    EVT_SIZE( EffectEqualization::OnSize )
@@ -313,10 +296,10 @@ EffectEqualization::~EffectEqualization()
 ComponentInterfaceSymbol EffectEqualization::GetSymbol()
 {
    if( mOptions == kEqOptionGraphic )
-      return EffectEqualizationGraphic::Symbol;
+      return GRAPHICEQ_PLUGIN_SYMBOL;
    if( mOptions == kEqOptionCurve )
-      return EffectEqualizationCurve::Symbol;
-   return EffectEqualization::Symbol;
+      return FILTERCURVE_PLUGIN_SYMBOL;
+   return EQUALIZATION_PLUGIN_SYMBOL;
 }
 
 wxString EffectEqualization::GetDescription()
@@ -521,7 +504,7 @@ bool EffectEqualization::Init()
    double rate = 0.0;
 
    auto trackRange =
-      TrackList::Get( *GetActiveProject() ).Selected< const WaveTrack >();
+      GetActiveProject()->GetTracks()->Selected< const WaveTrack >();
    if (trackRange) {
       rate = (*(trackRange.first++)) -> GetRate();
       ++selcount;
@@ -1104,7 +1087,7 @@ bool EffectEqualization::ProcessOne(int count, WaveTrack * t,
 {
    // create a NEW WaveTrack to hold all of the output, including 'tails' each end
    AudacityProject *p = GetActiveProject();
-   auto output = TrackFactory::Get( *p ).NewWaveTrack(floatSample, t->GetRate());
+   auto output = p->GetTrackFactory()->NewWaveTrack(floatSample, t->GetRate());
 
    wxASSERT(mM - 1 < windowSize);
    size_t L = windowSize - (mM - 1);   //Process L samples at a go
@@ -1398,7 +1381,7 @@ void EffectEqualization::LoadCurves(const wxString &fileName, bool append)
    //       creates a normal file as "$HOME/.audacity", while the former
    //       expects the ".audacity" portion to be a directory.
    // MJS:  I don't know what the above means, or if I have broken it.
-   wxFileNameWrapper fn;
+   wxFileName fn;
 
    if(fileName.empty()) {
       // Check if presets are up to date.
@@ -1412,7 +1395,7 @@ void EffectEqualization::LoadCurves(const wxString &fileName, bool append)
       // or update all factory preset curves.
       if (needUpdate)
          UpdateDefaultCurves( UPDATE_ALL != 0 );
-      fn = wxFileNameWrapper{ FileNames::DataDir(), wxT("EQCurves.xml") };
+      fn = wxFileName( FileNames::DataDir(), wxT("EQCurves.xml") );
    }
    else
       fn = fileName; // user is loading a specific set of curves
@@ -1493,7 +1476,7 @@ void EffectEqualization::UpdateDefaultCurves(bool updateAll /* false */)
    EQCurveArray userCurves = mCurves;
    mCurves.clear();
    // We only wamt to look for the shipped EQDefaultCurves.xml
-   wxFileName fn = wxFileNameWrapper{ FileNames::ResourcesDir(), wxT("EQDefaultCurves.xml") };
+   wxFileName fn = wxFileName(FileNames::ResourcesDir(), wxT("EQDefaultCurves.xml"));
    wxLogDebug(wxT("Attempting to load EQDefaultCurves.xml from %s"),fn.GetFullPath());
    XMLFileReader reader;
 
@@ -1596,14 +1579,14 @@ void EffectEqualization::UpdateDefaultCurves(bool updateAll /* false */)
 //
 // Get fully qualified filename of EQDefaultCurves.xml
 //
-bool EffectEqualization::GetDefaultFileName(wxFileNameWrapper &fileName)
+bool EffectEqualization::GetDefaultFileName(wxFileName &fileName)
 {
    // look in data dir first, in case the user has their own defaults (maybe downloaded ones)
-   fileName = wxFileNameWrapper{ FileNames::DataDir(), wxT("EQDefaultCurves.xml") };
+   fileName = wxFileName( FileNames::DataDir(), wxT("EQDefaultCurves.xml") );
    if( !fileName.FileExists() )
    {  // Default file not found in the data dir.  Fall back to Resources dir.
       // See http://docs.wxwidgets.org/trunk/classwx_standard_paths.html#5514bf6288ee9f5a0acaf065762ad95d
-      fileName = wxFileNameWrapper{ FileNames::ResourcesDir(), wxT("EQDefaultCurves.xml") };
+      fileName = wxFileName( FileNames::ResourcesDir(), wxT("EQDefaultCurves.xml") );
    }
    if( !fileName.FileExists() )
    {
@@ -1614,7 +1597,7 @@ bool EffectEqualization::GetDefaultFileName(wxFileNameWrapper &fileName)
       //   errorMessage, wxT("http://wiki.audacityteam.org/wiki/EQCurvesDownload"), false);
 
       // Have another go at finding EQCurves.xml in the data dir, in case 'help' helped
-      fileName = wxFileNameWrapper{ FileNames::DataDir(), wxT("EQDefaultCurves.xml") };
+      fileName = wxFileName( FileNames::DataDir(), wxT("EQDefaultCurves.xml") );
    }
    return (fileName.FileExists());
 }
@@ -1625,7 +1608,7 @@ bool EffectEqualization::GetDefaultFileName(wxFileNameWrapper &fileName)
 //
 void EffectEqualization::SaveCurves(const wxString &fileName)
 {
-   wxFileNameWrapper fn;
+   wxFileName fn;
    if( fileName.empty() )
    {
       // Construct default curve filename
@@ -1634,7 +1617,7 @@ void EffectEqualization::SaveCurves(const wxString &fileName)
       //       between wxStandardPaths and wxConfig under Linux.  The latter
       //       creates a normal file as "$HOME/.audacity", while the former
       //       expects the ".audacity" portion to be a directory.
-      fn = wxFileNameWrapper{ FileNames::DataDir(), wxT("EQCurves.xml") };
+      fn = wxFileName( FileNames::DataDir(), wxT("EQCurves.xml") );
 
       // If the directory doesn't exist...
       if( !fn.DirExists() )
@@ -2075,7 +2058,7 @@ bool EffectEqualization::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
 //
 // Return handler for recognized tags
 //
-XMLTagHandlerPtr EffectEqualization::HandleXMLChild(const wxChar *tag)
+XMLTagHandler *EffectEqualization::HandleXMLChild(const wxChar *tag)
 {
    if( !wxStrcmp( tag, wxT("equalizationeffect") ) )
    {
@@ -3631,8 +3614,7 @@ void EditCurvesDialog::OnDefaults( wxCommandEvent & WXUNUSED(event))
 void EditCurvesDialog::OnOK(wxCommandEvent & WXUNUSED(event))
 {
    // Make a backup of the current curves
-   wxString backupPlace = wxFileNameWrapper{ FileNames::DataDir(), wxT("EQBackup.xml") }
-      .GetFullPath();
+   wxString backupPlace = wxFileName( FileNames::DataDir(), wxT("EQBackup.xml") ).GetFullPath();
    mEffect->SaveCurves(backupPlace);
    // Load back into the main dialog
    mEffect->mCurves.clear();

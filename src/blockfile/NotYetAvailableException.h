@@ -16,7 +16,7 @@
 class NotYetAvailableException final : public FileException
 {
 public:
-   NotYetAvailableException( const wxFileNameWrapper &fileName )
+   NotYetAvailableException( const wxFileName &fileName )
       : FileException{ Cause::Read, fileName } {}
    NotYetAvailableException(NotYetAvailableException &&that)
       : FileException( std::move( that ) ) {}

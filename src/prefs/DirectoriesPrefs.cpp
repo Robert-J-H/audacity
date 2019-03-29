@@ -276,17 +276,8 @@ wxString DirectoriesPrefs::HelpPageName()
    return "Directories_Preferences";
 }
 
-PrefsPanel::Factory
-DirectoriesPrefsFactory() {
-   return [](wxWindow *parent, wxWindowID winid)
-   {
-      wxASSERT(parent); // to justify safenew
-      return safenew DirectoriesPrefs(parent, winid);
-   };
+PrefsPanel *DirectoriesPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+{
+   wxASSERT(parent); // to justify safenew
+   return safenew DirectoriesPrefs(parent, winid);
 }
-
-namespace{
-PrefsPanel::Registration sAttachment{ "Directories",
-   DirectoriesPrefsFactory() };
-};
-

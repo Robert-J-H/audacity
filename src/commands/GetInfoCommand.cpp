@@ -23,7 +23,6 @@ This class now lists
 #include "../Audacity.h" // for USE_* macros
 #include "GetInfoCommand.h"
 
-#include "LoadCommands.h"
 #include "../Project.h"
 #include "CommandManager.h"
 #include "../effects/EffectManager.h"
@@ -32,7 +31,6 @@ This class now lists
 #include "../TrackPanel.h"
 #include "../Track.h"
 #include "../WaveClip.h"
-#include "../ViewInfo.h"
 #include "../WaveTrack.h"
 #include "../LabelTrack.h"
 #include "../Envelope.h"
@@ -46,16 +44,10 @@ This class now lists
 #include "../prefs/PrefsDialog.h"
 #include "../Shuttle.h"
 #include "../PluginManager.h"
-#include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
-#include "../tracks/ui/TrackView.h"
 #include "../ShuttleGui.h"
 
 #include <wx/menu.h>
 
-const ComponentInterfaceSymbol GetInfoCommand::Symbol
-{ XO("Get Info") };
-
-namespace{ BuiltinCommandsModule::Registration< GetInfoCommand > reg; }
 enum {
    kCommands,
    //kCommandsPlus,
@@ -168,7 +160,7 @@ bool GetInfoCommand::ApplyInner(const CommandContext &context)
 
 bool GetInfoCommand::SendMenus(const CommandContext &context)
 {
-   wxMenuBar * pBar = ProjectWindow::Get( context.project ).GetMenuBar();
+   wxMenuBar * pBar = context.GetProject()->GetMenuBar();
    if(!pBar ){
       wxLogDebug("No menus");
       return false;
@@ -196,11 +188,11 @@ bool GetInfoCommand::SendMenus(const CommandContext &context)
 bool GetInfoCommand::SendPreferences(const CommandContext &context)
 {
    context.StartArray();
-   auto pWind = &ProjectWindow::Get( context.project );
-   GlobalPrefsDialog dialog( pWind );
+   GlobalPrefsDialog dialog( context.GetProject() );
    // wxCommandEvent Evt;
    //dialog.Show();
-   ShuttleGuiGetDefinition S(pWind, *((context.pOutput)->mStatusTarget) );
+   wxWindow * pWin = context.GetProject();
+   ShuttleGuiGetDefinition S(pWin, *((context.pOutput)->mStatusTarget) );
    dialog.ShuttleAll( S );
    context.EndArray();
    return true;
@@ -232,7 +224,7 @@ bool GetInfoCommand::SendCommands(const CommandContext &context, int flags )
 bool GetInfoCommand::SendBoxes(const CommandContext &context)
 {
    //context.Status("Boxes");
-   auto pWin = &ProjectWindow::Get( context.project );
+   wxWindow * pWin = context.GetProject();
 
    context.StartArray();
    wxRect R = pWin->GetScreenRect();
@@ -261,29 +253,27 @@ bool GetInfoCommand::SendBoxes(const CommandContext &context)
 
 bool GetInfoCommand::SendTracks(const CommandContext & context)
 {
-   auto &tracks = TrackList::Get( context.project );
+   TrackList *projTracks = context.GetProject()->GetTracks();
    context.StartArray();
-   for (auto trk : tracks.Leaders())
+   for (auto trk : projTracks->Leaders())
    {
-      auto &panel = TrackPanel::Get( context.project );
-      Track * fTrack = panel.GetFocusedTrack();
+      TrackPanel *panel = context.GetProject()->GetTrackPanel();
+      Track * fTrack = panel->GetFocusedTrack();
 
       context.StartStruct();
-      context.AddItem( trk->GetGroupData().GetName(), "name" );
+      context.AddItem( trk->GetName(), "name" );
       context.AddBool( (trk == fTrack), "focused");
       context.AddBool( trk->GetSelected(), "selected" );
       //JKC: Possibly add later...
-      //context.AddItem( trk->GetTrackView()->GetHeight(), "height" );
+      //context.AddItem( trk->GetHeight(), "height" );
       trk->TypeSwitch( [&] (const WaveTrack* t ) {
-         auto &data = t->GetGroupData();
-         auto &viewData = WaveTrackViewGroupData::Get( *t );
          float vzmin, vzmax;
-         viewData.GetDisplayBounds(&vzmin, &vzmax);
+         t->GetDisplayBounds(&vzmin, &vzmax);
          context.AddItem( "wave", "kind" );
          context.AddItem( t->GetStartTime(), "start" );
          context.AddItem( t->GetEndTime(), "end" );
-         context.AddItem( data.GetPan() , "pan");
-         context.AddItem( data.GetGain() , "gain");
+         context.AddItem( t->GetPan() , "pan");
+         context.AddItem( t->GetGain() , "gain");
          context.AddItem( TrackList::Channels(t).size(), "channels");
          context.AddBool( t->GetSolo(), "solo" );
          context.AddBool( t->GetMute(), "mute");
@@ -310,10 +300,10 @@ bool GetInfoCommand::SendTracks(const CommandContext & context)
 
 bool GetInfoCommand::SendClips(const CommandContext &context)
 {
-   auto &tracks = TrackList::Get( context.project );
+   TrackList *tracks = context.GetProject()->GetTracks();
    int i=0;
    context.StartArray();
-   for (auto waveTrack : tracks.Leaders<WaveTrack>()) {
+   for (auto waveTrack : tracks->Leaders<WaveTrack>()) {
       WaveClipPointers ptrs( waveTrack->SortedClipArray());
       for(WaveClip * pClip : ptrs ) {
          context.StartStruct();
@@ -332,11 +322,11 @@ bool GetInfoCommand::SendClips(const CommandContext &context)
 
 bool GetInfoCommand::SendEnvelopes(const CommandContext &context)
 {
-   auto &tracks = TrackList::Get( context.project );
+   TrackList *tracks = context.GetProject()->GetTracks();
    int i=0;
    int j=0;
    context.StartArray();
-   for (auto waveTrack : tracks.Leaders<WaveTrack>()) {
+   for (auto waveTrack : tracks->Leaders<WaveTrack>()) {
       WaveClipPointers ptrs( waveTrack->SortedClipArray());
       for(WaveClip * pClip : ptrs ) {
          context.StartStruct();
@@ -369,10 +359,10 @@ bool GetInfoCommand::SendEnvelopes(const CommandContext &context)
 
 bool GetInfoCommand::SendLabels(const CommandContext &context)
 {
-   auto &tracks = TrackList::Get( context.project );
+   TrackList *tracks = context.GetProject()->GetTracks();
    int i=0;
    context.StartArray();
-   for (auto t : tracks.Leaders()) {
+   for (auto t : tracks->Leaders()) {
       t->TypeSwitch( [&](LabelTrack *labelTrack) {
 #ifdef VERBOSE_LABELS_FORMATTING
          for (int nn = 0; nn< (int)labelTrack->mLabels.size(); nn++) {
@@ -388,7 +378,8 @@ bool GetInfoCommand::SendLabels(const CommandContext &context)
          context.StartArray();
          context.AddItem( (double)i ); // Track number.
          context.StartArray();
-         for ( const auto &label : labelTrack->GetLabels() ) {
+         for (int nn = 0; nn< (int)labelTrack->mLabels.size(); nn++) {
+            const auto &label = labelTrack->mLabels[nn];
             context.StartArray();
             context.AddItem( label.getT0() ); // start
             context.AddItem( label.getT1() ); // end
@@ -419,7 +410,7 @@ void GetInfoCommand::ExploreMenu( const CommandContext &context, wxMenu * pMenu,
    if( !pMenu )
       return;
 
-   auto &commandManager = CommandManager::Get( context.project );
+   CommandManager * pMan = context.GetProject()->GetCommandManager();
 
    wxMenuItemList list = pMenu->GetMenuItems();
    size_t lcnt = list.size();
@@ -431,7 +422,7 @@ void GetInfoCommand::ExploreMenu( const CommandContext &context, wxMenu * pMenu,
    for (size_t lndx = 0; lndx < lcnt; lndx++) {
       item = list.Item(lndx)->GetData();
       Label = item->GetItemLabelText();
-      Name = commandManager.GetNameFromNumericID( item->GetId() );
+      Name = pMan->GetNameFromID( item->GetId() );
       Accel = item->GetItemLabel();
       if( Accel.Contains("\t") )
          Accel = Accel.AfterLast('\t');
@@ -492,14 +483,13 @@ void GetInfoCommand::ExploreTrackPanel( const CommandContext &context,
    wxPoint P, wxWindow * pWin, int WXUNUSED(Id), int depth )
 {
    AudacityProject * pProj = context.GetProject();
-   auto &tp = TrackPanel::Get( *pProj );
+   TrackPanel * pTP = pProj->GetTrackPanel();
 
    wxRect trackRect = pWin->GetRect();
 
-   for (auto t : TrackList::Get( *pProj ).Any() + IsVisibleTrack{ pProj }) {
-      auto &view = TrackView::Get( *t );
-      trackRect.y = view.GetY() - tp.mViewInfo->vpos;
-      trackRect.height = view.GetHeight();
+   for (auto t : pProj->GetTracks()->Any() + IsVisibleTrack{ pProj }) {
+      trackRect.y = t->GetY() - pTP->mViewInfo->vpos;
+      trackRect.height = t->GetHeight();
 
 #if 0
       // Work in progress on getting the TCP button positions and sizes.
@@ -553,9 +543,9 @@ void GetInfoCommand::ExploreTrackPanel( const CommandContext &context,
       // The VRuler.
       {  
          wxRect R = trackRect;
-         R.x += tp.GetVRulerOffset();
+         R.x += pTP->GetVRulerOffset();
          R.y += kTopMargin;
-         R.width = tp.GetVRulerWidth();
+         R.width = pTP->GetVRulerWidth();
          R.height -= (kTopMargin + kBottomMargin);
          R.SetPosition( R.GetPosition() + P );
 

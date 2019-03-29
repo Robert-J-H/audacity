@@ -45,7 +45,6 @@
 #include "../LabelTrack.h"
 #include "../Project.h"
 #include "../Prefs.h"
-#include "../SelectionState.h"
 #include "../ShuttleGui.h"
 #include "../Tags.h"
 #include "../WaveTrack.h"
@@ -104,14 +103,13 @@ BEGIN_EVENT_TABLE(MouseEvtHandler, wxEvtHandler)
 END_EVENT_TABLE()
 
 ExportMultiple::ExportMultiple(AudacityProject *project)
-: wxDialogWrapper( &ProjectWindow::Get( *project ),
-   wxID_ANY, wxString(_("Export Multiple")) )
-, mSelectionState{ SelectionState::Get( *project ) }
+: wxDialogWrapper(project, wxID_ANY, wxString(_("Export Multiple")))
+, mSelectionState{ project->GetSelectionState() }
 {
    SetName(GetTitle());
 
    mProject = project;
-   mTracks = &TrackList::Get( *project );
+   mTracks = project->GetTracks();
    // Construct an array of non-owning pointers
    for (const auto &plugin : mExporter.GetPlugins())
       mPlugins.push_back(plugin.get());
@@ -621,67 +619,6 @@ bool ExportMultiple::DirOk()
    return fn.Mkdir(0777, wxPATH_MKDIR_FULL);
 }
 
-namespace {
-/** \brief Find out how many channels this track list mixes to
-*
-* This is used in exports of the tracks to work out whether to export in
-* Mono, Stereo etc. @param selectionOnly Whether to consider the entire track
-* list or only the selected members of it
-*/
-unsigned GetNumExportChannels(TrackList &list, bool selectionOnly)
-{
-   /* counters for tracks panned different places */
-   int numLeft = 0;
-   int numRight = 0;
-   //int numMono = 0;
-   /* track iteration kit */
-
-   // Want only unmuted wave tracks.
-   for (auto tr :
-         list.Any< const WaveTrack >()
-            + (selectionOnly ? &Track::IsSelected : &Track::Any)
-            - &WaveTrack::GetMute
-   ) {
-      // Found a left channel
-      if (tr->GetChannel() == WaveTrack::LeftChannel) {
-         numLeft++;
-      }
-
-      // Found a right channel
-      else if (tr->GetChannel() == WaveTrack::RightChannel) {
-         numRight++;
-      }
-
-      // Found a mono channel, but it may be panned
-      else if (tr->GetChannel() == WaveTrack::MonoChannel) {
-         float pan = tr->GetGroupData().GetPan();
-
-         // Figure out what kind of channel it should be
-         if (pan == -1.0) {   // panned hard left
-            numLeft++;
-         }
-         else if (pan == 1.0) {  // panned hard right
-            numRight++;
-         }
-         else if (pan == 0) { // panned dead center
-            // numMono++;
-         }
-         else {   // panned somewhere else
-            numLeft++;
-            numRight++;
-         }
-      }
-   }
-
-   // if there is stereo content, report 2, else report 1
-   if (numRight > 0 || numLeft > 0) {
-      return 2;
-   }
-
-   return 1;
-}
-}
-
 // TODO: JKC July2016: Merge labels/tracks duplicated export code.
 ProgressResult ExportMultiple::ExportMultipleByLabel(bool byName,
    const wxString &prefix, bool addNumber)
@@ -700,7 +637,7 @@ ProgressResult ExportMultiple::ExportMultipleByLabel(bool byName,
    }
 
    // Figure out how many channels we should export.
-   auto channels = GetNumExportChannels(*mTracks, false);
+   auto channels = mTracks->GetNumExportChannels(false);
 
    FilePaths otherNames;  // keep track of file names we will use, so we
    // don't duplicate them
@@ -772,13 +709,12 @@ ProgressResult ExportMultiple::ExportMultipleByLabel(bool byName,
 
          /* do the metadata for this file */
          // copy project metadata to start with
-         setting.filetags = Tags::Get( *mProject );
+         setting.filetags = *(mProject->GetTags());
          // over-ride with values
          setting.filetags.SetTag(TAG_TITLE, title);
          setting.filetags.SetTag(TAG_TRACK, l+1);
          // let the user have a crack at editing it, exit if cancelled
-         if( !setting.filetags.ShowEditDialog( ProjectWindow::Find( mProject ),
-            _("Edit Metadata Tags"), tagsPrompt) )
+         if( !setting.filetags.ShowEditDialog(mProject, _("Edit Metadata Tags"), tagsPrompt) )
             return ProgressResult::Cancelled;
       }
 
@@ -832,8 +768,8 @@ ProgressResult ExportMultiple::ExportMultipleByTrack(bool byName,
 
    /* Remember which tracks were selected, and set them to unselected */
    SelectionStateChanger changer{ mSelectionState, *mTracks };
-   for (auto group : mTracks->Selected<WaveTrack>().ByGroups())
-      group.data->SetSelected(false);
+   for (auto tr : mTracks->Selected<WaveTrack>())
+      tr->SetSelected(false);
 
    /* Examine all tracks in turn, collecting export information */
    for (auto tr : mTracks->Leaders<WaveTrack>() - &WaveTrack::GetMute) {
@@ -847,11 +783,11 @@ ProgressResult ExportMultiple::ExportMultipleByTrack(bool byName,
       setting.channels = channels.size();
       if (setting.channels == 1 &&
           !(tr->GetChannel() == WaveTrack::MonoChannel &&
-                  tr->GetGroupData().GetPan() == 0.0))
+                  tr->GetPan() == 0.0))
          setting.channels = 2;
 
       // Get name and title
-      title = tr->GetGroupData().GetName();
+      title = tr->GetName();
       if( title.empty() )
          title = _("untitled");
 
@@ -885,13 +821,12 @@ ProgressResult ExportMultiple::ExportMultipleByTrack(bool byName,
 
          /* do the metadata for this file */
          // copy project metadata to start with
-         setting.filetags = Tags::Get( *mProject );
+         setting.filetags = *(mProject->GetTags());
          // over-ride with values
          setting.filetags.SetTag(TAG_TITLE, title);
          setting.filetags.SetTag(TAG_TRACK, l+1);
          // let the user have a crack at editing it, exit if cancelled
-         if (!setting.filetags.ShowEditDialog( ProjectWindow::Find( mProject ),
-            _("Edit Metadata Tags"), tagsPrompt ))
+         if (!setting.filetags.ShowEditDialog(mProject,_("Edit Metadata Tags"), tagsPrompt))
             return ProgressResult::Cancelled;
       }
       /* add the settings to the array of settings to be used for export */
@@ -904,8 +839,7 @@ ProgressResult ExportMultiple::ExportMultipleByTrack(bool byName,
    int count = 0; // count the number of sucessful runs
    ExportKit activeSetting;  // pointer to the settings in use for this export
    std::unique_ptr<ProgressDialog> pDialog;
-   for (auto group :
-      (mTracks->Any<WaveTrack>() - &WaveTrack::GetMute).ByGroups() ) {
+   for (auto tr : mTracks->Leaders<WaveTrack>() - &WaveTrack::GetMute) {
       wxLogDebug( "Get setting %i", count );
       /* get the settings to use for the export from the array */
       activeSetting = exportSettings[count];
@@ -916,7 +850,9 @@ ProgressResult ExportMultiple::ExportMultipleByTrack(bool byName,
 
       /* Select the track */
       SelectionStateChanger changer2{ mSelectionState, *mTracks };
-      group.data->SetSelected(true);
+      const auto range = TrackList::Channels(tr);
+      for (auto channel : range)
+         channel->SetSelected(true);
 
       // Export the data. "channels" are per track.
       ok = DoExport(pDialog,
@@ -955,7 +891,7 @@ ProgressResult ExportMultiple::DoExport(std::unique_ptr<ProgressDialog> &pDialog
    wxFileName backup;
    if (mOverwrite->GetValue()) {
       // Make sure we don't overwrite (corrupt) alias files
-      if (!DirManager::Get( *mProject ).EnsureSafeFilename(inName)) {
+      if (!mProject->GetDirManager()->EnsureSafeFilename(inName)) {
          return ProgressResult::Cancelled;
       }
       name = inName;

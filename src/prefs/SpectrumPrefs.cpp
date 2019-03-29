@@ -28,7 +28,6 @@
 #include "../Project.h"
 #include "../ShuttleGui.h"
 #include "../WaveTrack.h"
-#include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
 
 #include "../TrackPanel.h"
 
@@ -42,14 +41,13 @@ SpectrumPrefs::SpectrumPrefs(wxWindow * parent, wxWindowID winid, WaveTrack *wt)
 , mPopulating(false)
 {
    if (mWt) {
-      auto &data = WaveTrackViewGroupData::Get( *wt );
-      SpectrogramSettings &settings = data.GetSpectrogramSettings();
+      SpectrogramSettings &settings = wt->GetSpectrogramSettings();
       mOrigDefaulted = mDefaulted = (&SpectrogramSettings::defaults() == &settings);
       mTempSettings = mOrigSettings = settings;
-      data.GetSpectrumBounds(wt->GetRate(), &mOrigMin, &mOrigMax);
+      wt->GetSpectrumBounds(&mOrigMin, &mOrigMax);
       mTempSettings.maxFreq = mOrigMax;
       mTempSettings.minFreq = mOrigMin;
-      mOrigDisplay = data.GetDisplay();
+      mOrigDisplay = mWt->GetDisplay();
    }
    else  {
       mTempSettings = mOrigSettings = SpectrogramSettings::defaults();
@@ -377,16 +375,19 @@ bool SpectrumPrefs::Validate()
 void SpectrumPrefs::Rollback()
 {
    if (mWt) {
-      auto &data = WaveTrackViewGroupData::Get( *mWt );
-      if (mOrigDefaulted) {
-         data.SetSpectrogramSettings({});
-         data.SetSpectrumBounds(-1, -1);
-      }
-      else {
-         auto &settings =
-            data.GetIndependentSpectrogramSettings();
-         data.SetSpectrumBounds(mOrigMin, mOrigMax);
-         settings = mOrigSettings;
+      auto channels = TrackList::Channels(mWt);
+
+      for (auto channel : channels) {
+         if (mOrigDefaulted) {
+            channel->SetSpectrogramSettings({});
+            channel->SetSpectrumBounds(-1, -1);
+         }
+         else {
+            auto &settings =
+               channel->GetIndependentSpectrogramSettings();
+            channel->SetSpectrumBounds(mOrigMin, mOrigMax);
+            settings = mOrigSettings;
+         }
       }
    }
 
@@ -397,14 +398,15 @@ void SpectrumPrefs::Rollback()
 
    const bool isOpenPage = this->IsShown();
    if (mWt && isOpenPage) {
-      auto &data = WaveTrackViewGroupData::Get( *mWt );
-      data.SetDisplay(mOrigDisplay);
+      auto channels = TrackList::Channels(mWt);
+      for (auto channel : channels)
+         channel->SetDisplay(mOrigDisplay);
    }
 
    if (isOpenPage) {
-      auto &tp = TrackPanel::Get ( *::GetActiveProject() );
-      tp.UpdateVRulers();
-      tp.Refresh(false);
+      TrackPanel *const tp = ::GetActiveProject()->GetTrackPanel();
+      tp->UpdateVRulers();
+      tp->Refresh(false);
    }
 }
 
@@ -422,17 +424,18 @@ void SpectrumPrefs::Preview()
    mTempSettings.ConvertToActualWindowSizes();
 
    if (mWt) {
-      auto &data = WaveTrackViewGroupData::Get( *mWt );
-      if (mDefaulted) {
-         data.SetSpectrogramSettings({});
-         // ... and so that the vertical scale also defaults:
-         data.SetSpectrumBounds(-1, -1);
-      }
-      else {
-         SpectrogramSettings &settings =
-            data.GetIndependentSpectrogramSettings();
-         data.SetSpectrumBounds(mTempSettings.minFreq, mTempSettings.maxFreq);
-         settings = mTempSettings;
+      for (auto channel : TrackList::Channels(mWt)) {
+         if (mDefaulted) {
+            channel->SetSpectrogramSettings({});
+            // ... and so that the vertical scale also defaults:
+            channel->SetSpectrumBounds(-1, -1);
+         }
+         else {
+            SpectrogramSettings &settings =
+               channel->GetIndependentSpectrogramSettings();
+            channel->SetSpectrumBounds(mTempSettings.minFreq, mTempSettings.maxFreq);
+            settings = mTempSettings;
+         }
       }
    }
 
@@ -443,14 +446,14 @@ void SpectrumPrefs::Preview()
    mTempSettings.ConvertToEnumeratedWindowSizes();
 
    if (mWt && isOpenPage) {
-      auto &data = WaveTrackViewGroupData::Get( *mWt );
-      data.SetDisplay(WaveTrackViewConstants::Spectrum);
+      for (auto channel : TrackList::Channels(mWt))
+         channel->SetDisplay(WaveTrack::Spectrum);
    }
 
    if (isOpenPage) {
-      auto &tp = TrackPanel::Get( *::GetActiveProject() );
-      tp.UpdateVRulers();
-      tp.Refresh(false);
+      TrackPanel *const tp = ::GetActiveProject()->GetTrackPanel();
+      tp->UpdateVRulers();
+      tp->Refresh(false);
    }
 }
 
@@ -461,11 +464,10 @@ bool SpectrumPrefs::Commit()
 
    mCommitted = true;
    SpectrogramSettings::Globals::Get().SavePrefs(); // always
-   SpectrogramSettings *const pSettings = &SpectrogramSettings::defaults();
    if (!mWt || mDefaulted) {
+      SpectrogramSettings *const pSettings = &SpectrogramSettings::defaults();
       pSettings->SavePrefs();
    }
-   pSettings->LoadPrefs(); // always; in case Globals changed
 
    return true;
 }
@@ -563,21 +565,13 @@ BEGIN_EVENT_TABLE(SpectrumPrefs, PrefsPanel)
 
 END_EVENT_TABLE()
 
-PrefsPanel::Factory
-SpectrumPrefsFactory( WaveTrack *wt )
+SpectrumPrefsFactory::SpectrumPrefsFactory(WaveTrack *wt)
+: mWt(wt)
 {
-   return [=](wxWindow *parent, wxWindowID winid)
-   {
-      wxASSERT(parent); // to justify safenew
-      return safenew SpectrumPrefs(parent, winid, wt);
-   };
 }
 
-namespace{
-PrefsPanel::Registration sAttachment{ "Spectrum",
-   SpectrumPrefsFactory( nullptr ),
-   false,
-   // Place it at a lower tree level
-   { "Tracks" }
-};
+PrefsPanel *SpectrumPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+{
+   wxASSERT(parent); // to justify safenew
+   return safenew SpectrumPrefs(parent, winid, mWt);
 }

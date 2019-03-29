@@ -21,7 +21,6 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../Track.h"
 #include "../../TrackPanel.h"
 #include "../../TrackPanelMouseEvent.h"
-#include "../../ViewInfo.h"
 
 CommonTrackPanelCell::~CommonTrackPanelCell()
 {
@@ -39,7 +38,7 @@ unsigned CommonTrackPanelCell::HandleWheelRotation
 {
    using namespace RefreshCode;
 
-   if ( TrackList::Get( *pProject ).empty() )
+   if (pProject->GetTracks()->empty())
       // Scrolling and Zoom in and out commands are disabled when there are no tracks.
       // This should be disabled too for consistency.  Otherwise
       // you do see changes in the time ruler.
@@ -47,9 +46,8 @@ unsigned CommonTrackPanelCell::HandleWheelRotation
 
    unsigned result = RefreshAll;
    const wxMouseEvent &event = evt.event;
-   auto &viewInfo = ViewInfo::Get( *pProject );
-   Scrubber &scrubber = Scrubber::Get( *pProject );
-   auto &window = ProjectWindow::Get( *pProject );
+   ViewInfo &viewInfo = pProject->GetViewInfo();
+   Scrubber &scrubber = pProject->GetScrubber();
    const auto steps = evt.steps;
 
    if (event.ShiftDown()
@@ -59,7 +57,7 @@ unsigned CommonTrackPanelCell::HandleWheelRotation
       )
    {
       // MM: Scroll left/right when used with Shift key down
-      window.TP_ScrollWindow(
+      pProject->TP_ScrollWindow(
          viewInfo.OffsetTimeByPixels(
             viewInfo.PositionToTime(0), 50.0 * -steps));
    }
@@ -80,8 +78,7 @@ unsigned CommonTrackPanelCell::HandleWheelRotation
       // MM: Zoom in/out when used with Control key down
       // We're converting pixel positions to times,
       // counting pixels from the left edge of the track.
-      auto &trackPanel = TrackPanel::Get( *pProject );
-      int trackLeftEdge = trackPanel.GetLeftOffset();
+      int trackLeftEdge = pProject->GetTrackPanel()->GetLeftOffset();
 
       // Time corresponding to mouse position
       wxCoord xx;
@@ -91,7 +88,7 @@ unsigned CommonTrackPanelCell::HandleWheelRotation
       // Scrubbing? Expand or contract about the center, ignoring mouse position
       if (scrubber.IsScrollScrubbing())
          center_h = viewInfo.h +
-            (trackPanel.GetScreenEndTime() - viewInfo.h) / 2.0;
+            (pProject->GetTrackPanel()->GetScreenEndTime() - viewInfo.h) / 2.0;
       // Zooming out? Focus on mouse.
       else if( steps <= 0 )
          center_h = mouse_h;
@@ -111,7 +108,7 @@ unsigned CommonTrackPanelCell::HandleWheelRotation
       xx = viewInfo.TimeToPosition(center_h, trackLeftEdge);
 
       // Time corresponding to last (most far right) audio.
-      double audioEndTime = TrackList::Get( *pProject ).GetEndTime();
+      double audioEndTime = pProject->GetTracks()->GetEndTime();
 
 // Disabled this code to fix Bug 1923 (tricky to wheel-zoom right of waveform).
 #if 0
@@ -155,7 +152,7 @@ unsigned CommonTrackPanelCell::HandleWheelRotation
          double lines = steps * 4 + mVertScrollRemainder;
          mVertScrollRemainder = lines - floor(lines);
          lines = floor(lines);
-         auto didSomething = window.TP_ScrollUpDown((int)-lines);
+         auto didSomething = pProject->TP_ScrollUpDown((int)-lines);
          if (!didSomething)
             result |= Cancelled;
       }

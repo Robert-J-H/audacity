@@ -34,14 +34,11 @@
 #include "Internat.h"
 #include "Prefs.h"
 #include "effects/TimeWarper.h"
-#include "tracks/ui/TrackControls.h"
 
 #include "InconsistencyException.h"
 
 #include "TrackPanel.h" // For TrackInfo
 #include "AllThemeResources.h"
-
-#include "tracks/playabletrack/notetrack/ui/NoteTrackView.h"
 
 #ifdef SONIFY
 #include "../lib-src/portmidi/pm_common/portmidi.h"
@@ -114,23 +111,25 @@ NoteTrack::Holder TrackFactory::NewNoteTrack()
 NoteTrack::NoteTrack(const std::shared_ptr<DirManager> &projDirManager)
    : NoteTrackBase(projDirManager)
 {
+   SetDefaultName(_("Note Track"));
+   SetName(GetDefaultName());
+
+   SetHeight( TrackInfo::DefaultNoteTrackHeight() );
+
    mSeq = NULL;
    mSerializationLength = 0;
 
 #ifdef EXPERIMENTAL_MIDI_OUT
    mVelocity = 0;
 #endif
+   mBottomNote = 24;
+   mPitchHeight = 5.0f;
 
    mVisibleChannels = ALL_CHANNELS;
 }
 
 NoteTrack::~NoteTrack()
 {
-}
-
-wxString NoteTrack::GetDefaultName() const
-{
-   return _("Note Track");
 }
 
 Alg_seq &NoteTrack::GetSeq() const
@@ -155,7 +154,7 @@ Alg_seq &NoteTrack::GetSeq() const
    return *mSeq;
 }
 
-Track::Holder NoteTrack::Clone() const
+Track::Holder NoteTrack::Duplicate() const
 {
    auto duplicate = std::make_shared<NoteTrack>(mDirManager);
    duplicate->Init(*this);
@@ -185,6 +184,8 @@ Track::Holder NoteTrack::Clone() const
       // We are duplicating a default-constructed NoteTrack, and that's okay
    }
    // copy some other fields here
+   duplicate->SetBottomNote(mBottomNote);
+   duplicate->mPitchHeight = mPitchHeight;
    duplicate->mVisibleChannels = mVisibleChannels;
    duplicate->SetOffset(GetOffset());
 #ifdef EXPERIMENTAL_MIDI_OUT
@@ -208,6 +209,22 @@ double NoteTrack::GetEndTime() const
 {
    return GetStartTime() + GetSeq().get_real_dur();
 }
+
+void NoteTrack::DoSetHeight(int h)
+{
+   auto oldHeight = GetHeight();
+   auto oldMargin = GetNoteMargin(oldHeight);
+   PlayableTrack::DoSetHeight(h);
+   auto margin = GetNoteMargin(h);
+   Zoom(
+      wxRect{ 0, 0, 1, h }, // only height matters
+      h - margin - 1, // preserve bottom note
+      (float)(h - 2 * margin) /
+           std::max(1, oldHeight - 2 * oldMargin),
+      false
+   );
+}
+
 
 void NoteTrack::WarpAndTransposeNotes(double t0, double t1,
                                       const TimeWarper &warper,
@@ -863,8 +880,8 @@ bool NoteTrack::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
          const wxString strValue = value;
          long nValue;
          double dblValue;
-         if (this->Track::HandleCommonXMLAttribute(attr, strValue))
-            ;
+         if (!wxStrcmp(attr, wxT("name")) && XMLValueChecker::IsGoodString(strValue))
+            mName = strValue;
          else if (this->NoteTrackBase::HandleXMLAttribute(attr, value))
          {}
          else if (!wxStrcmp(attr, wxT("offset")) &&
@@ -878,6 +895,15 @@ bool NoteTrack::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
                  return false;
              mVisibleChannels = nValue;
          }
+         else if (!wxStrcmp(attr, wxT("height")) &&
+                  XMLValueChecker::IsGoodInt(strValue) && strValue.ToLong(&nValue))
+            mHeight = nValue;
+         else if (!wxStrcmp(attr, wxT("minimized")) &&
+                  XMLValueChecker::IsGoodInt(strValue) && strValue.ToLong(&nValue))
+            mMinimized = (nValue != 0);
+         else if (!wxStrcmp(attr, wxT("isSelected")) &&
+                  XMLValueChecker::IsGoodInt(strValue) && strValue.ToLong(&nValue))
+            this->SetSelected(nValue != 0);
 #ifdef EXPERIMENTAL_MIDI_OUT
          else if (!wxStrcmp(attr, wxT("velocity")) &&
                   XMLValueChecker::IsGoodString(strValue) &&
@@ -886,7 +912,7 @@ bool NoteTrack::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
 #endif
          else if (!wxStrcmp(attr, wxT("bottomnote")) &&
                   XMLValueChecker::IsGoodInt(strValue) && strValue.ToLong(&nValue))
-            NoteTrackView::Get( *this ).SetBottomNote(nValue);
+            SetBottomNote(nValue);
          else if (!wxStrcmp(attr, wxT("data"))) {
              std::string s(strValue.mb_str(wxConvUTF8));
              std::istringstream data(s);
@@ -898,7 +924,7 @@ bool NoteTrack::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
    return false;
 }
 
-XMLTagHandlerPtr NoteTrack::HandleXMLChild(const wxChar * WXUNUSED(tag))
+XMLTagHandler *NoteTrack::HandleXMLChild(const wxChar * WXUNUSED(tag))
 {
    return NULL;
 }
@@ -912,21 +938,23 @@ void NoteTrack::WriteXML(XMLWriter &xmlFile) const
    if (!mSeq) {
       // replace saveme with an (unserialized) duplicate, which is
       // destroyed at end of function.
-      holder = Clone();
+      holder = Duplicate();
       saveme = static_cast<NoteTrack*>(holder.get());
    }
    saveme->GetSeq().write(data, true);
    xmlFile.StartTag(wxT("notetrack"));
-   saveme->Track::WriteCommonXMLAttributes( xmlFile );
+   xmlFile.WriteAttr(wxT("name"), saveme->mName);
    this->NoteTrackBase::WriteXMLAttributes(xmlFile);
    xmlFile.WriteAttr(wxT("offset"), saveme->GetOffset());
    xmlFile.WriteAttr(wxT("visiblechannels"), saveme->mVisibleChannels);
+   xmlFile.WriteAttr(wxT("height"), saveme->GetActualHeight());
+   xmlFile.WriteAttr(wxT("minimized"), saveme->GetMinimized());
+   xmlFile.WriteAttr(wxT("isSelected"), this->GetSelected());
 
 #ifdef EXPERIMENTAL_MIDI_OUT
    xmlFile.WriteAttr(wxT("velocity"), (double) saveme->mVelocity);
 #endif
-   xmlFile.WriteAttr( wxT("bottomnote"),
-      NoteTrackView::Get( *saveme ).GetBottomNote() );
+   xmlFile.WriteAttr(wxT("bottomnote"), saveme->mBottomNote);
    xmlFile.WriteAttr(wxT("data"), wxString(data.str().c_str(), wxConvUTF8));
    xmlFile.EndTag(wxT("notetrack"));
 }
@@ -941,22 +969,59 @@ void NoteTrack::VScroll(int start, int end)
 {
     int ph = GetPitchHeight();
     int delta = ((end - start) + ph / 2) / ph;
-    NoteTrackView::Get( *this ).SetBottomNote(mStartBottomNote + delta);
+    SetBottomNote(mStartBottomNote + delta);
 }
 #endif
 
-#include "tracks/playabletrack/notetrack/ui/NoteTrackControls.h"
-#include "tracks/playabletrack/notetrack/ui/NoteTrackView.h"
-#include "tracks/playabletrack/notetrack/ui/NoteTrackVRulerControls.h"
-
-std::shared_ptr<TrackView> NoteTrack::DoGetView()
+void NoteTrack::Zoom(const wxRect &rect, int y, float multiplier, bool center)
 {
-   return std::make_shared<NoteTrackView>( SharedPointer() );
+   // Construct track rectangle to map pitch to screen coordinates
+   // Only y and height are needed:
+   wxRect trackRect(0, rect.GetY(), 1, rect.GetHeight());
+   PrepareIPitchToY(trackRect);
+   int clickedPitch = YToIPitch(y);
+   // zoom by changing the pitch height
+   SetPitchHeight(rect.height, mPitchHeight * multiplier);
+   PrepareIPitchToY(trackRect); // update because mPitchHeight changed
+   if (center) {
+      int newCenterPitch = YToIPitch(rect.GetY() + rect.GetHeight() / 2);
+      // center the pitch that the user clicked on
+      SetBottomNote(mBottomNote + (clickedPitch - newCenterPitch));
+   } else {
+      int newClickedPitch = YToIPitch(y);
+      // align to keep the pitch that the user clicked on in the same place
+      SetBottomNote(mBottomNote + (clickedPitch - newClickedPitch));
+   }
 }
 
-std::shared_ptr<TrackControls> NoteTrack::DoGetControls()
+
+void NoteTrack::ZoomTo(const wxRect &rect, int start, int end)
 {
-   return std::make_shared<NoteTrackControls>( SharedPointer() );
+   wxRect trackRect(0, rect.GetY(), 1, rect.GetHeight());
+   PrepareIPitchToY(trackRect);
+   int topPitch = YToIPitch(start);
+   int botPitch = YToIPitch(end);
+   if (topPitch < botPitch) { // swap
+      int temp = topPitch; topPitch = botPitch; botPitch = temp;
+   }
+   if (topPitch == botPitch) { // can't divide by zero, do something else
+      Zoom(rect, start, 1, true);
+      return;
+   }
+   auto trialPitchHeight = (float)trackRect.height / (topPitch - botPitch);
+   Zoom(rect, (start + end) / 2, trialPitchHeight / mPitchHeight, true);
 }
+
+int NoteTrack::YToIPitch(int y)
+{
+   y = mBottom - y; // pixels above pitch 0
+   int octave = (y / GetOctaveHeight());
+   y -= octave * GetOctaveHeight();
+   // result is approximate because C and G are one pixel taller than
+   // mPitchHeight.
+   return (y / GetPitchHeight(1)) + octave * 12;
+}
+
+const float NoteTrack::ZoomStep = powf( 2.0f, 0.25f );
 
 #endif // USE_MIDI

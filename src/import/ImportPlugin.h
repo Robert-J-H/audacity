@@ -65,8 +65,6 @@ but little else.
 
 #include "ImportRaw.h" // defines TrackHolders
 
-#include "../wxFileNameWrapper.h"
-
 class wxArrayString;
 class TrackFactory;
 class Track;

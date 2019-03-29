@@ -169,7 +169,7 @@ bool MacroCommands::ReadMacro(const wxString & macro)
    ResetMacro();
 
    // Build the filename
-   wxFileNameWrapper name{ FileNames::MacroDir(), macro, wxT("txt") };
+   wxFileName name(FileNames::MacroDir(), macro, wxT("txt"));
 
    // Set the file name
    wxTextFile tf(name.GetFullPath());
@@ -212,7 +212,7 @@ bool MacroCommands::ReadMacro(const wxString & macro)
 bool MacroCommands::WriteMacro(const wxString & macro)
 {
    // Build the filename
-   wxFileNameWrapper name{ FileNames::MacroDir(), macro, wxT("txt") };
+   wxFileName name(FileNames::MacroDir(), macro, wxT("txt"));
 
    // Set the file name
    wxTextFile tf(name.GetFullPath());
@@ -251,7 +251,7 @@ bool MacroCommands::WriteMacro(const wxString & macro)
 bool MacroCommands::AddMacro(const wxString & macro)
 {
    // Build the filename
-   wxFileNameWrapper name{ FileNames::MacroDir(), macro, wxT("txt") };
+   wxFileName name(FileNames::MacroDir(), macro, wxT("txt"));
 
    // Set the file name
    wxTextFile tf(name.GetFullPath());
@@ -263,13 +263,13 @@ bool MacroCommands::AddMacro(const wxString & macro)
 bool MacroCommands::DeleteMacro(const wxString & macro)
 {
    // Build the filename
-   wxFileNameWrapper name{ FileNames::MacroDir(), macro, wxT("txt") };
+   wxFileName name(FileNames::MacroDir(), macro, wxT("txt"));
 
    // Delete it...wxRemoveFile will display errors
    auto result = wxRemoveFile(name.GetFullPath());
 
    // Delete any legacy chain that it shadowed
-   auto oldPath = wxFileNameWrapper{ FileNames::LegacyChainDir(), macro, wxT("txt") };
+   auto oldPath = wxFileName{ FileNames::LegacyChainDir(), macro, wxT("txt") };
    wxRemoveFile(oldPath.GetFullPath()); // Don't care about this return value
 
    return result;
@@ -278,8 +278,8 @@ bool MacroCommands::DeleteMacro(const wxString & macro)
 bool MacroCommands::RenameMacro(const wxString & oldmacro, const wxString & newmacro)
 {
    // Build the filenames
-   wxFileNameWrapper oname{ FileNames::MacroDir(), oldmacro, wxT("txt") };
-   wxFileNameWrapper nname{ FileNames::MacroDir(), newmacro, wxT("txt") };
+   wxFileName oname(FileNames::MacroDir(), oldmacro, wxT("txt"));
+   wxFileName nname(FileNames::MacroDir(), newmacro, wxT("txt"));
 
    // Rename it...wxRenameFile will display errors
    return wxRenameFile(oname.GetFullPath(), nname.GetFullPath());
@@ -318,14 +318,14 @@ MacroCommandsCatalog::MacroCommandsCatalog( const AudacityProject *project )
       }
    }
 
-   auto &manager = CommandManager::Get( *project );
+   auto mManager = project->GetCommandManager();
    wxArrayString mLabels;
    CommandIDs mNames;
    std::vector<bool> vHasDialog;
    mLabels.clear();
    mNames.clear();
-   manager.GetAllCommandLabels(mLabels, vHasDialog, true);
-   manager.GetAllCommandNames(mNames, true);
+   mManager->GetAllCommandLabels(mLabels, vHasDialog, true);
+   mManager->GetAllCommandNames(mNames, true);
 
    const bool english = wxGetLocale()->GetCanonicalName().StartsWith(wxT("en"));
 
@@ -477,9 +477,14 @@ double MacroCommands::GetEndTime()
       //AudacityMessageBox( _("No project to process!") );
       return -1.0;
    }
-   auto &tracks = TrackList::Get( *project );
+   TrackList * tracks = project->GetTracks();
+   if( tracks == NULL )
+   {
+      //AudacityMessageBox( _("No tracks to process!") );
+      return -1.0;
+   }
 
-   double endTime = tracks.GetEndTime();
+   double endTime = tracks->GetEndTime();
    return endTime;
 }
 
@@ -492,15 +497,20 @@ bool MacroCommands::IsMono()
       return false;
    }
 
-   auto &tracks = TrackList::Get( *project );
+   TrackList * tracks = project->GetTracks();
+   if( tracks == NULL )
+   {
+      //AudacityMessageBox( _("No tracks to process!") );
+      return false;
+   }
 
-   return ( tracks.Any() - &Track::IsLeader ).empty();
+   return ( tracks->Any() - &Track::IsLeader ).empty();
 }
 
 wxString MacroCommands::BuildCleanFileName(const FilePath &fileName,
    const FileExtension &extension)
 {
-   const wxFileNameWrapper newFileName{ fileName };
+   const wxFileName newFileName{ fileName };
    wxString justName = newFileName.GetName();
    wxString pathName = newFileName.GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR);
    const auto cleanedString = _("cleaned");
@@ -769,9 +779,9 @@ bool MacroCommands::ApplyCommand( const wxString &friendlyCommand,
    }
 
    AudacityProject *project = GetActiveProject();
-   auto &manager = CommandManager::Get( *project );
+   CommandManager * pManager = project->GetCommandManager();
    if( pContext ){
-      if( manager.HandleTextualCommand( command, *pContext, AlwaysEnabledFlag, AlwaysEnabledFlag ) )
+      if( pManager->HandleTextualCommand( command, *pContext, AlwaysEnabledFlag, AlwaysEnabledFlag ) )
          return true;
       pContext->Status( wxString::Format(
          _("Your batch command of %s was not recognized."), friendlyCommand ));
@@ -780,7 +790,7 @@ bool MacroCommands::ApplyCommand( const wxString &friendlyCommand,
    else
    {
       const CommandContext context(  *GetActiveProject() );
-      if( manager.HandleTextualCommand( command, context, AlwaysEnabledFlag, AlwaysEnabledFlag ) )
+      if( pManager->HandleTextualCommand( command, context, AlwaysEnabledFlag, AlwaysEnabledFlag ) )
          return true;
    }
 
@@ -797,7 +807,7 @@ bool MacroCommands::ApplyCommandInBatchMode( const wxString &friendlyCommand,
 {
    AudacityProject *project = GetActiveProject();
    // Recalc flags and enable items that may have become enabled.
-   MenuManager::Get(*project).UpdateMenus(*project, false);
+   GetMenuManager(*project).UpdateMenus(*project, false);
    // enter batch mode...
    bool prevShowMode = project->GetShowId3Dialog();
    project->mBatchMode++;
@@ -962,10 +972,10 @@ void MacroCommands::MigrateLegacyChains()
       wxDir::GetAllFiles(oldDir, &files, wxT("*.txt"), wxDIR_FILES);
 
       // add a dummy path component to be overwritten by SetFullName
-      wxFileNameWrapper newDir{ FileNames::MacroDir(), wxT("x") };
+      wxFileName newDir{ FileNames::MacroDir(), wxT("x") };
 
       for (const auto &file : files) {
-         auto name = wxFileNameWrapper{ file }.GetFullName();
+         auto name = wxFileName{file}.GetFullName();
          newDir.SetFullName(name);
          const auto newPath = newDir.GetFullPath();
          if (!wxFileExists(newPath))
@@ -985,9 +995,9 @@ wxArrayString MacroCommands::GetNames()
    wxDir::GetAllFiles(FileNames::MacroDir(), &files, wxT("*.txt"), wxDIR_FILES);
    size_t i;
 
-   wxFileNameWrapper ff;
-   for ( const auto &file : files ) {
-      ff = file;
+   wxFileName ff;
+   for (i = 0; i < files.size(); i++) {
+      ff = (files[i]);
       names.push_back(ff.GetName());
    }
 

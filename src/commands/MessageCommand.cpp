@@ -16,16 +16,10 @@
 #include "../Audacity.h"
 #include "MessageCommand.h"
 
-#include "LoadCommands.h"
 #include "CommandType.h"
 #include "CommandContext.h"
 #include "../Shuttle.h"
 #include "../ShuttleGui.h"
-
-const ComponentInterfaceSymbol MessageCommand::Symbol
-{ XO("Message") };
-
-namespace{ BuiltinCommandsModule::Registration< MessageCommand > reg; }
 
 bool MessageCommand::DefineParams( ShuttleParams & S ){
    S.Define( mMessage, wxT("Text"),  "Some message" );

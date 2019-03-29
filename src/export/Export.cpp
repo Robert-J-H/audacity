@@ -332,7 +332,7 @@ void Exporter::OnExtensionChanged(wxCommandEvent &evt) {
 
 void Exporter::OnHelp(wxCommandEvent& WXUNUSED(evt))
 {
-   wxWindow * pWin = &ProjectWindow::Get( *GetActiveProject() );
+   wxWindow * pWin = GetActiveProject();
    HelpSystem::ShowHelp(pWin, wxT("File_Export_Dialog"), true);
 }
 
@@ -459,24 +459,24 @@ bool Exporter::ExamineTracks()
    double earliestBegin = mT1;
    double latestEnd = mT0;
 
-   auto &tracks = TrackList::Get( *mProject );
+   const TrackList *tracks = mProject->GetTracks();
 
    for (auto tr :
-         tracks.Any< const WaveTrack >()
+         tracks->Any< const WaveTrack >()
             + ( mSelectedOnly ? &Track::IsSelected : &Track::Any )
             - &WaveTrack::GetMute
    ) {
       mNumSelected++;
 
-      if (tr->GetChannel() == WaveTrack::LeftChannel) {
+      if (tr->GetChannel() == Track::LeftChannel) {
          mNumLeft++;
       }
-      else if (tr->GetChannel() == WaveTrack::RightChannel) {
+      else if (tr->GetChannel() == Track::RightChannel) {
          mNumRight++;
       }
-      else if (tr->GetChannel() == WaveTrack::MonoChannel) {
+      else if (tr->GetChannel() == Track::MonoChannel) {
          // It's a mono channel, but it may be panned
-         float pan = tr->GetGroupData().GetPan();
+         float pan = tr->GetPan();
 
          if (pan == -1.0)
             mNumLeft++;
@@ -570,7 +570,7 @@ bool Exporter::GetFilename()
          auto useFileName = mFilename;
          if (!useFileName.HasExt())
             useFileName.SetExt(defext);
-         FileDialogWrapper fd( ProjectWindow::Find( mProject ),
+         FileDialogWrapper fd(mProject,
                        mFileDialogTitle,
                        mFilename.GetPath(),
                        useFileName.GetFullName(),
@@ -727,7 +727,7 @@ bool Exporter::CheckFilename()
    // existing file.)
    //
 
-   if (!DirManager::Get( *mProject ).EnsureSafeFilename(mFilename))
+   if (!mProject->GetDirManager()->EnsureSafeFilename(mFilename))
       return false;
 
    if( mFormatName.empty() )
@@ -811,23 +811,22 @@ bool Exporter::CheckMix()
          if (exportFormat != wxT("CL") && exportFormat != wxT("FFMPEG") && exportedChannels == -1)
             exportedChannels = mChannels;
 
-         auto pWindow = ProjectWindow::Find( mProject );
          if (exportedChannels == 1) {
-            if (ShowWarningDialog(pWindow,
+            if (ShowWarningDialog(mProject,
                                   wxT("MixMono"),
                                   _("Your tracks will be mixed down and exported as one mono file."),
                                   true) == wxID_CANCEL)
                return false;
          }
          else if (exportedChannels == 2) {
-            if (ShowWarningDialog(pWindow,
+            if (ShowWarningDialog(mProject,
                                   wxT("MixStereo"),
                                   _("Your tracks will be mixed down and exported as one stereo file."),
                                   true) == wxID_CANCEL)
                return false;
          }
          else {
-            if (ShowWarningDialog(pWindow,
+            if (ShowWarningDialog(mProject,
                                   wxT("MixUnknownChannels"),
                                   _("Your tracks will be mixed down to one exported file according to the encoder settings."),
                                   true) == wxID_CANCEL)
@@ -840,7 +839,7 @@ bool Exporter::CheckMix()
       if (exportedChannels < 0)
          exportedChannels = mPlugins[mFormat]->GetMaxChannels(mSubFormat);
 
-      ExportMixerDialog md(&TrackList::Get( *mProject ),
+      ExportMixerDialog md(mProject->GetTracks(),
                            mSelectedOnly,
                            exportedChannels,
                            NULL,
@@ -1309,11 +1308,11 @@ ExportMixerDialog::ExportMixerDialog( const TrackList *tracks, bool selectedOnly
             - &WaveTrack::GetMute
    ) {
       numTracks++;
-      const wxString sTrackName = (t->GetGroupData().GetName()).Left(20);
-      if( t->GetChannel() == WaveTrack::LeftChannel )
+      const wxString sTrackName = (t->GetName()).Left(20);
+      if( t->GetChannel() == Track::LeftChannel )
       /* i18n-hint: track name and L abbreviating Left channel */
          mTrackNames.push_back( wxString::Format( _( "%s - L" ), sTrackName ) );
-      else if( t->GetChannel() == WaveTrack::RightChannel )
+      else if( t->GetChannel() == Track::RightChannel )
       /* i18n-hint: track name and R abbreviating Right channel */
          mTrackNames.push_back( wxString::Format( _( "%s - R" ), sTrackName ) );
       else

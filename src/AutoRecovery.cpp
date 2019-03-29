@@ -285,7 +285,7 @@ RecordingRecoveryHandler::RecordingRecoveryHandler(AudacityProject* proj)
 
 int RecordingRecoveryHandler::FindTrack() const
 {
-   WaveTrackArray tracks = TrackList::Get( *mProject ).GetWaveTrackArray(false);
+   WaveTrackArray tracks = mProject->GetTracks()->GetWaveTrackArray(false);
    int index;
    if (mAutoSaveIdent)
    {
@@ -318,7 +318,7 @@ bool RecordingRecoveryHandler::HandleXMLTag(const wxChar *tag,
          return false;
       }
 
-      WaveTrackArray tracks = TrackList::Get( *mProject ).GetWaveTrackArray(false);
+      WaveTrackArray tracks = mProject->GetTracks()->GetWaveTrackArray(false);
       int index = FindTrack();
       // We need to find the track and sequence where the blockfile belongs
 
@@ -334,15 +334,15 @@ bool RecordingRecoveryHandler::HandleXMLTag(const wxChar *tag,
       Sequence* seq = clip->GetSequence();
 
       // Load the blockfile from the XML
-      auto &dirManager = DirManager::Get( *mProject );
-      dirManager.SetLoadingFormat(seq->GetSampleFormat());
+      const auto &dirManager = mProject->GetDirManager();
+      dirManager->SetLoadingFormat(seq->GetSampleFormat());
 
       BlockArray array;
       array.resize(1);
-      dirManager.SetLoadingTarget(&array, 0);
+      dirManager->SetLoadingTarget(&array, 0);
       auto &blockFile = array[0].f;
 
-      if (!dirManager.HandleXMLTag(tag, attrs) || !blockFile)
+      if (!dirManager->HandleXMLTag(tag, attrs) || !blockFile)
       {
          // This should only happen if there is a bug
          wxASSERT(false);
@@ -352,8 +352,7 @@ bool RecordingRecoveryHandler::HandleXMLTag(const wxChar *tag,
       seq->AppendBlockFile(blockFile);
       clip->UpdateEnvelopeTrackLen();
 
-   }
-   else if (wxStrcmp(tag, wxT("recordingrecovery")) == 0)
+   } else if (wxStrcmp(tag, wxT("recordingrecovery")) == 0)
    {
       mAutoSaveIdent = 0;
 
@@ -406,7 +405,7 @@ void RecordingRecoveryHandler::HandleXMLEndTag(const wxChar *tag)
       // Still in inner looop
       return;
 
-   WaveTrackArray tracks = TrackList::Get( *mProject ).GetWaveTrackArray(false);
+   WaveTrackArray tracks = mProject->GetTracks()->GetWaveTrackArray(false);
    int index = FindTrack();
    // We need to find the track and sequence where the blockfile belongs
 
@@ -424,7 +423,7 @@ void RecordingRecoveryHandler::HandleXMLEndTag(const wxChar *tag)
    }
 }
 
-XMLTagHandlerPtr RecordingRecoveryHandler::HandleXMLChild(const wxChar *tag)
+XMLTagHandler* RecordingRecoveryHandler::HandleXMLChild(const wxChar *tag)
 {
    if (wxStrcmp(tag, wxT("simpleblockfile")) == 0)
       return this; // HandleXMLTag also handles <simpleblockfile>
@@ -685,7 +684,7 @@ bool AutoSaveFile::Decode(const FilePath & fileName)
    char ident[sizeof(AutoSaveIdent)];
    size_t len = strlen(AutoSaveIdent);
 
-   const wxFileNameWrapper fn{ fileName };
+   const wxFileName fn(fileName);
    const wxString fnPath{fn.GetFullPath()};
    wxFFile file;
 

@@ -64,7 +64,6 @@ effects from this one class.
 #include "../../Project.h"
 #include "../../Shuttle.h"
 #include "../../ShuttleGui.h"
-#include "../../ViewInfo.h"
 #include "../../WaveClip.h"
 #include "../../WaveTrack.h"
 #include "../../widgets/valnum.h"
@@ -73,7 +72,6 @@ effects from this one class.
 #include "../../wxFileNameWrapper.h"
 #include "../../prefs/WaveformSettings.h"
 #include "../../widgets/NumericTextCtrl.h"
-#include "../../tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
 
 #include "../lib-src/FileDialog/FileDialog.h"
 
@@ -242,10 +240,11 @@ wxString NyquistEffect::ManualPage()
 
 wxString NyquistEffect::HelpPage()
 {
+   auto paths = NyquistEffect::GetNyquistSearchPath();
    wxString fileName;
 
-   for (const auto &path : NyquistEffect::GetNyquistSearchPath()) {
-      fileName = wxFileNameWrapper{ path, mHelpFile }.GetFullPath();
+   for (size_t i = 0, cnt = paths.size(); i < cnt; i++) {
+      fileName = wxFileName(paths[i] + wxT("/") + mHelpFile).GetFullPath();
       if (wxFileExists(fileName)) {
          mHelpFileExists = true;
          return fileName;
@@ -539,10 +538,9 @@ bool NyquistEffect::Init()
       bool bAllowSpectralEditing = true;
 
       for ( auto t :
-               TrackList::Get( *project ).Selected< const WaveTrack >() ) {
-         auto &data = WaveTrackViewGroupData::Get( *t );
-         if (data.GetDisplay() != WaveTrackViewConstants::Spectrum ||
-             !(data.GetSpectrogramSettings().SpectralSelectionEnabled())) {
+               project->GetTracks()->Selected< const WaveTrack >() ) {
+         if (t->GetDisplay() != WaveTrack::Spectrum ||
+             !(t->GetSpectrogramSettings().SpectralSelectionEnabled())) {
             bAllowSpectralEditing = false;
             break;
          }
@@ -716,7 +714,7 @@ bool NyquistEffect::Process()
       wxString waveTrackList;   // track positions of selected audio tracks.
 
       {
-         auto countRange = TrackList::Get( *project ).Leaders();
+         auto countRange = project->GetTracks()->Leaders();
          for (auto t : countRange) {
             t->TypeSwitch( [&](const WaveTrack *) {
                numWave++;
@@ -931,7 +929,7 @@ finish:
       // Selection is to be set to whatever it is in the project.
       AudacityProject *project = GetActiveProject();
       if (project) {
-         auto &selectedRegion = ViewInfo::Get( *project ).selectedRegion;
+         auto &selectedRegion = project->GetViewInfo().selectedRegion;
          mT0 = selectedRegion.t0();
          mT1 = selectedRegion.t1();
       }
@@ -1062,14 +1060,13 @@ bool NyquistEffect::ProcessOne()
       mCurTrack[0]->TypeSwitch(
          [&](const WaveTrack *wt) {
             type = wxT("wave");
-            auto &data = WaveTrackViewGroupData::Get( *wt );
-            spectralEditp = data.GetSpectrogramSettings().SpectralSelectionEnabled()? wxT("T") : wxT("NIL");
-            switch (data.GetDisplay())
+            spectralEditp = mCurTrack[0]->GetSpectrogramSettings().SpectralSelectionEnabled()? wxT("T") : wxT("NIL");
+            switch (wt->GetDisplay())
             {
-            case WaveTrackViewConstants::Waveform:
-               view = (data.GetWaveformSettings().scaleType == 0) ? wxT("\"Waveform\"") : wxT("\"Waveform (dB)\"");
+            case WaveTrack::Waveform:
+               view = (mCurTrack[0]->GetWaveformSettings().scaleType == 0) ? wxT("\"Waveform\"") : wxT("\"Waveform (dB)\"");
                break;
-            case WaveTrackViewConstants::Spectrum:
+            case WaveTrack::Spectrum:
                view = wxT("\"Spectrogram\"");
                break;
             default: view = wxT("NIL"); break;
@@ -1092,8 +1089,7 @@ bool NyquistEffect::ProcessOne()
       );
 
       cmd += wxString::Format(wxT("(putprop '*TRACK* %d 'INDEX)\n"), ++mTrackIndex);
-      cmd += wxString::Format(wxT("(putprop '*TRACK* \"%s\" 'NAME)\n"),
-         mCurTrack[0]->GetGroupData().GetName());
+      cmd += wxString::Format(wxT("(putprop '*TRACK* \"%s\" 'NAME)\n"), mCurTrack[0]->GetName());
       cmd += wxString::Format(wxT("(putprop '*TRACK* \"%s\" 'TYPE)\n"), type);
       // Note: "View" property may change when Audacity's choice of track views has stabilized.
       cmd += wxString::Format(wxT("(putprop '*TRACK* %s 'VIEW)\n"), view);
@@ -1110,12 +1106,10 @@ bool NyquistEffect::ProcessOne()
                               Internat::ToString(startTime));
       cmd += wxString::Format(wxT("(putprop '*TRACK* (float %s) 'END-TIME)\n"),
                               Internat::ToString(endTime));
-
-      auto &data = mCurTrack[0]->GetGroupData();
       cmd += wxString::Format(wxT("(putprop '*TRACK* (float %s) 'GAIN)\n"),
-               Internat::ToString(data.GetGain()));
+                              Internat::ToString(mCurTrack[0]->GetGain()));
       cmd += wxString::Format(wxT("(putprop '*TRACK* (float %s) 'PAN)\n"),
-               Internat::ToString(data.GetPan()));
+                              Internat::ToString(mCurTrack[0]->GetPan()));
       cmd += wxString::Format(wxT("(putprop '*TRACK* (float %s) 'RATE)\n"),
                               Internat::ToString(mCurTrack[0]->GetRate()));
 
@@ -1397,8 +1391,7 @@ bool NyquistEffect::ProcessOne()
       unsigned int l;
       auto ltrack = * mOutputTracks->Any< LabelTrack >().begin();
       if (!ltrack) {
-         ltrack = static_cast<LabelTrack*>(
-            AddToOutputTracks(mFactory->NewLabelTrack(), true));
+         ltrack = static_cast<LabelTrack*>(AddToOutputTracks(mFactory->NewLabelTrack()));
       }
 
       for (l = 0; l < numLabels; l++) {
@@ -1409,7 +1402,7 @@ bool NyquistEffect::ProcessOne()
          // let Nyquist analyzers define more complicated selections
          nyx_get_label(l, &t0, &t1, &str);
 
-         ltrack->AddLabel(SelectedRegion(t0 + mT0, t1 + mT0), UTF8CTOWX(str));
+         ltrack->AddLabel(SelectedRegion(t0 + mT0, t1 + mT0), UTF8CTOWX(str), -2);
       }
       return (GetType() != EffectTypeProcess || mIsPrompt);
    }
@@ -1443,6 +1436,7 @@ bool NyquistEffect::ProcessOne()
       }
 
       outputTrack[i] = mFactory->NewWaveTrack(format, rate);
+      outputTrack[i]->SetWaveColorIndex( mCurTrack[i]->GetWaveColorIndex() );
 
       // Clean the initial buffer states again for the get callbacks
       // -- is this really needed?
@@ -1648,7 +1642,7 @@ double NyquistEffect::GetCtrlValue(const wxString &s)
    AudacityProject *project = GetActiveProject();
    if (project && s.IsSameAs(wxT("half-srate"), false)) {
       auto rate =
-         TrackList::Get( *project )->Selected< const WaveTrack >()
+         project->GetTracks()->Selected< const WaveTrack >()
             .min( &WaveTrack::GetRate );
       return (rate / 2.0);
    }

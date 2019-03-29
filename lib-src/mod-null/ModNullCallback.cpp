@@ -112,7 +112,7 @@ void ModNullCallback::OnFuncSecond(const CommandContext &)
 }
 ModNullCallback * pModNullCallback=NULL;
 
-#define ModNullFN(X) (&ModNullCallback:: X)
+#define ModNullFN(X) ident, static_cast<CommandFunctorPointer>(&ModNullCallback:: X)
 
 extern "C" {
 
@@ -145,32 +145,40 @@ int ModuleDispatch(ModuleDispatchTypes type)
       break;
    case AppQuiting:
       break;
+   case ProjectInitialized:
+   case MenusRebuilt:
+      {
+         AudacityProject *p = GetActiveProject();
+         if( p== NULL )
+            return 0;
+
+         wxMenuBar * pBar = p->GetMenuBar();
+         wxMenu * pMenu = pBar->GetMenu( 8 );  // Menu 8 is the Analyze Menu.
+         CommandManager * c = p->GetCommandManager();
+
+         c->SetCurrentMenu( pMenu );
+         c->AddSeparator();
+         // We add two new commands into the Analyze menu.
+         c->AddItem( 
+            _T("A New Command"), // internal name
+            _T("1st Experimental Command"), //displayed name
+            true, // has dialog
+            ModNullFN( OnFuncFirst ),
+            AudioIONotBusyFlag );
+         c->AddItem( 
+            _T("Another New Command"), 
+            _T("2nd Experimental Command"),
+            false, // no dialog
+            ModNullFN( OnFuncSecond ),
+            AudioIONotBusyFlag );
+         c->ClearCurrentMenu();
+   }
+      break;
    default:
       break;
    }
 
    return 1;
-}
-
-// Register our extra menu items
-namespace {
-   using namespace MenuTable;
-   // We add two new commands into the Analyze menu.
-   AttachedItem sAttachment{ wxT("Analyze"),
-      FinderScope( ident ).Eval( Items( wxT("NullModule"),
-         Separator(),
-         Command(
-            _T("A New Command"), // internal name
-            _T("1st Experimental Command..."), //displayed name
-            ModNullFN( OnFuncFirst ),
-            AudioIONotBusyFlag ),
-         Command( 
-            _T("Another New Command"), 
-            _T("2nd Experimental Command"),
-            ModNullFN( OnFuncSecond ),
-            AudioIONotBusyFlag )
-      ) )
-   };
 }
 
 //Example code commented out.

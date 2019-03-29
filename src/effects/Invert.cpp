@@ -19,13 +19,6 @@
 
 #include <wx/intl.h>
 
-#include "LoadEffects.h"
-
-const ComponentInterfaceSymbol EffectInvert::Symbol
-{ XO("Invert") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectInvert > reg; }
-
 EffectInvert::EffectInvert()
 {
 }
@@ -38,7 +31,7 @@ EffectInvert::~EffectInvert()
 
 ComponentInterfaceSymbol EffectInvert::GetSymbol()
 {
-   return Symbol;
+   return INVERT_PLUGIN_SYMBOL;
 }
 
 wxString EffectInvert::GetDescription()

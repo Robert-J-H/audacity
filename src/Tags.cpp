@@ -46,7 +46,6 @@
 #include "FileNames.h"
 #include "Internat.h"
 #include "Prefs.h"
-#include "Project.h"
 #include "ShuttleGui.h"
 #include "TranslatableStringArray.h"
 #include "widgets/Grid.h"
@@ -68,8 +67,6 @@
 #include <wx/textfile.h>
 #include <wx/combobox.h>
 #include <wx/display.h>
-
-#include "wxFileNameWrapper.h"
 
 static const wxChar *DefaultGenres[] =
 {
@@ -226,28 +223,6 @@ static const wxChar *DefaultGenres[] =
    wxT("Synthpop")
 };
 
-static const AudacityProject::AttachedObjects::RegisteredFactory key{
-  [](AudacityProject &){ return std::make_shared< Tags >(); }
-};
-
-Tags &Tags::Get( AudacityProject &project )
-{
-   return project.AttachedObjects::Get< Tags >( key );
-}
-
-const Tags &Tags::Get( const AudacityProject &project )
-{
-   return Get( const_cast< AudacityProject & >( project ) );
-}
-
-Tags &Tags::Set( AudacityProject &project, const std::shared_ptr< Tags > &tags )
-{
-   auto &result = *tags;
-   auto copy = tags;
-   project.AttachedObjects::Assign( key, std::move(copy) );
-   return result;
-}
-
 Tags::Tags()
 {
    mEditTitle = true;
@@ -291,7 +266,8 @@ void Tags::LoadDefaults()
    bool cont;
 
    // Set the parent group
-   wxConfigPathChanger changer{ gPrefs, wxT("/Tags/") };
+   path = gPrefs->GetPath();
+   gPrefs->SetPath(wxT("/Tags"));
 
    // Process all entries in the group
    cont = gPrefs->GetFirstEntry(name, ndx);
@@ -307,6 +283,9 @@ void Tags::LoadDefaults()
 
       cont = gPrefs->GetNextEntry(name, ndx);
    }
+
+   // Restore original group
+   gPrefs->SetPath(path);
 }
 
 bool Tags::IsEmpty()
@@ -386,7 +365,7 @@ void Tags::LoadDefaultGenres()
 
 void Tags::LoadGenres()
 {
-   wxFileNameWrapper fn{ FileNames::DataDir(), wxT("genres.txt") };
+   wxFileName fn(FileNames::DataDir(), wxT("genres.txt"));
    wxTextFile tf(fn.GetFullPath());
 
    if (!tf.Exists() || !tf.Open()) {
@@ -566,7 +545,7 @@ bool Tags::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
    return false;
 }
 
-XMLTagHandlerPtr Tags::HandleXMLChild(const wxChar *tag)
+XMLTagHandler *Tags::HandleXMLChild(const wxChar *tag)
 {
    if (wxStrcmp(tag, wxT("tags")) == 0) {
       return this;
@@ -1136,7 +1115,7 @@ void TagsEditor::OnEdit(wxCommandEvent & WXUNUSED(event))
       return;
    }
 
-   wxFileNameWrapper fn{ FileNames::DataDir(), wxT("genres.txt") };
+   wxFileName fn(FileNames::DataDir(), wxT("genres.txt"));
    wxFile f(fn.GetFullPath(), wxFile::write);
    if (!f.IsOpened() || !f.Write(tc->GetValue())) {
       AudacityMessageBox(_("Unable to save genre file."), _("Reset Genres"));
@@ -1159,7 +1138,7 @@ void TagsEditor::OnReset(wxCommandEvent & WXUNUSED(event))
    }
    mLocal.LoadDefaultGenres();
 
-   wxFileNameWrapper fn{ FileNames::DataDir(), wxT("genres.txt") };
+   wxFileName fn(FileNames::DataDir(), wxT("genres.txt"));
    wxTextFile tf(fn.GetFullPath());
 
    bool open = (tf.Exists() && tf.Open()) ||

@@ -492,7 +492,7 @@ FFmpegPresets::FFmpegPresets()
    mAbortImport = false;
 
    XMLFileReader xmlfile;
-   wxFileNameWrapper xmlFileName{ FileNames::DataDir(), wxT("ffmpeg_presets.xml") };
+   wxFileName xmlFileName(FileNames::DataDir(), wxT("ffmpeg_presets.xml"));
    xmlfile.Parse(this,xmlFileName.GetFullPath());
 }
 
@@ -500,8 +500,7 @@ FFmpegPresets::~FFmpegPresets()
 {
    // We're in a destructor!  Don't let exceptions out!
    GuardedCall( [&] {
-      wxFileNameWrapper xmlFileName{
-         FileNames::DataDir(), wxT("ffmpeg_presets.xml") };
+      wxFileName xmlFileName{ FileNames::DataDir(), wxT("ffmpeg_presets.xml") };
       XMLFileWriter writer{
          xmlFileName.GetFullPath(), _("Error Saving FFmpeg Presets") };
       WriteXMLHeader(writer);
@@ -823,7 +822,7 @@ bool FFmpegPresets::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
    return false;
 }
 
-XMLTagHandlerPtr FFmpegPresets::HandleXMLChild(const wxChar *tag)
+XMLTagHandler *FFmpegPresets::HandleXMLChild(const wxChar *tag)
 {
    if (mAbortImport)
    {

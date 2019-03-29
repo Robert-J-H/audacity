@@ -24,11 +24,8 @@ class wxDC;
 class wxRadioButton;
 class wxSizeEvent;
 
-class AudacityProject;
 class SpectralSelectionBarListener;
 class NumericTextCtrl;
-
-using NumericFormatId = ComponentInterfaceSymbol;
 
 class SpectralSelectionBar final : public ToolBar {
 
@@ -36,9 +33,6 @@ public:
 
    SpectralSelectionBar();
    virtual ~SpectralSelectionBar();
-
-   static SpectralSelectionBar &Get( AudacityProject &project );
-   static const SpectralSelectionBar &Get( const AudacityProject &project );
 
    void Create(wxWindow *parent) override;
 

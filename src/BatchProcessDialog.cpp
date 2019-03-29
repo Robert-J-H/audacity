@@ -323,7 +323,7 @@ void ApplyMacroDialog::OnApplyToFiles(wxCommandEvent & WXUNUSED(event))
    gPrefs->Flush();
 
    AudacityProject *project = GetActiveProject();
-   if (!TrackList::Get( *project ).empty()) {
+   if (!project->GetTracks()->empty()) {
       AudacityMessageBox(_("Please save and close the current project first."));
       return;
    }
@@ -751,7 +751,7 @@ void MacrosWindow::UpdateMenus()
 {
    // OK even on mac, as dialog is modal.
    auto p = GetActiveProject();
-   MenuManager::Get(*p).RebuildMenuBar(*p);
+   GetMenuManager(*p).RebuildMenuBar(*p);
 }
 
 void MacrosWindow::UpdateDisplay( bool bExpanded )

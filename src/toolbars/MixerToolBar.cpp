@@ -17,8 +17,6 @@
 #include "../Audacity.h" // for USE_* macros
 #include "MixerToolBar.h"
 
-#include "ToolManager.h"
-
 // For compilers that support precompilation, includes "wx/wx.h".
 #include <wx/wxprec.h>
 
@@ -67,21 +65,9 @@ MixerToolBar::~MixerToolBar()
 {
 }
 
-MixerToolBar &MixerToolBar::Get( AudacityProject &project )
-{
-   auto &toolManager = ToolManager::Get( project );
-   return *static_cast<MixerToolBar*>( toolManager.GetToolBar(MixerBarID) );
-}
-
-const MixerToolBar &MixerToolBar::Get( const AudacityProject &project )
-{
-   return Get( const_cast<AudacityProject&>( project )) ;
-}
-
 void MixerToolBar::Create(wxWindow *parent)
 {
    ToolBar::Create(parent);
-   UpdatePrefs();
 }
 
 void MixerToolBar::Populate()

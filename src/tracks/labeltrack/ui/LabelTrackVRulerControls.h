@@ -23,20 +23,9 @@ class LabelTrackVRulerControls final : public TrackVRulerControls
 
 public:
    explicit
-   LabelTrackVRulerControls( std::shared_ptr<TrackView> pTrackView )
-      : TrackVRulerControls( pTrackView ) {}
+   LabelTrackVRulerControls( std::shared_ptr<Track> pTrack )
+      : TrackVRulerControls( pTrack ) {}
    ~LabelTrackVRulerControls();
-
-private:
-
-   // TrackPanelDrawable implementation
-   void Draw(
-      TrackPanelDrawingContext &context,
-      const wxRect &rect, unsigned iPass ) override;
-
-   // TrackVRulerControls implementation
-   void UpdateRuler( const wxRect &rect ) override;
-
 };
 
 #endif

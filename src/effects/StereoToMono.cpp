@@ -15,17 +15,11 @@
 
 #include "../Audacity.h"
 #include "StereoToMono.h"
-#include "LoadEffects.h"
 
 #include <wx/intl.h>
 
 #include "../Project.h"
 #include "../WaveTrack.h"
-
-const ComponentInterfaceSymbol EffectStereoToMono::Symbol
-{ XO("Stereo To Mono") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectStereoToMono > reg; }
 
 EffectStereoToMono::EffectStereoToMono()
 {
@@ -39,7 +33,7 @@ EffectStereoToMono::~EffectStereoToMono()
 
 ComponentInterfaceSymbol EffectStereoToMono::GetSymbol()
 {
-   return Symbol;
+   return STEREOTOMONO_PLUGIN_SYMBOL;
 }
 
 wxString EffectStereoToMono::GetDescription()
@@ -141,7 +135,7 @@ bool EffectStereoToMono::ProcessOne(int count)
 
    AudacityProject *p = GetActiveProject();
    auto outTrack =
-      TrackFactory::Get( *p ).NewWaveTrack(floatSample, mLeftTrack->GetRate());
+      p->GetTrackFactory()->NewWaveTrack(floatSample, mLeftTrack->GetRate());
 
    while (index < mEnd) {
       bResult &= mLeftTrack->Get((samplePtr)leftBuffer.get(), floatSample, index, idealBlockLen);
@@ -163,6 +157,7 @@ bool EffectStereoToMono::ProcessOne(int count)
    mLeftTrack->Clear(mLeftTrack->GetStartTime(), mLeftTrack->GetEndTime());
    outTrack->Flush();
    mLeftTrack->Paste(minStart, outTrack.get());
+   mOutputTracks->GroupChannels( *mLeftTrack,  1 );
    mOutputTracks->Remove(mRightTrack);
 
    return bResult;

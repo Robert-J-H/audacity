@@ -17,7 +17,6 @@
 #include "../Project.h"
 #include "../ShuttleGui.h"
 #include "../FileNames.h"
-#include "../ViewInfo.h"
 #include "../widgets/LinkingHtmlWindow.h"
 #include "../widgets/HelpSystem.h"
 #include "../widgets/NumericTextCtrl.h"
@@ -51,7 +50,7 @@ bool ContrastDialog::GetDB(float &dB)
 
    AudacityProject *p = GetActiveProject();
    auto range =
-      TrackList::Get( *p ).SelectedLeaders< const WaveTrack >();
+      p->GetTracks()->SelectedLeaders< const WaveTrack >();
    auto numberSelectedTracks = range.size();
    if (numberSelectedTracks > 1) {
       AudacityMessageDialog m(NULL, _("You can only measure one track at a time."), _("Error"), wxOK);
@@ -114,9 +113,8 @@ bool ContrastDialog::GetDB(float &dB)
 void ContrastDialog::SetStartAndEndTime()
 {
    AudacityProject *p = GetActiveProject();
-   auto &selectedRegion = ViewInfo::Get( *p ).selectedRegion;
-   mT0 = selectedRegion.t0();
-   mT1 = selectedRegion.t1();
+   mT0 = p->mViewInfo.selectedRegion.t0();
+   mT1 = p->mViewInfo.selectedRegion.t1();
 }
 
 
@@ -346,11 +344,10 @@ void ContrastDialog::OnClose(wxCommandEvent & WXUNUSED(event))
 void ContrastDialog::OnGetForeground(wxCommandEvent & /*event*/)
 {
    AudacityProject *p = GetActiveProject();
-   auto &selectedRegion = ViewInfo::Get( *p ).selectedRegion;
 
-   if( TrackList::Get( *p ).Selected< const WaveTrack >() ) {
-      mForegroundStartT->SetValue(selectedRegion.t0());
-      mForegroundEndT->SetValue(selectedRegion.t1());
+   if( p->GetTracks()->Selected< const WaveTrack >() ) {
+      mForegroundStartT->SetValue(p->mViewInfo.selectedRegion.t0());
+      mForegroundEndT->SetValue(p->mViewInfo.selectedRegion.t1());
    }
 
    SetStartAndEndTime();
@@ -362,11 +359,10 @@ void ContrastDialog::OnGetForeground(wxCommandEvent & /*event*/)
 void ContrastDialog::OnGetBackground(wxCommandEvent & /*event*/)
 {
    AudacityProject *p = GetActiveProject();
-   auto &selectedRegion = ViewInfo::Get( *p ).selectedRegion;
 
-   if( TrackList::Get( *p ).Selected< const WaveTrack >() ) {
-      mBackgroundStartT->SetValue(selectedRegion.t0());
-      mBackgroundEndT->SetValue(selectedRegion.t1());
+   if( p->GetTracks()->Selected< const WaveTrack >() ) {
+      mBackgroundStartT->SetValue(p->mViewInfo.selectedRegion.t0());
+      mBackgroundEndT->SetValue(p->mViewInfo.selectedRegion.t1());
    }
 
    SetStartAndEndTime();
@@ -608,57 +604,4 @@ void ContrastDialog::OnReset(wxCommandEvent & /*event*/)
    mBackgroundRMSText->ChangeValue(wxT(""));
    mPassFailText->ChangeValue(wxT(""));
    mDiffText->ChangeValue(wxT(""));
-}
-
-// Remaining code hooks this add-on into the application
-#include "commands/CommandContext.h"
-#include "commands/CommandManager.h"
-#include "../commands/ScreenshotCommand.h"
-
-namespace {
-
-// Contrast window attached to each project is built on demand by:
-AudacityProject::AttachedWindows::RegisteredFactory sContrastDialogKey{
-   []( AudacityProject &parent ) -> wxWeakRef< wxWindow > {
-      auto &window = ProjectWindow::Get( parent );
-      return safenew ContrastDialog(
-         &window, -1, _("Contrast Analysis (WCAG 2 compliance)"),
-         wxPoint{ 150, 150 }
-      );
-   }
-};
-
-
-// Define our extra menu item that invokes that factory
-struct Handler : CommandHandlerObject {
-   void OnContrast(const CommandContext &context)
-   {
-      auto &project = context.project;
-      auto contrastDialog =
-         &project.AttachedWindows::Get< ContrastDialog >( sContrastDialogKey );
-
-      contrastDialog->CentreOnParent();
-      if( ScreenshotCommand::MayCapture( contrastDialog ) )
-         return;
-      contrastDialog->Show();
-   }
-};
-CommandHandlerObject &findCommandHandler(AudacityProject &) {
-   // Handler is not stateful.  Doesn't need a factory registered with
-   // AudacityProject.
-   static Handler instance;
-   return instance;
-}
-
-// Register that menu item
-
-using namespace MenuTable;
-AttachedItem sAttachment{ wxT("Analyze/Windows"),
-   FinderScope( findCommandHandler ).Eval(
-      Command( wxT("ContrastAnalyser"), XXO("Contrast..."),
-         &Handler::OnContrast,
-         AudioIONotBusyFlag | WaveTracksSelectedFlag | TimeSelectedFlag,
-         wxT("Ctrl+Shift+T") ) )
-};
-
 }

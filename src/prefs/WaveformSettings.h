@@ -60,8 +60,8 @@ public:
 
    static const wxArrayStringEx &GetScaleNames();
 
-   ScaleType scaleType; //
-   int dBRange; //
+   ScaleType scaleType;
+   int dBRange;
 
    // Convenience
    bool isLinear() const { return stLinear == scaleType; }

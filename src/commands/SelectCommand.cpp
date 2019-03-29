@@ -35,20 +35,13 @@ explicitly code all three.
 #include <wx/string.h>
 #include <float.h>
 
-#include "LoadCommands.h"
 #include "../Project.h"
 #include "../Track.h"
 #include "../TrackPanel.h"
 #include "../Shuttle.h"
 #include "../ShuttleGui.h"
-#include "../ViewInfo.h"
 #include "CommandContext.h"
 
-
-const ComponentInterfaceSymbol SelectTimeCommand::Symbol
-{ XO("Select Time") };
-
-namespace{ BuiltinCommandsModule::Registration< SelectTimeCommand > reg; }
 
 // Relative to project and relative to selection cover MOST options, since you can already
 // set a selection to a clip.
@@ -92,7 +85,7 @@ void SelectTimeCommand::PopulateOrExchange(ShuttleGui & S)
 bool SelectTimeCommand::Apply(const CommandContext & context){
    // Many commands need focus on track panel.
    // No harm in setting it with a scripted select.
-   TrackPanel::Get( context.project ).SetFocus();
+   context.GetProject()->GetTrackPanel()->SetFocus();
    if( !bHasT0 && !bHasT1 )
       return true;
 
@@ -105,11 +98,11 @@ bool SelectTimeCommand::Apply(const CommandContext & context){
       mRelativeTo = 0;
 
    AudacityProject * p = context.GetProject();
-   double end = TrackList::Get( *p ).GetEndTime();
+   double end = p->GetTracks()->GetEndTime();
    double t0;
    double t1;
 
-   auto &selectedRegion = ViewInfo::Get( *p ).selectedRegion;
+   const auto &selectedRegion = p->GetViewInfo().selectedRegion;
    switch( bHasRelativeSpec ? mRelativeTo : 0 ){
    default:
    case 0: //project start
@@ -138,14 +131,9 @@ bool SelectTimeCommand::Apply(const CommandContext & context){
       break;
    }
 
-   selectedRegion.setTimes( t0, t1 );
+   p->mViewInfo.selectedRegion.setTimes( t0, t1);
    return true;
 }
-
-const ComponentInterfaceSymbol SelectFrequenciesCommand::Symbol
-{ XO("Select Frequencies") };
-
-namespace{ BuiltinCommandsModule::Registration< SelectFrequenciesCommand > reg2; }
 
 bool SelectFrequenciesCommand::DefineParams( ShuttleParams & S ){
    S.OptionalN( bHasTop ).Define(    mTop,    wxT("High"), 0.0, 0.0, (double)FLT_MAX);
@@ -180,11 +168,6 @@ bool SelectFrequenciesCommand::Apply(const CommandContext & context){
       mBottom, mTop, false);// false for not done.
    return true;
 }
-
-const ComponentInterfaceSymbol SelectTracksCommand::Symbol
-{ XO("Select Tracks") };
-
-namespace{ BuiltinCommandsModule::Registration< SelectTracksCommand > reg3; }
 
 const int nModes =3;
 static const EnumValueSymbol kModes[nModes] =
@@ -231,7 +214,7 @@ bool SelectTracksCommand::Apply(const CommandContext &context)
    // Used to invalidate cached selection and tracks.
    Effect::IncEffectCounter();
    int index = 0;
-   auto &tracks = TrackList::Get( context.project );
+   TrackList *tracks = context.GetProject()->GetTracks();
 
    // Defaults if no value...
    if( !bHasNumTracks ) 
@@ -240,26 +223,30 @@ bool SelectTracksCommand::Apply(const CommandContext &context)
       mFirstTrack = 0.0;
 
    // Multiple channels count as fractions of a track.
-   double last = mFirstTrack + mNumTracks;
+   double last = mFirstTrack+mNumTracks;
    double first = mFirstTrack;
 
-   for (auto group : tracks.Any().ByGroups()) {
-      bool sel = first <= index && index <= last;
-      if( mMode == 0 ){ // Set
-         group.data->SetSelected(sel);
+   for (auto t : tracks->Leaders()) {
+      auto channels = TrackList::Channels(t);
+      double term = 0.0;
+      // Add 0.01 so we are free of rounding errors in comparisons.
+      constexpr double fudge = 0.01;
+      for (auto channel : channels) {
+         double track = index + fudge + term;
+         bool sel = first <= track && track <= last;
+         if( mMode == 0 ){ // Set
+            channel->SetSelected(sel);
+         }
+         else if( mMode == 1 && sel ){ // Add
+            channel->SetSelected(sel);
+         }
+         else if( mMode == 2 && sel ){ // Remove
+            channel->SetSelected(!sel);
+         }
+         term += 1.0 / channels.size();
       }
-      else if( mMode == 1 && sel ){ // Add
-         group.data->SetSelected(sel);
-      }
-      else if( mMode == 2 && sel ){ // Remove
-         group.data->SetSelected(!sel);
-      }
-      index += group.channels.size();
+      ++index;
    }
    return true;
 }
 
-const ComponentInterfaceSymbol SelectCommand::Symbol
-{ XO("Select") };
-
-namespace{ BuiltinCommandsModule::Registration< SelectCommand > reg4; }

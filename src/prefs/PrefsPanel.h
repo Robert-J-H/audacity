@@ -22,14 +22,18 @@ MousePrefs, QualityPrefs, SpectrumPrefs and ThemePrefs.
   To actually add the new panel, edit the PrefsDialog constructor
   to append the panel to its list of panels.
 
+*******************************************************************//**
+
+\class PrefsPanelFactory
+\brief Base class for factories such as GUIPrefsFactory that produce a
+PrefsPanel.
+
 *//*******************************************************************/
 
 #ifndef __AUDACITY_PREFS_PANEL__
 #define __AUDACITY_PREFS_PANEL__
 
-#include <functional>
 #include "../widgets/wxPanelWrapper.h"
-#include "../commands/CommandManager.h"
 
 /* A few constants for an attempt at semi-uniformity */
 #define PREFS_FONT_SIZE     8
@@ -45,20 +49,6 @@ class ShuttleGui;
 class PrefsPanel /* not final */ : public wxPanelWrapper
 {
  public:
-   // \brief Type alias for factories such as GUIPrefsFactory that produce a
-   // PrefsPanel, used by the Preferences dialog in a treebook
-   using Factory =
-      std::function< PrefsPanel * (wxWindow *parent, wxWindowID winid) >;
-
-   // Typically you make a static object of this type in the .cpp file that
-   // also implements the PrefsPanel subclass.
-   struct Registration final
-   {
-      Registration( const wxString &name, const Factory &factory,
-         bool expanded = false,
-         const Registry::Placement &placement = { wxEmptyString, {} });
-   };
-
    PrefsPanel(wxWindow * parent, wxWindowID winid, const wxString &title)
    :  wxPanelWrapper(parent, winid)
    {
@@ -82,6 +72,13 @@ class PrefsPanel /* not final */ : public wxPanelWrapper
    virtual wxString HelpPageName();
 
    virtual void Cancel();
+};
+
+class PrefsPanelFactory /* not final */
+{
+public:
+   // Precondition: parent != NULL
+   virtual PrefsPanel *operator () (wxWindow *parent, wxWindowID winid) = 0;
 };
 
 #endif

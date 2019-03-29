@@ -15,7 +15,6 @@
 
 #include "../Audacity.h"
 #include "ScrubbingToolBar.h"
-#include "ToolManager.h"
 
 // For compilers that support precompilation, includes "wx/wx.h".
 #include <wx/wxprec.h>
@@ -70,21 +69,9 @@ ScrubbingToolBar::~ScrubbingToolBar()
 {
 }
 
-ScrubbingToolBar &ScrubbingToolBar::Get( AudacityProject &project )
-{
-   auto &toolManager = ToolManager::Get( project );
-   return *static_cast<ScrubbingToolBar*>( toolManager.GetToolBar(ScrubbingBarID) );
-}
-
-const ScrubbingToolBar &ScrubbingToolBar::Get( const AudacityProject &project )
-{
-   return Get( const_cast<AudacityProject&>( project )) ;
-}
-
 void ScrubbingToolBar::Create(wxWindow * parent)
 {
    ToolBar::Create(parent);
-   UpdatePrefs();
 }
 
 /// This is a convenience function that allows for button creation in
@@ -158,7 +145,7 @@ void ScrubbingToolBar::RegenerateTooltips()
 
    auto project = GetActiveProject();
    if (project) {
-      auto &scrubber = Scrubber::Get( *project );
+      auto &scrubber = project->GetScrubber();
 
       const auto scrubButton = mButtons[STBScrubID];
       const auto seekButton = mButtons[STBSeekID];
@@ -187,7 +174,7 @@ void ScrubbingToolBar::RegenerateTooltips()
       fn(*seekButton, label, wxT("Seek"));
 
       label = (
-               AdornedRulerPanel::Get( *project ).ShowingScrubRuler()
+               project->GetRulerPanel()->ShowingScrubRuler()
                ? _("Hide Scrub Ruler")
                : _("Show Scrub Ruler")
                );
@@ -200,7 +187,7 @@ void ScrubbingToolBar::OnButton(wxCommandEvent &event)
 {
    AudacityProject *p = GetActiveProject();
    if (!p) return;
-   auto &scrubber = Scrubber::Get( *p );
+   auto &scrubber = p->GetScrubber();
 
    int id = event.GetId();
 
@@ -231,7 +218,7 @@ void ScrubbingToolBar::EnableDisableButtons()
    AudacityProject *p = GetActiveProject();
    if (!p) return;
 
-   auto &scrubber = Scrubber::Get( *p );
+   auto &scrubber = p->GetScrubber();
    const auto canScrub = scrubber.CanScrub();
 
    if (scrubber.Scrubs()) {
@@ -260,7 +247,7 @@ void ScrubbingToolBar::EnableDisableButtons()
 
    const auto barButton = mButtons[STBRulerID];
    barButton->Enable();
-   if (AdornedRulerPanel::Get( *p ).ShowingScrubRuler())
+   if (p->GetRulerPanel()->ShowingScrubRuler())
       barButton->PushDown();
    else
       barButton->PopUp();

@@ -27,19 +27,11 @@ public:
    std::vector<UIHandlePtr> HitTest
       (const TrackPanelMouseState &, const AudacityProject *) override;
 
-   void Reparent( Track &parent );
-
 protected:
    std::shared_ptr<Track> DoFindTrack() override
    { return mpTrack.lock(); };
 
 private:
-
-   // TrackPanelDrawable implementation
-   void Draw(
-      TrackPanelDrawingContext &context,
-      const wxRect &rect, unsigned iPass ) override;
-
    std::weak_ptr<Track> mpTrack;
 
    std::weak_ptr<TrackPanelResizeHandle> mResizeHandle;

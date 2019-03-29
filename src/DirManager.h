@@ -19,14 +19,10 @@
 #include "audacity/Types.h"
 #include "xml/XMLTagHandler.h"
 
-#include <memory>
 #include <unordered_map>
-
-#include "ClientData.h"
 
 class wxFileNameWrapper;
 class wxHashTable;
-class AudacityProject;
 class BlockArray;
 class BlockFile;
 
@@ -51,16 +47,8 @@ enum {
 };
 
 
-class PROFILE_DLL_API DirManager final
-   : public XMLTagHandler
-   , public ClientData::Base
-   , public std::enable_shared_from_this< DirManager >
-{
+class PROFILE_DLL_API DirManager final : public XMLTagHandler {
  public:
-
-   static DirManager &Get( AudacityProject &project );
-   static const DirManager &Get( const AudacityProject &project );
-   static DirManager &Reset( AudacityProject &project );
 
    // MM: Construct DirManager
    DirManager();
@@ -155,7 +143,7 @@ class PROFILE_DLL_API DirManager final
    void SetLoadingMaxSamples(size_t max) { mMaxSamples = max; }
 
    bool HandleXMLTag(const wxChar *tag, const wxChar **attrs) override;
-   XMLTagHandlerPtr HandleXMLChild(const wxChar * WXUNUSED(tag)) override
+   XMLTagHandler *HandleXMLChild(const wxChar * WXUNUSED(tag)) override
       { return NULL; }
    bool AssignFile(wxFileNameWrapper &filename, const wxString &value, bool check);
 

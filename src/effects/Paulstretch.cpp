@@ -16,7 +16,6 @@
 
 #include "../Audacity.h"
 #include "Paulstretch.h"
-#include "LoadEffects.h"
 
 #include <algorithm>
 
@@ -84,11 +83,6 @@ private:
 // EffectPaulstretch
 //
 
-const ComponentInterfaceSymbol EffectPaulstretch::Symbol
-{ XO("Paulstretch") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectPaulstretch > reg; }
-
 BEGIN_EVENT_TABLE(EffectPaulstretch, wxEvtHandler)
     EVT_TEXT(wxID_ANY, EffectPaulstretch::OnText)
 END_EVENT_TABLE()
@@ -109,7 +103,7 @@ EffectPaulstretch::~EffectPaulstretch()
 
 ComponentInterfaceSymbol EffectPaulstretch::GetSymbol()
 {
-   return Symbol;
+   return PAULSTRETCH_PLUGIN_SYMBOL;
 }
 
 wxString EffectPaulstretch::GetDescription()

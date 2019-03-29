@@ -213,7 +213,7 @@ ProgressResult ExportMP2::Export(AudacityProject *project,
    bool stereo = (channels == 2);
    long bitrate = gPrefs->Read(wxT("/FileFormats/MP2Bitrate"), 160);
    double rate = project->GetRate();
-   const auto &tracks = TrackList::Get( *project );
+   const TrackList *tracks = project->GetTracks();
 
    wxLogNull logNo;             /* temporarily disable wxWidgets error messages */
 
@@ -235,7 +235,7 @@ ProgressResult ExportMP2::Export(AudacityProject *project,
 
    // Put ID3 tags at beginning of file
    if (metadata == NULL)
-      metadata = &Tags::Get( *project );
+      metadata = project->GetTags();
 
    FileIO outFile(fName, FileIO::Output);
    if (!outFile.IsOpened()) {
@@ -265,11 +265,11 @@ ProgressResult ExportMP2::Export(AudacityProject *project,
    ArrayOf<unsigned char> mp2Buffer{ mp2BufferSize };
 
    const WaveTrackConstArray waveTracks =
-      tracks.GetWaveTrackConstArray(selectionOnly, false);
+      tracks->GetWaveTrackConstArray(selectionOnly, false);
    auto updateResult = ProgressResult::Success;
    {
       auto mixer = CreateMixer(waveTracks,
-         tracks.GetTimeTrack(),
+         tracks->GetTimeTrack(),
          t0, t1,
          stereo ? 2 : 1, pcmBufferSize, true,
          rate, int16Sample, true, mixerSpec);

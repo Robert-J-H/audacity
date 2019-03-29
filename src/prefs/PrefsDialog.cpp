@@ -20,8 +20,6 @@
 #include "../Experimental.h"
 
 #include <wx/setup.h> // for wxUSE_* macros
-#include <mutex>
-
 #include <wx/defs.h>
 #include <wx/button.h>
 #include <wx/dialog.h>
@@ -40,9 +38,37 @@
 #include "../Project.h"
 #include "../Prefs.h"
 #include "../ShuttleGui.h"
-#include "../commands/CommandManager.h"
 
 #include "PrefsPanel.h"
+
+#include "BatchPrefs.h"
+#include "DevicePrefs.h"
+#include "DirectoriesPrefs.h"
+#include "EffectsPrefs.h"
+#include "GUIPrefs.h"
+#include "ImportExportPrefs.h"
+#include "KeyConfigPrefs.h"
+#include "LibraryPrefs.h"
+#include "MousePrefs.h"
+#ifdef EXPERIMENTAL_MODULE_PREFS
+#include "ModulePrefs.h"
+#endif
+#include "PlaybackPrefs.h"
+#include "ProjectsPrefs.h"
+#include "QualityPrefs.h"
+#include "RecordingPrefs.h"
+#include "SpectrumPrefs.h"
+#include "ThemePrefs.h"
+#include "TracksPrefs.h"
+#include "TracksBehaviorsPrefs.h"
+#include "WarningsPrefs.h"
+// #include "WaveformPrefs.h"
+#include "WaveformSettings.h"
+#include "ExtImportPrefs.h"
+
+#ifdef EXPERIMENTAL_MIDI_OUT
+#include "MidiIOPrefs.h"
+#endif
 
 #include "../Theme.h"
 #include "../widgets/HelpSystem.h"
@@ -127,116 +153,81 @@ int wxTreebookExt::SetSelection(size_t n)
 
 
 
-namespace {
-
-struct PrefsItem final : Registry::GroupItem {
-   PrefsPanel::Factory factory;
-   bool expanded{ false };
-
-   PrefsItem( const wxString &name,
-      const PrefsPanel::Factory &factory_, bool expanded_ )
-         : GroupItem{ name }
-         , factory{ factory_ }, expanded{ expanded_ }
-   {}
-};
-
-// Collects registry tree nodes into a vector, in preorder.
-struct PrefsItemVisitor final : Registry::Visitor {
-   PrefsItemVisitor( PrefsDialog::Factories &factories_ )
-      : factories{ factories_ }
-   {
-      childCounts.push_back( 0 );
-   }
-   void BeginGroup( Registry::GroupItem &item, const wxArrayString & ) override
-   {
-      auto pItem = dynamic_cast<PrefsItem*>( &item );
-      if (!pItem)
-         return;
-      indices.push_back( factories.size() );
-      factories.emplace_back( pItem->factory, 0, pItem->expanded );
-      ++childCounts.back();
-      childCounts.push_back( 0 );
-   }
-   void EndGroup( Registry::GroupItem &item, const wxArrayString & ) override
-   {
-      auto pItem = dynamic_cast<PrefsItem*>( &item );
-      if (!pItem)
-         return;
-      auto &factory = factories[ indices.back() ];
-      factory.nChildren = childCounts.back();
-      childCounts.pop_back();
-      indices.pop_back();
-   }
-
-   PrefsDialog::Factories &factories;
-   std::vector<size_t> childCounts;
-   std::vector<size_t> indices;
-};
-
-
-const auto PathStart = wxT("Preferences");
-
-// Once only, cause initial population of preferences for the ordering
-// of some preference pages that used to be given in a table but are now
-// separately registered in several .cpp files; the sequence of registration
-// depends on unspecified accidents of static initialization order across
-// compilation units, so we need something specific here to preserve old
-// default appearance of the preference dialog.
-// But this needs only to mention some strings -- there is no compilation or
-// link dependency of this source file on those other implementation files.
-void InitializeOrdering()
-{
-   using Pair = std::pair<const wxChar *, const wxChar *>;
-   static const Pair pairs [] = {
-      {wxT(""),
-wxT("Device,Playback,Recording,Quality,GUI,Tracks,ImportExport,Projects,Directories,Warnings,Effects,KeyConfig,Mouse")
-      },
-      {wxT("/Tracks"), wxT("TracksBehaviors,Spectrum")},
-   };
-
-   bool doFlush = false;
-   for (auto pair : pairs) {
-      const auto key = wxString{'/'} + PathStart + pair.first;
-      if ( gPrefs->Read(key).empty() ) {
-         gPrefs->Write( key, pair.second );
-         doFlush = true;
-      }
-   }
-   
-   if (doFlush)
-      gPrefs->Flush();
-}
-
-}
-
-namespace {
-static Registry::GroupItem &sRegistry()
-{
-   static Registry::GroupingItem registry{ PathStart };
-   return registry;
-}
-}
-
-PrefsPanel::Registration::Registration( const wxString &name,
-   const Factory &factory, bool expanded,
-   const Registry::Placement &placement )
-{
-   Registry::RegisterItems( sRegistry(), placement,
-      std::make_unique< PrefsItem >( name, factory, expanded ) );
-}
-
 PrefsDialog::Factories
 &PrefsDialog::DefaultFactories()
 {
-   static Factories factories;
-   static std::once_flag flag;
-   std::call_once( flag, []{
-      InitializeOrdering();
+   // To do, perhaps:  create this table by registration, without including each PrefsPanel
+   // class... and thus allowing a plug-in protocol
+   static DevicePrefsFactory devicePrefsFactory;
+   static PlaybackPrefsFactory playbackPrefsFactory;
+   static RecordingPrefsFactory recordingPrefsFactory;
+#ifdef EXPERIMENTAL_MIDI_OUT
+   static MidiIOPrefsFactory midiIOPrefsFactory;
+#endif
+   static QualityPrefsFactory qualityPrefsFactory;
+   static GUIPrefsFactory guiPrefsFactory;
+   static TracksPrefsFactory tracksPrefsFactory;
+   static ImportExportPrefsFactory importExportPrefsFactory;
+   static ExtImportPrefsFactory extImportPrefsFactory;
+   static ProjectsPrefsFactory projectsPrefsFactory;
+#if !defined(DISABLE_DYNAMIC_LOADING_FFMPEG) || !defined(DISABLE_DYNAMIC_LOADING_LAME)
+   static LibraryPrefsFactory libraryPrefsFactory;
+#endif
+   // static WaveformPrefsFactory waveformPrefsFactory;
+   static TracksBehaviorsPrefsFactory tracksBehaviorsPrefsFactory;
+   static SpectrumPrefsFactory spectrumPrefsFactory;
+   static DirectoriesPrefsFactory directoriesPrefsFactory;
+   static WarningsPrefsFactory warningsPrefsFactory;
+   static EffectsPrefsFactory effectsPrefsFactory;
+#ifdef EXPERIMENTAL_THEME_PREFS
+   static ThemePrefsFactory themePrefsFactory;
+#endif
+   // static BatchPrefsFactory batchPrefsFactory;
+   static KeyConfigPrefsFactory keyConfigPrefsFactory;
+   static MousePrefsFactory mousePrefsFactory;
+#ifdef EXPERIMENTAL_MODULE_PREFS
+   static ModulePrefsFactory modulePrefsFactory;
+#endif
 
-      PrefsItemVisitor visitor{ factories };
-      Registry::GroupingItem top{ PathStart };
-      Registry::Visit( visitor, &top, &sRegistry() );
-   } );
+   static PrefsNode nodes[] = {
+      &devicePrefsFactory,
+      &playbackPrefsFactory,
+      &recordingPrefsFactory,
+#ifdef EXPERIMENTAL_MIDI_OUT
+      &midiIOPrefsFactory,
+#endif
+      &qualityPrefsFactory,
+      &guiPrefsFactory,
+
+      // Group other page(s)
+      PrefsNode(&tracksPrefsFactory, 2),
+      // &waveformPrefsFactory,
+      &tracksBehaviorsPrefsFactory,
+      &spectrumPrefsFactory,
+
+      // Group one other page
+      PrefsNode(&importExportPrefsFactory, 1),
+      &extImportPrefsFactory,
+
+      &projectsPrefsFactory,
+#if !defined(DISABLE_DYNAMIC_LOADING_FFMPEG) || !defined(DISABLE_DYNAMIC_LOADING_LAME)
+      &libraryPrefsFactory,
+#endif
+      &directoriesPrefsFactory,
+      &warningsPrefsFactory,
+      &effectsPrefsFactory,
+#ifdef EXPERIMENTAL_THEME_PREFS
+      &themePrefsFactory,
+#endif
+      // &batchPrefsFactory,
+      &keyConfigPrefsFactory,
+      &mousePrefsFactory,
+#ifdef EXPERIMENTAL_MODULE_PREFS
+      &modulePrefsFactory,
+#endif
+   };
+
+   static Factories factories(nodes, nodes + sizeof(nodes) / sizeof(nodes[0]));
    return factories;
 }
 
@@ -280,7 +271,7 @@ PrefsDialog::PrefsDialog
                   it != end; ++it, ++iPage)
                {
                   const PrefsNode &node = *it;
-                  const PrefsPanel::Factory &factory = node.factory;
+                  PrefsPanelFactory &factory = *node.pFactory;
                   wxWindow *const w = factory(mCategories, wxID_ANY);
                   if (stack.empty())
                      // Parameters are: AddPage(page, name, IsSelected, imageId).
@@ -308,7 +299,7 @@ PrefsDialog::PrefsDialog
 
          // Unique page, don't show the factory
          const PrefsNode &node = factories[0];
-         const PrefsPanel::Factory &factory = node.factory;
+         PrefsPanelFactory &factory = *node.pFactory;
          mUniquePage = factory(this, wxID_ANY);
          wxWindow * uniquePageWindow = S.Prop(1).AddWindow(mUniquePage, wxEXPAND);
          // We're not in the wxTreebook, so add the accelerator here
@@ -555,14 +546,15 @@ void PrefsDialog::OnOK(wxCommandEvent & WXUNUSED(event))
    }
 #endif
 
-   // PRL:  Is the following concern still valid, now that prefs update is
-   //      handled instead by delayed event processing?
-
    // LL:  wxMac can't handle recreating the menus when this dialog is still active,
    //      so AudacityProject::UpdatePrefs() or any of the routines it calls must
    //      not cause MenuCreator::RebuildMenuBar() to be executed.
+   for (size_t i = 0; i < gAudacityProjects.size(); i++) {
+      gAudacityProjects[i]->UpdatePrefs();
+   }
 
-   wxTheApp->AddPendingEvent(wxCommandEvent{ EVT_PREFS_UPDATE });
+   WaveformSettings::defaults().LoadPrefs();
+   SpectrogramSettings::defaults().LoadPrefs();
 
    if( IsModal() )
       EndModal(true);

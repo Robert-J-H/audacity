@@ -15,7 +15,6 @@
 #include "Prefs.h" // for RTL_WORKAROUND
 #include "Project.h"
 #include "TrackPanel.h" // for EVT_TRACK_PANEL_TIMER
-#include "ViewInfo.h"
 
 #include <wx/radiobut.h>
 #include <wx/toolbar.h>
@@ -44,8 +43,8 @@ END_EVENT_TABLE()
 
 const wxSize gSize = wxSize(LYRICS_DEFAULT_WIDTH, LYRICS_DEFAULT_HEIGHT);
 
-LyricsWindow::LyricsWindow(AudacityProject *parent)
-   : wxFrame( &ProjectWindow::Get( *parent ), -1,
+LyricsWindow::LyricsWindow(AudacityProject *parent):
+   wxFrame(parent, -1,
             wxString::Format(_("Audacity Karaoke%s"),
                               ((parent->GetName().empty()) ?
                                  wxT("") :
@@ -129,7 +128,7 @@ LyricsWindow::LyricsWindow(AudacityProject *parent)
    //}
 
    // Events from the project don't propagate directly to this other frame, so...
-   GetParent()->Bind(EVT_TRACK_PANEL_TIMER,
+   mProject->Bind(EVT_TRACK_PANEL_TIMER,
       &LyricsWindow::OnTimer,
       this);
    Center();
@@ -159,52 +158,10 @@ void LyricsWindow::OnTimer(wxCommandEvent &event)
    else
    {
       // Reset lyrics display.
-      const auto &selectedRegion = ViewInfo::Get( *mProject ).selectedRegion;
+      const auto &selectedRegion = mProject->GetViewInfo().selectedRegion;
       GetLyricsPanel()->Update(selectedRegion.t0());
    }
 
    // Let other listeners get the notification
    event.Skip();
-}
-
-// Remaining code hooks this add-on into the application
-#include "commands/CommandContext.h"
-#include "commands/CommandManager.h"
-
-namespace {
-
-// Lyrics window attached to each project is built on demand by:
-AudacityProject::AttachedWindows::RegisteredFactory sLyricsWindowKey{
-   []( AudacityProject &parent ) -> wxWeakRef< wxWindow > {
-      return safenew LyricsWindow( &parent );
-   }
-};
-
-// Define our extra menu item that invokes that factory
-struct Handler : CommandHandlerObject {
-   void OnKaraoke(const CommandContext &context)
-   {
-      auto &project = context.project;
-
-      auto lyricsWindow = &project.AttachedWindows::Get( sLyricsWindowKey );
-      lyricsWindow->Show();
-      lyricsWindow->Raise();
-   }
-};
-CommandHandlerObject &findCommandHandler(AudacityProject &) {
-   // Handler is not stateful.  Doesn't need a factory registered with
-   // AudacityProject.
-   static Handler instance;
-   return instance;
-}
-
-// Register that menu item
-
-using namespace MenuTable;
-AttachedItem sAttachment{ wxT("View/Windows"),
-   FinderScope( findCommandHandler ).Eval(
-      Command( wxT("Karaoke"), XXO("&Karaoke..."), &Handler::OnKaraoke,
-         LabelTracksExistFlag ) )
-};
-
 }

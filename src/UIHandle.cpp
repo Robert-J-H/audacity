@@ -41,6 +41,11 @@ bool UIHandle::Escape()
    return false;
 }
 
+void UIHandle::DrawExtras
+   (DrawingPass, wxDC *, const wxRegion &, const wxRect &)
+{
+}
+
 bool UIHandle::StopsOnKeystroke()
 {
    return false;

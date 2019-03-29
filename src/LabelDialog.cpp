@@ -35,7 +35,6 @@
 #include "Prefs.h"
 #include "Project.h"
 #include "ViewInfo.h"
-#include "tracks/labeltrack/ui/LabelTrackView.h"
 #include "widgets/NumericTextCtrl.h"
 #include "widgets/ErrorDialog.h"
 #include "widgets/HelpSystem.h"
@@ -392,8 +391,8 @@ bool LabelDialog::TransferDataFromWindow()
 
       // Create the NEW track and add to track list
       auto newTrack = mFactory.NewLabelTrack();
-      newTrack->GetGroupData().SetName(name);
-      mTracks->Add( newTrack, true);
+      newTrack->SetName(name);
+      mTracks->Add( newTrack );
       tndx++;
    }
 
@@ -415,8 +414,8 @@ bool LabelDialog::TransferDataFromWindow()
          return false;
 
       // Add the label to it
-      lt->AddLabel(rd.selectedRegion, rd.title);
-      LabelTrackView::Get( *lt ).SetSelectedIndex( -1 );
+      lt->AddLabel(rd.selectedRegion, rd.title, -2);
+      lt->Unselect();
    }
 
    return true;
@@ -466,7 +465,7 @@ void LabelDialog::AddLabels(const LabelTrack *t)
    int i;
 
    // Add a NEW track name
-   TrackName(tndx, t->GetGroupData().GetName());
+   TrackName(tndx, t->GetName());
 
    // If editor was invoked for one label, add that one only, else add all.
    if (!mSelectedTrack || mSelectedTrack == t) {
@@ -718,7 +717,7 @@ void LabelDialog::OnExport(wxCommandEvent & WXUNUSED(event))
    for (i = 0; i < cnt; i++) {
       RowData &rd = mData[i];
 
-      lt->AddLabel(rd.selectedRegion, rd.title);
+      lt->AddLabel(rd.selectedRegion, rd.title,-2);
    }
 
    // Export them and clean
@@ -734,15 +733,15 @@ void LabelDialog::OnExport(wxCommandEvent & WXUNUSED(event))
 
 void LabelDialog::OnSelectCell(wxGridEvent &event)
 {
-   for (auto group: mTracks->Any().ByGroups())
-      group.data->SetSelected( true );
+   for (auto t: mTracks->Any())
+      t->SetSelected( true );
 
    if (!mData.empty())
    {
       RowData &rd = mData[event.GetRow()];
       mViewInfo->selectedRegion = rd.selectedRegion;
 
-      ProjectWindow::Get( *GetActiveProject() ).RedrawProject();
+      GetActiveProject()->RedrawProject();
    }
 
    event.Skip();

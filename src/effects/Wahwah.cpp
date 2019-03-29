@@ -20,7 +20,6 @@
 
 #include "../Audacity.h"
 #include "Wahwah.h"
-#include "LoadEffects.h"
 
 #include "../Experimental.h"
 
@@ -60,11 +59,6 @@ Param( OutGain,   double,  wxT("Gain"),      -6.0,    -30.0,    30.0,    1   );
 // EffectWahwah
 //
 
-const ComponentInterfaceSymbol EffectWahwah::Symbol
-{ XO("Wahwah") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectWahwah > reg; }
-
 BEGIN_EVENT_TABLE(EffectWahwah, wxEvtHandler)
     EVT_SLIDER(ID_Freq, EffectWahwah::OnFreqSlider)
     EVT_SLIDER(ID_Phase, EffectWahwah::OnPhaseSlider)
@@ -100,7 +94,7 @@ EffectWahwah::~EffectWahwah()
 
 ComponentInterfaceSymbol EffectWahwah::GetSymbol()
 {
-   return Symbol;
+   return WAHWAH_PLUGIN_SYMBOL;
 }
 
 wxString EffectWahwah::GetDescription()

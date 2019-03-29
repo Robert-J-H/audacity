@@ -424,12 +424,12 @@ ProgressResult ExportCL::Export(AudacityProject *project,
    os->Write(&header, sizeof(wav_header));
 
    // Mix 'em up
-   const auto &tracks = TrackList::Get( *project );
+   const TrackList *tracks = project->GetTracks();
    const WaveTrackConstArray waveTracks =
-      tracks.GetWaveTrackConstArray(selectionOnly, false);
+      tracks->GetWaveTrackConstArray(selectionOnly, false);
    auto mixer = CreateMixer(
                             waveTracks,
-                            tracks.GetTimeTrack(),
+                            tracks->GetTimeTrack(),
                             t0,
                             t1,
                             channels,

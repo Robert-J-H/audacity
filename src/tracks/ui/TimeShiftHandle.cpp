@@ -14,23 +14,17 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../Experimental.h"
 
 #include "TrackControls.h"
-#include "TrackView.h"
 #include "../../AColor.h"
 #include "../../HitTestResult.h"
 #include "../../NoteTrack.h"
 #include "../../Project.h"
 #include "../../RefreshCode.h"
-#include "../../TrackArtist.h"
-#include "../../TrackPanelDrawingContext.h"
 #include "../../TrackPanelMouseEvent.h"
 #include "../../toolbars/ToolsToolBar.h"
 #include "../../UndoManager.h"
 #include "../../WaveClip.h"
-#include "../../ViewInfo.h"
 #include "../../WaveTrack.h"
 #include "../../../images/Cursors.h"
-
-#include "../playabletrack/wavetrack/ui/WaveTrackView.h"
 
 TimeShiftHandle::TimeShiftHandle
 ( const std::shared_ptr<Track> &pTrack, bool gripHit )
@@ -203,7 +197,7 @@ namespace
    WaveClip *FindClipAtTime(WaveTrack *pTrack, double time)
    {
       if (pTrack) {
-         // GetClipAtX doesn't work unless the clip is on the screen and can return bad info otherwise
+         // WaveClip::GetClipAtX doesn't work unless the clip is on the screen and can return bad info otherwise
          // instead calculate the time manually
          double rate = pTrack->GetRate();
          auto s0 = (sampleCount)(time * rate + 0.5);
@@ -364,19 +358,18 @@ UIHandle::Result TimeShiftHandle::Click
 
    const wxMouseEvent &event = evt.event;
    const wxRect &rect = evt.rect;
-   auto &viewInfo = ViewInfo::Get( *pProject );
+   const ViewInfo &viewInfo = pProject->GetViewInfo();
 
-   const auto pView = std::static_pointer_cast<TrackView>(evt.pCell);
-   const auto pTrack = pView ? pView->FindTrack().get() : nullptr;
+   const auto pTrack = std::static_pointer_cast<Track>(evt.pCell);
    if (!pTrack)
       return RefreshCode::Cancelled;
 
-   auto &trackList = TrackList::Get( *pProject );
+   TrackList *const trackList = pProject->GetTracks();
 
    mClipMoveState.clear();
    mDidSlideVertically = false;
 
-   const auto ttb = &ToolsToolBar::Get( *pProject );
+   ToolsToolBar *const ttb = pProject->GetToolsToolBar();
    const bool multiToolModeActive = (ttb && ttb->IsDown(multiTool));
 
    const double clickTime =
@@ -396,8 +389,7 @@ UIHandle::Result TimeShiftHandle::Click
       pTrack->TypeSwitch(
          [&](WaveTrack *wt) {
             if (nullptr ==
-               (mClipMoveState.capturedClip =
-                  WaveTrackView::GetClipAtX(*wt, event.m_x)))
+               (mClipMoveState.capturedClip = wt->GetClipAtX(event.m_x)))
                ok = false;
             else
                captureClips = true;
@@ -413,13 +405,13 @@ UIHandle::Result TimeShiftHandle::Click
       return Cancelled;
    else if ( captureClips )
       CreateListOfCapturedClips
-         ( mClipMoveState, viewInfo, *pTrack, trackList,
+         ( mClipMoveState, viewInfo, *pTrack, *trackList,
            pProject->IsSyncLocked(), clickTime );
 
    mSlideUpDownOnly = event.CmdDown() && !multiToolModeActive;
    mRect = rect;
    mClipMoveState.mMouseClickX = event.m_x;
-   mSnapManager = std::make_shared<SnapManager>(&trackList,
+   mSnapManager = std::make_shared<SnapManager>(trackList,
                                   &viewInfo,
                                   &mClipMoveState.capturedClipArray,
                                   &mClipMoveState.trackExclusions,
@@ -685,10 +677,9 @@ UIHandle::Result TimeShiftHandle::Drag
    }
 
    const wxMouseEvent &event = evt.event;
-   auto &viewInfo = ViewInfo::Get( *pProject );
+   ViewInfo &viewInfo = pProject->GetViewInfo();
 
-   TrackView *trackView = dynamic_cast<TrackView*>(evt.pCell.get());
-   Track *track = trackView ? trackView->FindTrack().get() : nullptr;
+   Track *track = dynamic_cast<Track*>(evt.pCell.get());
 
    // Uncommenting this permits drag to continue to work even over the controls area
    /*
@@ -709,7 +700,7 @@ UIHandle::Result TimeShiftHandle::Drag
       return RefreshCode::RefreshNone;
 
 
-   auto &trackList = TrackList::Get( *pProject );
+   TrackList *const trackList = pProject->GetTracks();
 
    // GM: DoSlide now implementing snap-to
    // samples functionality based on sample rate.
@@ -743,7 +734,7 @@ UIHandle::Result TimeShiftHandle::Drag
        /* && !mCapturedClipIsSelection*/
       && pTrack->TypeSwitch<bool>( [&] (WaveTrack *) {
             if ( DoSlideVertical( viewInfo, event.m_x, mClipMoveState,
-                     trackList, *mCapturedTrack, *pTrack, desiredSlideAmount ) ) {
+                     *trackList, *mCapturedTrack, *pTrack, desiredSlideAmount ) ) {
                mCapturedTrack = pTrack;
                mDidSlideVertically = true;
             }
@@ -764,7 +755,7 @@ UIHandle::Result TimeShiftHandle::Drag
 
    mClipMoveState.hSlideAmount = desiredSlideAmount;
 
-   DoSlideHorizontal( mClipMoveState, trackList, *mCapturedTrack );
+   DoSlideHorizontal( mClipMoveState, *trackList, *mCapturedTrack );
 
    if (mClipMoveState.capturedClipIsSelection) {
       // Slide the selection, too
@@ -853,25 +844,14 @@ UIHandle::Result TimeShiftHandle::Cancel(AudacityProject *pProject)
    return RefreshCode::RefreshAll;
 }
 
-void TimeShiftHandle::Draw(
-   TrackPanelDrawingContext &context,
-   const wxRect &rect, unsigned iPass )
+void TimeShiftHandle::DrawExtras
+(DrawingPass pass,
+ wxDC * dc, const wxRegion &, const wxRect &)
 {
-   if ( iPass == TrackArtist::PassSnapping ) {
-      auto &dc = context.dc;
+   if (pass == Panel) {
       // Draw snap guidelines if we have any
-      if ( mSnapManager ) {
-         mSnapManager->Draw(
-            &dc, mClipMoveState.snapLeft, mClipMoveState.snapRight );
-      }
+      if ( mSnapManager )
+         mSnapManager->Draw
+            ( dc, mClipMoveState.snapLeft, mClipMoveState.snapRight );
    }
-}
-
-wxRect TimeShiftHandle::DrawingArea(
-   const wxRect &rect, const wxRect &panelRect, unsigned iPass )
-{
-   if ( iPass == TrackArtist::PassSnapping )
-      return MaximizeHeight( rect, panelRect );
-   else
-      return rect;
 }

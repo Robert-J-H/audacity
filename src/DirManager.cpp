@@ -68,7 +68,6 @@
 
 #include <time.h> // to use time() for srand()
 
-#include <wx/wxcrtvararg.h>
 #include <wx/defs.h>
 #include <wx/app.h>
 #include <wx/dir.h>
@@ -369,27 +368,6 @@ int DirManager::numDirManagers = 0;
 bool DirManager::dontDeleteTempFiles = false;
 
 
-static const AudacityProject::AttachedObjects::RegisteredFactory key{
-   [](AudacityProject&) { return std::make_shared<DirManager>(); }
-};
-
-DirManager &DirManager::Get( AudacityProject &project )
-{
-   return project.AttachedObjects::Get< DirManager >( key );
-}
-
-const DirManager &DirManager::Get( const AudacityProject &project )
-{
-   return Get( const_cast< AudacityProject & >( project ) );
-}
-
-DirManager &DirManager::Reset( AudacityProject &project )
-{
-   auto dirManager = std::make_shared<DirManager>();
-   project.AttachedObjects::Assign( key, dirManager );
-   return *dirManager;
-}
-
 DirManager::DirManager()
 {
    wxLogDebug(wxT("DirManager: Created new instance."));
@@ -618,9 +596,10 @@ DirManager::ProjectSetter::Impl::Impl(
 
    dirManager.projPath = newProjPath;
    dirManager.projName = newProjName;
-   auto projFull =
-      wxFileNameWrapper{ newProjPath, newProjName }.GetFullPath();
-   dirManager.projFull = projFull;
+   if (newProjPath.Last() == wxFILE_SEP_PATH)
+      dirManager.projFull = newProjPath + newProjName;
+   else
+      dirManager.projFull = newProjPath + wxFILE_SEP_PATH + newProjName;
 
    // Verify new paths, maybe creating a directory
    if (bCreate) {
@@ -754,7 +733,7 @@ void DirManager::ProjectSetter::Impl::Commit()
 
          if (ii < size)
             b->SetFileName(
-               wxFileNameWrapper{ newPaths[ii] } );
+               wxFileNameWrapper{ wxFileName{ newPaths[ii] } } );
       }
 
       ++ii;
@@ -818,7 +797,7 @@ FilePath DirManager::GetProjectName()
 wxLongLong DirManager::GetFreeDiskSpace()
 {
    wxLongLong freeSpace = -1;
-   wxFileNameWrapper path;
+   wxFileName path;
 
    path.SetPath(projPath.empty() ? mytemp : projPath);
 
@@ -848,7 +827,8 @@ void DirManager::SetLocalTempDir(const wxString &path)
 
 wxFileNameWrapper DirManager::MakeBlockFilePath(const wxString &value) {
 
-   wxFileNameWrapper dir{ GetDataFilesDir() + wxFILE_SEP_PATH };
+   wxFileNameWrapper dir;
+   dir.AssignDir(GetDataFilesDir());
 
    if(value.GetChar(0)==wxT('d')){
       // this file is located in a subdirectory tree
@@ -2139,9 +2119,9 @@ void DirManager::FindOrphanBlockFiles(
 {
    DirManager *clipboardDM = NULL;
 
-   for (const auto &path : filePathArray)
+   for (size_t i = 0; i < filePathArray.size(); i++)
    {
-      const wxFileNameWrapper fullname{ path };
+      const wxFileName &fullname = filePathArray[i];
       wxString basename = fullname.GetName();
       const wxString ext{fullname.GetExt()};
       if ((mBlockFileHash.find(basename) == mBlockFileHash.end()) && // is orphan

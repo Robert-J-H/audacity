@@ -266,14 +266,10 @@ wxString QualityPrefs::HelpPageName()
    return "Quality_Preferences";
 }
 
-namespace{
-PrefsPanel::Registration sAttachment{ "Quality",
-   [](wxWindow *parent, wxWindowID winid)
-   {
-      wxASSERT(parent); // to justify safenew
-      return safenew QualityPrefs(parent, winid);
-   }
-};
+PrefsPanel *QualityPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+{
+   wxASSERT(parent); // to justify safenew
+   return safenew QualityPrefs(parent, winid);
 }
 
 sampleFormat QualityPrefs::SampleFormatChoice()

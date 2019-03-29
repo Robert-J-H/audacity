@@ -18,7 +18,6 @@
 
 #include "../Audacity.h"
 #include "Distortion.h"
-#include "LoadEffects.h"
 
 #include "../Experimental.h"
 
@@ -158,11 +157,6 @@ wxString defaultLabel(int index)
 // EffectDistortion
 //
 
-const ComponentInterfaceSymbol EffectDistortion::Symbol
-{ XO("Distortion") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectDistortion > reg; }
-
 BEGIN_EVENT_TABLE(EffectDistortion, wxEvtHandler)
    EVT_CHOICE(ID_Type, EffectDistortion::OnTypeChoice)
    EVT_CHECKBOX(ID_DCBlock, EffectDistortion::OnDCBlockCheckbox)
@@ -204,7 +198,7 @@ EffectDistortion::~EffectDistortion()
 
 ComponentInterfaceSymbol EffectDistortion::GetSymbol()
 {
-   return Symbol;
+   return DISTORTION_PLUGIN_SYMBOL;
 }
 
 wxString EffectDistortion::GetDescription()

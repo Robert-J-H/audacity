@@ -455,12 +455,12 @@ TimeTrack and AudioIOListener and whether the playback is looped.
 #include "Prefs.h"
 #include "Project.h"
 #include "TimeTrack.h"
-#include "TransportState.h"
 #include "WaveTrack.h"
 #include "AutoRecovery.h"
 
 #include "effects/EffectManager.h"
 #include "prefs/QualityPrefs.h"
+#include "toolbars/ControlToolBar.h"
 #include "widgets/Meter.h"
 #include "widgets/ErrorDialog.h"
 #include "widgets/Warning.h"
@@ -1697,8 +1697,7 @@ void AudioIO::StartMonitoring(double sampleRate)
 
    if (!success) {
       wxString msg = wxString::Format(_("Error opening recording device.\nError code: %s"), gAudioIO->LastPaErrorString());
-      ShowErrorDialog( ProjectWindow::Find( mOwningProject ),
-         _("Error"), msg, wxT("Error_opening_sound_device"));
+      ShowErrorDialog(mOwningProject, _("Error"), msg, wxT("Error_opening_sound_device"));
       return;
    }
 
@@ -1971,7 +1970,7 @@ int AudioIO::StartStream(const TransportTracks &tracks,
       // work with a thread, or else yield to timer messages, but that would
       // execute too much else
       if (mScrubState) {
-         Scrubber::Get( *mOwningProject ).ContinueScrubbingPoll();
+         mOwningProject->GetScrubber().ContinueScrubbingPoll();
          wxMilliSleep( Scrubber::ScrubPollInterval_ms * 0.9 );
       }
       else
@@ -2650,7 +2649,8 @@ void AudioIO::StopStream()
             }
          }
 
-         TransportState::CommitRecording();
+         ControlToolBar *bar = mOwningProject->GetControlToolBar();
+         bar->CommitRecording();
       }
    }
 
@@ -4819,7 +4819,10 @@ void AudioIoCallback::CheckSoundActivatedRecordingLevel( const void *inputBuffer
    
    bool bShouldBePaused = mInputMeter->GetMaxPeak() < mSilenceLevel;
    if( bShouldBePaused != IsPaused())
-      wxTheApp->CallAfter( &TransportState::Pause );
+   {
+      ControlToolBar *bar = mOwningProject->GetControlToolBar();
+      bar->CallAfter(&ControlToolBar::Pause);
+   }
 }
 
 
@@ -5039,12 +5042,12 @@ bool AudioIoCallback::FillOutputBuffers(
       {
          vt = chans[c];
 
-         if (vt->GetChannelIgnoringPan() == WaveTrack::LeftChannel ||
-               vt->GetChannelIgnoringPan() == WaveTrack::MonoChannel )
+         if (vt->GetChannelIgnoringPan() == Track::LeftChannel ||
+               vt->GetChannelIgnoringPan() == Track::MonoChannel )
             AddToOutputChannel( 0, outputMeterFloats, outputFloats, tempFloats, tempBufs[c], drop, len, vt);
 
-         if (vt->GetChannelIgnoringPan() == WaveTrack::RightChannel ||
-               vt->GetChannelIgnoringPan() == WaveTrack::MonoChannel  )
+         if (vt->GetChannelIgnoringPan() == Track::RightChannel ||
+               vt->GetChannelIgnoringPan() == Track::MonoChannel  )
             AddToOutputChannel( 1, outputMeterFloats, outputFloats, tempFloats, tempBufs[c], drop, len, vt);
       }
 
@@ -5358,7 +5361,7 @@ void AudioIoCallback::SendVuOutputMeterData(
       //MixerBoard* pMixerBoard = mOwningProject->GetMixerBoard();
       //if (pMixerBoard)
       //   pMixerBoard->UpdateMeters(GetStreamTime(),
-      //                              (sLastPlayMode == loopedPlay));
+      //                              (pProj->mLastPlayMode == loopedPlay));
    }
    mUpdatingMeters = false;
 }
@@ -5400,10 +5403,10 @@ bool AudioIoCallback::TrackShouldBeSilent( const WaveTrack &wt )
 bool AudioIoCallback::TrackHasBeenFadedOut( const WaveTrack &wt )
 {
    const auto channel = wt.GetChannelIgnoringPan();
-   if ((channel == WaveTrack::LeftChannel  || channel == WaveTrack::MonoChannel) &&
+   if ((channel == Track::LeftChannel  || channel == Track::MonoChannel) &&
       wt.GetOldChannelGain(0) != 0.0)
       return false;
-   if ((channel == WaveTrack::RightChannel || channel == WaveTrack::MonoChannel) &&
+   if ((channel == Track::RightChannel || channel == Track::MonoChannel) &&
       wt.GetOldChannelGain(1) != 0.0)
       return false;
    return true;
@@ -5805,27 +5808,4 @@ bool AudioIO::IsCapturing() const
       GetNumCaptureChannels() > 0 &&
       mPlaybackSchedule.GetTrackTime() >=
          mPlaybackSchedule.mT0 + mRecordingSchedule.mPreRoll;
-}
-
-AudioIOStartStreamOptions
-AudioIOStartStreamOptions::PlayDefaults( AudacityProject &project )
-{
-   AudioIOStartStreamOptions options { project.GetRate() };
-   options.timeTrack = TrackList::Get( project ).GetTimeTrack();
-   options.listener = &project;
-   return options;
-}
-
-AudioIOStartStreamOptions
-AudioIOStartStreamOptions::SpeedPlayDefaults( AudacityProject &project )
-{
-   auto PlayAtSpeedRate = gAudioIO->GetBestRate(
-      false,     //not capturing
-      true,      //is playing
-      project.GetRate()  //suggested rate
-   );
-   AudioIOStartStreamOptions options{ PlayAtSpeedRate };
-   options.timeTrack = TrackList::Get( project ).GetTimeTrack();
-   options.listener = &project;
-   return options;
 }

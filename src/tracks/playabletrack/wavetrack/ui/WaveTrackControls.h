@@ -35,12 +35,7 @@ public:
 
    PopupMenuTable *GetMenuExtension(Track *pTrack) override;
 
-   static void ReCreateSliders( wxWindow *pParent );
-
 private:
-   // TrackControls implementation
-   const TCPLines &GetControlLines() const override;
-
    std::weak_ptr<MuteButtonHandle> mMuteHandle;
    std::weak_ptr<SoloButtonHandle> mSoloHandle;
    std::weak_ptr<GainSliderHandle> mGainHandle;

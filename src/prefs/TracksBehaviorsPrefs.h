@@ -38,4 +38,12 @@ class TracksBehaviorsPrefs final : public PrefsPanel
    wxArrayStringEx mSoloChoices;
 };
 
+/// A PrefsPanelFactory that creates one TracksBehaviorsPrefs panel.
+class TracksBehaviorsPrefsFactory final : public PrefsPanelFactory
+{
+public:
+   explicit TracksBehaviorsPrefsFactory();
+   PrefsPanel *operator () (wxWindow *parent, wxWindowID winid) override;
+
+};
 #endif

@@ -41,20 +41,26 @@
 #include "Prefs.h"
 #include "Project.h"
 #include "TrackPanel.h"
-#include "TransportState.h"
 #include "UndoManager.h"
-#include "ViewInfo.h"
 #include "WaveTrack.h"
 #include "commands/CommandManager.h"
 #include "effects/EffectManager.h"
 #include "prefs/TracksPrefs.h"
+#include "toolbars/ControlToolBar.h"
 #include "toolbars/ToolManager.h"
-#include "tracks/labeltrack/ui/LabelTrackView.h"
-
-#include <mutex>
-#include <unordered_set>
 
 #include <wx/menu.h>
+
+PrefsListener::~PrefsListener()
+{
+}
+
+void PrefsListener::UpdatePrefs()
+{
+}
+
+MenuManager &GetMenuManager(AudacityProject &project)
+{ return *project.mMenuManager; }
 
 MenuCreator::MenuCreator()
 {
@@ -62,26 +68,6 @@ MenuCreator::MenuCreator()
 
 MenuCreator::~MenuCreator()
 {
-}
-
-static const AudacityProject::AttachedObjects::RegisteredFactory key{
-  []( AudacityProject&){
-     return std::make_shared< MenuManager >(); }
-};
-
-MenuManager &MenuManager::Get( AudacityProject &project )
-{
-   return project.AttachedObjects::Get< MenuManager >( key );
-}
-
-const MenuManager &MenuManager::Get( const AudacityProject &project )
-{
-   return Get( const_cast< AudacityProject & >( project ) );
-}
-
-MenuManager::MenuManager()
-{
-   UpdatePrefs();
 }
 
 void MenuManager::UpdatePrefs()
@@ -100,18 +86,14 @@ void MenuManager::UpdatePrefs()
 }
 
 /// Namespace for structures that go into building a menu
-namespace Registry {
+namespace MenuTable {
 
 BaseItem::~BaseItem() {}
 
-SharedItem::~SharedItem() {}
-
 ComputedItem::~ComputedItem() {}
 
-SingleItem::~SingleItem() {}
-
-GroupItem::GroupItem( const wxString &internalName, BaseItemPtrs &&items_ )
-: BaseItem{ internalName }, items{ std::move( items_ ) }
+GroupItem::GroupItem( BaseItemPtrs &&items_ )
+: items{ std::move( items_ ) }
 {
 }
 void GroupItem::AppendOne( BaseItemPtr&& ptr )
@@ -120,28 +102,16 @@ void GroupItem::AppendOne( BaseItemPtr&& ptr )
 }
 GroupItem::~GroupItem() {}
 
-GroupingItem::~GroupingItem() {}
-
-Visitor::~Visitor(){}
-void Visitor::BeginGroup(GroupItem &, const wxArrayString &) {}
-void Visitor::EndGroup(GroupItem &, const wxArrayString &) {}
-void Visitor::Visit(SingleItem &, const wxArrayString &) {}
-
-}
-
-namespace MenuTable {
-
-MenuItem::MenuItem( const wxString &internalName,
-   const wxString &title_, BaseItemPtrs &&items_ )
-: GroupItem{ internalName, std::move( items_ ) }, title{ title_ }
+MenuItem::MenuItem( const wxString &title_, BaseItemPtrs &&items_ )
+: GroupItem{ std::move( items_ ) }, title{ title_ }
 {
    wxASSERT( !title.empty() );
 }
 MenuItem::~MenuItem() {}
 
 ConditionalGroupItem::ConditionalGroupItem(
-   const wxString &internalName, Condition condition_, BaseItemPtrs &&items_ )
-: GroupItem{ internalName, std::move( items_ ) }, condition{ condition_ }
+   Condition condition_, BaseItemPtrs &&items_ )
+: GroupItem{ std::move( items_ ) }, condition{ condition_ }
 {
 }
 ConditionalGroupItem::~ConditionalGroupItem() {}
@@ -150,11 +120,12 @@ SeparatorItem::~SeparatorItem() {}
 
 CommandItem::CommandItem(const CommandID &name_,
          const wxString &label_in_,
+         bool hasDialog_,
          CommandHandlerFinder finder_,
          CommandFunctorPointer callback_,
          CommandFlag flags_,
          const CommandManager::Options &options_)
-: SingleItem{ name_ }, label_in{ label_in_ }
+: name{ name_ }, label_in{ label_in_ }, hasDialog{ hasDialog_ }
 , finder{ finder_ }, callback{ callback_ }
 , flags{ flags_ }, options{ options_ }
 {}
@@ -166,7 +137,7 @@ CommandGroupItem::CommandGroupItem(const wxString &name_,
          CommandFunctorPointer callback_,
          CommandFlag flags_,
          bool isEffect_)
-: SingleItem{ name_ }, items{ items_ }
+: name{ name_ }, items{ items_ }
 , finder{ finder_ }, callback{ callback_ }
 , flags{ flags_ }, isEffect{ isEffect_ }
 {}
@@ -174,548 +145,91 @@ CommandGroupItem::~CommandGroupItem() {}
 
 SpecialItem::~SpecialItem() {}
 
-CommandHandlerFinder FinderScope::sFinder =
-   [](AudacityProject &project) -> CommandHandlerObject & {
-      // If this default finder function is reached, then FinderScope should
-      // have been used somewhere, or an explicit CommandHandlerFinder passed
-      // to menu item constructors
-      wxASSERT( false );
-      return ProjectWindow::Get( project );
-   };
-
-}
-
-
-namespace Registry {
-
-void RegisterItems( GroupItem &registry, const Placement &placement,
-   BaseItemPtr &&pItem )
-{
-   // Since registration determines only an unordered tree of menu items,
-   // we can sort children of each node lexicographically for our convenience.
-   BaseItemPtrs *pItems;
-   struct Comparator {
-      bool operator()
-         ( const wxString &component, const BaseItemPtr& pItem ) const {
-            return component < pItem->name; }
-      bool operator()
-         ( const BaseItemPtr& pItem, const wxString &component ) const {
-            return pItem->name < component; }
-   };
-   auto find = [&pItems]( const wxString &component ){ return std::equal_range(
-      pItems->begin(), pItems->end(), component, Comparator() ); };
-
-   auto pNode = &registry;
-   pItems = &pNode->items;
-   auto iter = pItems->end();
-
-   auto pathComponents = ::wxSplit( placement.path, '/' );
-   auto pComponent = pathComponents.begin(), end = pathComponents.end();
-
-   // Descend the registry hierarchy, while groups matching the path components
-   // can be found
-   auto debugPath = wxString{'/'} + registry.name;
-   while ( pComponent != end ) {
-      const auto &pathComponent = *pComponent;
-
-      // Try to find an item already present that is a group item with the
-      // same name; we don't care which if there is more than one.
-      const auto range = find( pathComponent );
-      const auto iter2 = std::find_if( range.first, range.second,
-         [](const BaseItemPtr &pItem){
-            return dynamic_cast< GroupItem* >( pItem.get() ); } );
-
-      if ( iter2 != range.second ) {
-         // A matching group in the registry, so descend
-         pNode = static_cast< GroupItem* >( iter2->get() );
-         pItems = &pNode->items;
-         iter = pItems->end();
-         debugPath += '/' + pathComponent;
-         ++pComponent;
-      }
-      else
-         // Insert at this level;
-         // If there are no more path components, and a name collision of
-         // the added item with something already in the registry, don't resolve
-         // it yet in this function, but see MergeItems().
-         break;
-   }
-
-   // Create path group items for remaining components
-   while ( pComponent != end ) {
-      auto newNode = Items( *pComponent );
-      pNode = newNode.get();
-      pItems->insert( iter, std::move( newNode ) );
-      pItems = &pNode->items;
-      iter = pItems->end();
-      ++pComponent;
-   }
-
-   // Remember the hint, to be used later in merging.
-   pItem->orderingHint = placement.hint;
-
-   // Now insert the item.
-   pItems->insert( find( pItem->name ).second, std::move( pItem ) );
-}
-
 }
 
 namespace {
 
-const auto MenuPathStart = wxT("MenuBar");
+void VisitItem( AudacityProject &project, MenuTable::BaseItem *pItem );
 
-using namespace MenuTable;
-struct CollectedItems
+void VisitItems(
+   AudacityProject &project, const MenuTable::BaseItemPtrs &items )
 {
-   struct Item{
-      // Predefined, or merged from registry already:
-      BaseItem *merged;
-      // Corresponding item from the registry, its sub-items to be merged:
-      GroupItem *merging;
-      // Ordering hint for the merged item:
-      OrderingHint hint;
-   };
-   std::vector< Item > items;
-   std::vector< std::shared_ptr< BaseItem > > &computedItems;
-};
-
-// When a computed or shared item, or nameless grouping, specifies a hint and
-// the subordinate does not, propagate the hint.
-const OrderingHint &ChooseHint(BaseItem *delegate, const OrderingHint &hint)
-{
-   return delegate->orderingHint.type == OrderingHint::Unspecified
-      ? hint
-      : delegate->orderingHint;
+   for ( auto &pSubItem : items )
+      VisitItem( project, pSubItem.get() );
 }
 
-// forward declaration for mutually recursive functions
-void CollectItem( void *context,
-   CollectedItems &collection, BaseItem *Item, const OrderingHint &hint );
-void CollectItems( void *context,
-   CollectedItems &collection, const BaseItemPtrs &items,
-   const OrderingHint &hint )
-{
-   for ( auto &item : items )
-      CollectItem( context, collection, item.get(),
-         ChooseHint( item.get(), hint ) );
-}
-void CollectItem( void *context,
-   CollectedItems &collection, BaseItem *pItem, const OrderingHint &hint )
+void VisitItem( AudacityProject &project, MenuTable::BaseItem *pItem )
 {
    if (!pItem)
       return;
+
+   auto &manager = *project.GetCommandManager();
 
    using namespace MenuTable;
-   if (const auto pShared =
-       dynamic_cast<SharedItem*>( pItem )) {
-      auto delegate = pShared->ptr.get();
-      if ( delegate )
-         CollectItem( context, collection, delegate,
-            ChooseHint( delegate, hint ) );
-   }
-   else
    if (const auto pComputed =
        dynamic_cast<ComputedItem*>( pItem )) {
-      auto result = pComputed->factory( context );
-      if (result) {
-         // Guarantee long enough lifetime of the result
-         collection.computedItems.push_back( result );
+      // TODO maybe?  memo-ize the results of the function, but that requires
+      // invalidating the memo at the right times
+      auto result = pComputed->factory( project );
+      if (result)
          // recursion
-         CollectItem( context, collection, result.get(),
-            ChooseHint( result.get(), hint ) );
-      }
+         VisitItem( project, result.get() );
    }
    else
-   if (auto pGroup = dynamic_cast<GroupItem*>(pItem)) {
-      if (dynamic_cast<GroupingItem*>(pItem) && pItem->name.empty())
-         // nameless grouping item is transparent to path calculations
-         CollectItems( context, collection, pGroup->items, hint );
-      else
-         // all other group items
-         collection.items.push_back( {pItem, nullptr, hint} );
+   if (const auto pCommand =
+       dynamic_cast<CommandItem*>( pItem )) {
+      manager.AddItem(
+         pCommand->name, pCommand->label_in, pCommand->hasDialog,
+         pCommand->finder, pCommand->callback,
+         pCommand->flags, pCommand->options
+      );
    }
-   else {
-      wxASSERT( dynamic_cast<SingleItem*>(pItem) );
-      // common to all single items
-      collection.items.push_back( {pItem, nullptr, hint} );
+   else
+   if (const auto pCommandList =
+      dynamic_cast<CommandGroupItem*>( pItem ) ) {
+      manager.AddItemList(pCommandList->name,
+         pCommandList->items.data(), pCommandList->items.size(),
+         pCommandList->finder, pCommandList->callback,
+         pCommandList->flags, pCommandList->isEffect);
    }
-}
-
-}
-
-using Path = wxArrayString;
-
-namespace {
-   std::unordered_set< wxString > sBadPaths;
-   void BadPath(
-     const wxString &format, const wxString &key, const wxString &name )
-   {
-     // Warn, but not more than once in a session for each bad path
-     auto badPath = key + '/' + name;
-     if ( sBadPaths.insert( badPath ).second ) {
-        // debug message
-        wxLogDebug( wxString::Format( format, badPath ) );
-        // user-visible message
-        AudacityMessageBox(
-           wxString::Format( wxGetTranslation( format ), badPath ) );
-     }
+   else
+   if (const auto pMenu =
+       dynamic_cast<MenuItem*>( pItem )) {
+      manager.BeginMenu( pMenu->title );
+      // recursion
+      VisitItems( project, pMenu->items );
+      manager.EndMenu();
    }
-
-   void ReportGroupGroupCollision( const wxString &key, const wxString &name )
-   {
-        BadPath(
-XO("Plug-in group at %s was merged with a previously defined group"),
-                key, name);
-   }
-
-   void ReportItemGroupCollision( const wxString &key, const wxString &name )
-   {
-        BadPath(
-XO("Plug-in group at %s conflicts with a previously defined item.\n Its items were merged into the parent"),
-                key, name);
-   }
-
-   void ReportItemItemCollision( const wxString &key, const wxString &name )
-   {
-        BadPath(
-XO("Plug-in item at %s conflicts with a previously defined item and was discarded"),
-                key, name);
-   }
-}
-
-void MergeItems( void *context,
-   CollectedItems &collection, const Path &path, const BaseItemPtrs &registry,
-   bool &doFlush )
-{
-   // The set of path names determines only an unordered tree.
-   // We want an ordering of the tree that is stable across runs.
-   // The last used ordering for this node can be found in preferences at this
-   // key:
-   auto key = '/' + ::wxJoin( path, '/', '\0' );
-
-   // Retrieve the old ordering on demand, if needed to merge something.
-   bool gotValue = false;
-   wxString strValue;
-   wxArrayString ordering;
-   auto GetOrdering = [&]() -> wxArrayString & {
-      if ( !gotValue ) {
-         gPrefs->Read(key, &strValue);
-         ordering = ::wxSplit( strValue, ',' );
-         gotValue = true;
-      }
-      return ordering;
-   };
-
-   // A linear search lookup lambda.  Smarter search may not be worth the
-   // effort.
-   using Iterator = decltype( collection.items )::iterator;
-   Iterator begin, end;
-   auto find = [&](const wxString &name){
-      return name.empty()
-         ? end
-         : std::find_if( begin, end,
-            [&]( const CollectedItems::Item& item ){
-               return name == item.merged->name; } ); };
-
-   using NewItem = std::pair< BaseItem*, OrderingHint >;
-   auto insertNewItemUsingPreferences = [&]( const NewItem &newItem ) {
-      // beware changes of collection.itemPairs in previous iterations!
-      begin = collection.items.begin(), end = collection.items.end();
-
-      BaseItem *pItem = newItem.first;
-
-      // Note that if more than one plug-in registers items under the same
-      // node, then it is not specified which plug-in is handled first,
-      // the first time registration happens.  It might happen that you
-      // add a plug-in, run the program, then add another, then run again;
-      // registration order determined by those actions might not
-      // correspond to the order of re-loading of modules in later
-      // sessions.  But whatever ordering is chosen the first time some
-      // plug-in is seen -- that ordering gets remembered in preferences.
-
-      if ( !pItem->name.empty() ) {
-         // Check saved ordering first, and rebuild that as well as is possible
-         auto &ordering = GetOrdering();
-         auto begin2 = ordering.begin(), end2 = ordering.end(),
-            found2 = std::find( begin2, end2, pItem->name );
-         if ( found2 != end2 ) {
-            auto insertPoint = end;
-            // Find the next name in the saved ordering that is known already
-            // in the collection.
-            while ( ++found2 != end2 ) {
-               auto known = find( *found2 );
-               if ( known != end ) {
-                  insertPoint = known;
-                  break;
-               }
-            }
-            collection.items.insert( insertPoint, {pItem, nullptr, {}} );
-            return true;
-         }
-      }
-
-      return false;
-   };
-   auto insertNewItemUsingHint = [&]( const NewItem &newItem ) {
-      // beware changes of collection.itemPairs in previous iterations!
-      begin = collection.items.begin(), end = collection.items.end();
-
-      BaseItem *pItem = newItem.first;
-      const OrderingHint &hint = newItem.second;
-
-      // pItem should have a name; if not, ignore the hint and put it at the
-      // end.
-      auto insertPoint = end;
-
-      if ( !pItem->name.empty() ) {
-         // Use the placement hint.
-         // If more than one item request the same placement, they
-         // end up in the sequence in which they were merged.
-         switch ( hint.type ) {
-            case OrderingHint::Before:
-            case OrderingHint::After:
-               // Default to the end if the name is not found.
-               insertPoint = find( hint.name );
-               if ( hint.type == OrderingHint::After &&
-                  insertPoint != end )
-                  ++insertPoint;
-               break;
-            case OrderingHint::Begin:
-               insertPoint = begin;
-               break;
-            case OrderingHint::End:
-            case OrderingHint::Unspecified:
-            default:
-               break;
-         }
-      }
-
-      // Insert the item; the hint has been used and no longer matters
-      collection.items.insert( insertPoint, {pItem, nullptr, {}} );
-   };
-
-   // Make some mutually recursive lambdas using the above ones
-   std::function< void( const BaseItemPtrs &, const OrderingHint & ) >
-      mergeItems;
-   auto mergeItem = [&](
-      BaseItem *pItem, const OrderingHint &hint,
-      std::vector<NewItem> *pNewItems ){
-      // beware changes of collection.itemPairs in previous iterations!
-      begin = collection.items.begin(), end = collection.items.end();
-
-      // Assume no null pointers in the registry
-      const auto &name = pItem->name;
-      auto found = find( name );
-      if (found != end) {
-         // Collision of names between collection and registry!
-         // There are 2 * 2 = 4 cases, as each of the two are group items or
-         // not.
-         auto pCollectionGroup = dynamic_cast< GroupItem * >( found->merged );
-         auto pRegistryGroup = dynamic_cast< GroupItem * >( pItem );
-         if (pCollectionGroup) {
-            if (pRegistryGroup) {
-               // This is the expected case of collision.
-               // Subordinate items from one of the groups will be merged in
-               // another call to MergeItems at a lower level of path.
-               // Note, however, that at most one of the two should be other
-               // than a plain grouping item; if not, we must lose the extra
-               // information carried by one of them.
-               auto pCollectionGrouping =
-                  dynamic_cast<GroupingItem*>( found->merged );
-               auto pRegistryGrouping =
-                  dynamic_cast<GroupingItem*>( pItem );
-               if ( !(pCollectionGrouping || pRegistryGrouping) )
-                  ReportGroupGroupCollision( key, name );
-
-               if ( pCollectionGrouping && !pRegistryGrouping ) {
-                  // Swap their roles
-                  found->merged = pRegistryGroup;
-                  found->merging = pCollectionGroup;
-               }
-               else
-                  found->merging = pRegistryGroup;
-            }
-            else {
-               // Registered non-group item collides with a previously defined
-               // group.
-               // Resolve this by subordinating the non-group item below
-               // that group.
-               auto subGroup = std::make_shared<GroupingItem>( name,
-                  std::make_unique<SharedItem>(
-                     // shared pointer with vacuous deleter
-                     std::shared_ptr<BaseItem>( pItem, [](void*){} ) ) );
-               found->merging = subGroup.get();
-               collection.computedItems.push_back( subGroup );
-            }
-         }
-         else {
-            if (pRegistryGroup) {
-               // (This is where the mutual recursion of this lambda and the
-               // other happens.  It's only an abnormal case)
-               // When a group item collides with a previously defined name,
-               // splice the sub-items at the same level, saving the items
-               // but losing the grouping.
-               mergeItems( pRegistryGroup->items, pRegistryGroup->orderingHint );
-               ReportItemGroupCollision( key, name );
-            }
-            else
-               // Collision of non-group items is the worst case!
-               // The later-registered item is lost.
-               ReportItemItemCollision( key, name );
-         }
-      }
-      else {
-         // A name is registered that is not known in the collection.
-         if (pNewItems)
-            pNewItems->push_back( { pItem, hint } );
-      }
-   };
-   mergeItems = [&](
-      const BaseItemPtrs &registry, const OrderingHint &hint ){
-      // First do expansion of nameless groupings, and caching of computed
-      // items, just as for the previously defined menus
-      CollectedItems newCollection{ {}, collection.computedItems };
-      CollectItems( context, newCollection, registry, hint );
-      std::vector<NewItem> newItems;
-      for ( const auto &item : newCollection.items )
-         mergeItem( item.merged, item.hint, &newItems );
-
-      // There may still be unresolved name collisions among the new items,
-      // so treat them in sorted order
-      std::sort( newItems.begin(), newItems.end(),
-         [](const NewItem &a, const NewItem &b){
-            return a.first->name < b.first->name; } );
-
-      BaseItem *pItem;
-      decltype( newItems.begin() ) iter;
-      auto resolveCollisions = [&]{
-         while (iter != newItems.end() && pItem->name == iter->first->name) {
-            mergeItem( iter->first, {}, nullptr );
-            iter = newItems.erase( iter );
-         }
-      };
-
-      // Choose placement for items in the registry that were not merged with
-      // some previously added item.
-      // If such an item is a group, then we do retain the kind of grouping that
-      // was registered.
-      //
-      // This is done in two passes:  first to repopulate according to ordering
-      // saved in preferences, then to handle remaining ones according to hints.
-      //
-      // The second pass might handle a plug-in loaded for the first time in
-      // this session; in later sessions, the first pass will handle it;
-      // thus if you should add plug-ins incrementally over sessions, you get
-      // some consistent ordering result, dependent on that history.
-      for ( iter = newItems.begin(); iter != newItems.end(); ) {
-         auto &newItem = *iter;
-         pItem = newItem.first;
-         if ( insertNewItemUsingPreferences( newItem ) ) {
-            iter = newItems.erase( iter );
-            resolveCollisions();
-         }
-         else
-            ++iter;
-      }
-      for ( iter = newItems.begin(); iter != newItems.end(); ) {
-         auto &newItem = *iter;
-         insertNewItemUsingHint( newItem );
-         ++iter;
-         resolveCollisions();
-      }
-   };
-
-   // Now invoke
-   mergeItems( registry, {} );
-
-   // Remember the NEW ordering, if there was any need to use the old.
-   if ( gotValue ) {
-      wxString newValue;
-      for ( const auto &item : collection.items ) {
-         const auto &name = item.merged->name;
-         if ( !name.empty() )
-            newValue += newValue.empty()
-               ? name
-               : ',' + name;
-      }
-      if (newValue != strValue) {
-         gPrefs->Write( key, newValue );
-         doFlush = true;
-      }
-   }
-}
-
-namespace {
-
-// forward declaration for mutually recursive functions
-void VisitItem(
-   Registry::Visitor &visitor,
-   void *context, CollectedItems &collection,
-   Path &path, BaseItem *pItem, GroupItem *pRegistry, bool &doFlush );
-void VisitItems(
-   Registry::Visitor &visitor,
-   void *context, CollectedItems &collection,
-   Path &path, GroupItem *pGroup, GroupItem *pRegistry, bool &doFlush )
-{
-   // Make a new collection for this subtree, sharing the memo cache
-   CollectedItems newCollection{ {}, collection.computedItems };
-
-   // Gather items at this level
-   CollectItems( context, newCollection, pGroup->items, {} );
-
-   path.push_back( pGroup->name );
-
-   // Merge with the registry
-   if ( pRegistry )
-      MergeItems( context, newCollection, path, pRegistry->items, doFlush );
-
-   // Now visit them
-   for ( auto &item : newCollection.items )
-      VisitItem( visitor, context, collection, path, item.merged, item.merging,
-         doFlush );
-
-   path.pop_back();
-}
-void VisitItem(
-   Registry::Visitor &visitor,
-   void *context, CollectedItems &collection,
-   Path &path, BaseItem *pItem, GroupItem *pRegistry, bool &doFlush )
-{
-   if (!pItem)
-      return;
-
-   if (const auto pSingle =
-       dynamic_cast<SingleItem*>( pItem )) {
-      visitor.Visit( *pSingle, path );
+   else
+   if (const auto pConditionalGroup =
+       dynamic_cast<ConditionalGroupItem*>( pItem )) {
+      const auto flag = pConditionalGroup->condition();
+      if (!flag)
+         manager.BeginOccultCommands();
+      // recursion
+      VisitItems( project, pConditionalGroup->items );
+      if (!flag)
+         manager.EndOccultCommands();
    }
    else
    if (const auto pGroup =
        dynamic_cast<GroupItem*>( pItem )) {
-      visitor.BeginGroup( *pGroup, path );
       // recursion
-      VisitItems( visitor, context, collection, path, pGroup, pRegistry, doFlush );
-      visitor.EndGroup( *pGroup, path );
+      VisitItems( project, pGroup->items );
+   }
+   else
+   if (dynamic_cast<SeparatorItem*>( pItem )) {
+      manager.AddSeparator();
+   }
+   else
+   if (const auto pSpecial =
+       dynamic_cast<SpecialItem*>( pItem )) {
+      const auto pCurrentMenu = manager.CurrentMenu();
+      wxASSERT( pCurrentMenu );
+      pSpecial->fn( project, *pCurrentMenu );
    }
    else
       wxASSERT( false );
-}
-
-}
-
-namespace Registry {
-
-void Visit(
-   Visitor &visitor, BaseItem *pTopItem, GroupItem *pRegistry, void *context )
-{
-   std::vector< MenuTable::BaseItemSharedPtr > computedItems;
-   bool doFlush = false;
-   CollectedItems collection{ {}, computedItems };
-   Path emptyPath;
-   VisitItem(
-      visitor, context, collection, emptyPath, pTopItem, pRegistry, doFlush );
-   // Flush any writes done by MergeItems()
-   if (doFlush)
-      gPrefs->Flush();
 }
 
 }
@@ -724,172 +238,61 @@ void Visit(
 /// changes in configured preferences - for example changes in key-bindings
 /// affect the short-cut key legend that appears beside each command,
 
-namespace {
-static Registry::GroupItem &sRegistry()
-{
-   static Registry::GroupingItem registry{ MenuPathStart };
-   return registry;
-}
-}
+MenuTable::BaseItemPtr FileMenu( AudacityProject& );
 
-MenuTable::AttachedItem::AttachedItem(
-   const Placement &placement, BaseItemPtr &&pItem )
-{
-   Registry::RegisterItems( sRegistry(), placement, std::move( pItem ) );
-}
+MenuTable::BaseItemPtr EditMenu( AudacityProject& );
 
-namespace {
-// Once only, cause initial population of preferences for the ordering
-// of some menu items that used to be given in tables but are now separately
-// registered in several .cpp files; the sequence of registration depends
-// on unspecified accidents of static initialization order across
-// compilation units, so we need something specific here to preserve old
-// default appearance of menus.
-// But this needs only to mention some strings -- there is no compilation or
-// link dependency of this source file on those other implementation files.
-void InitializeMenuOrdering()
-{
-   using Pair = std::pair<const wxChar *, const wxChar *>;
-   static const Pair pairs [] = {
-      {wxT(""), wxT(
-"File,Edit,Select,View,Transport,Tracks,Generate,Effect,Analyze,Tools,Window,Optional,Help"
-       )},
-      {wxT("/Optional/Extra/Part1"), wxT(
-"Transport,Tools,Mixer,Edit,PlayAtSpeed,Seek,Device,Select"
-       )},
-      {wxT("/Optional/Extra/Part2"), wxT(
-"Navigation,Focus,Cursor,Track,Scriptables1,Scriptables2,Misc"
-       )},
-      {wxT("/View/Windows"), wxT("UndoHistory,Karaoke,MixerBoard")},
-      {wxT("/Analyze/Windows"), wxT("ContrastAnalyser,PlotSpectrum")},
-   };
+MenuTable::BaseItemPtr SelectMenu( AudacityProject& );
 
-   bool doFlush = false;
-   for (auto pair : pairs) {
-      const auto key = wxString{'/'} + MenuPathStart + pair.first;
-      if ( gPrefs->Read(key).empty() ) {
-         gPrefs->Write( key, pair.second );
-         doFlush = true;
-      }
-   }
-   
-   if (doFlush)
-      gPrefs->Flush();
-}
+MenuTable::BaseItemPtr ViewMenu( AudacityProject& );
 
-struct MenuItemVisitor : Registry::Visitor
-{
-   MenuItemVisitor( AudacityProject &proj, CommandManager &man )
-      : project(proj), manager( man ) {}
+MenuTable::BaseItemPtr TransportMenu( AudacityProject& );
 
-   void BeginGroup( GroupItem &item, const wxArrayString& ) override
-   {
-      auto pItem = &item;
-      if (const auto pMenu =
-          dynamic_cast<MenuItem*>( pItem )) {
-         auto title = pMenu->translated
-            ? pMenu->title
-            : ::wxGetTranslation( pMenu->title );
-         manager.BeginMenu( title );
-      }
-      else
-      if (const auto pConditionalGroup =
-          dynamic_cast<ConditionalGroupItem*>( pItem )) {
-         const auto flag = pConditionalGroup->condition();
-         if (!flag)
-            manager.BeginOccultCommands();
-         // to avoid repeated call of condition predicate in EndGroup():
-         flags.push_back(flag);
-      }
-      else
-      if (const auto pGroup =
-          dynamic_cast<GroupingItem*>( pItem )) {
-      }
-      else
-         wxASSERT( false );
-   }
+MenuTable::BaseItemPtr TracksMenu( AudacityProject& );
 
-   void EndGroup( GroupItem &item, const wxArrayString& ) override
-   {
-      auto pItem = &item;
-      if (const auto pMenu =
-          dynamic_cast<MenuItem*>( pItem )) {
-         manager.EndMenu();
-      }
-      else
-      if (const auto pConditionalGroup =
-          dynamic_cast<ConditionalGroupItem*>( pItem )) {
-         const bool flag = flags.back();
-         if (!flag)
-            manager.EndOccultCommands();
-         flags.pop_back();
-      }
-      else
-      if (const auto pGroup =
-          dynamic_cast<GroupingItem*>( pItem )) {
-      }
-      else
-         wxASSERT( false );
-   }
+MenuTable::BaseItemPtr GenerateMenu( AudacityProject& );
+MenuTable::BaseItemPtr EffectMenu( AudacityProject& );
+MenuTable::BaseItemPtr AnalyzeMenu( AudacityProject& );
+MenuTable::BaseItemPtr ToolsMenu( AudacityProject& );
 
-   void Visit( SingleItem &item, const wxArrayString& ) override
-   {
-      auto pItem = &item;
-      if (const auto pCommand =
-          dynamic_cast<CommandItem*>( pItem )) {
-         manager.AddItem(
-            pCommand->name, pCommand->label_in,
-            pCommand->finder, pCommand->callback,
-            pCommand->flags, pCommand->options
-         );
-      }
-      else
-      if (const auto pCommandList =
-         dynamic_cast<CommandGroupItem*>( pItem ) ) {
-         manager.AddItemList(pCommandList->name,
-            pCommandList->items.data(), pCommandList->items.size(),
-            pCommandList->finder, pCommandList->callback,
-            pCommandList->flags, pCommandList->isEffect);
-      }
-      else
-      if (dynamic_cast<SeparatorItem*>( pItem )) {
-         manager.AddSeparator();
-      }
-      else
-      if (const auto pSpecial =
-          dynamic_cast<SpecialItem*>( pItem )) {
-         const auto pCurrentMenu = manager.CurrentMenu();
-         wxASSERT( pCurrentMenu );
-         pSpecial->fn( project, *pCurrentMenu );
-      }
-      else
-         wxASSERT( false );
-   }
+MenuTable::BaseItemPtr WindowMenu( AudacityProject& );
 
-   AudacityProject &project;
-   CommandManager &manager;
-   std::vector<bool> flags;
-};
-}
+MenuTable::BaseItemPtr ExtraMenu( AudacityProject& );
+
+MenuTable::BaseItemPtr HelpMenu( AudacityProject& );
+
+// Table of menu factories.
+// TODO:  devise a registration system instead.
+static const auto menuTree = MenuTable::Items(
+   FileMenu
+   , EditMenu
+   , SelectMenu
+   , ViewMenu
+   , TransportMenu
+   , TracksMenu
+   , GenerateMenu
+   , EffectMenu
+   , AnalyzeMenu
+   , ToolsMenu
+   , WindowMenu
+   , ExtraMenu
+   , HelpMenu
+);
 
 void MenuCreator::CreateMenusAndCommands(AudacityProject &project)
 {
-   static std::once_flag flag;
-   std::call_once( flag, InitializeMenuOrdering );
-
-   auto &commandManager = CommandManager::Get( project );
+   CommandManager *c = project.GetCommandManager();
 
    // The list of defaults to exclude depends on
    // preference wxT("/GUI/Shortcuts/FullDefaults"), which may have changed.
-   commandManager.SetMaxList();
+   c->SetMaxList();
 
-   auto menubar = commandManager.AddMenuBar(wxT("appmenu"));
+   auto menubar = c->AddMenuBar(wxT("appmenu"));
    wxASSERT(menubar);
 
-   MenuItemVisitor visitor{ project, commandManager };
-   MenuManager::Visit( visitor, project );
+   VisitItem( project, menuTree.get() );
 
-   ProjectWindow::Get( project ).SetMenuBar(menubar.release());
+   project.SetMenuBar(menubar.release());
 
    mLastFlags = AlwaysEnabledFlag;
 
@@ -898,18 +301,12 @@ void MenuCreator::CreateMenusAndCommands(AudacityProject &project)
 #endif
 }
 
-void MenuManager::Visit( Registry::Visitor &visitor, AudacityProject &project )
-{
-   static const auto menuTree = MenuTable::Items( MenuPathStart );
-   Registry::Visit( visitor, menuTree.get(), &sRegistry(), &project );
-}
-
 // TODO: This surely belongs in CommandManager?
 void MenuManager::ModifyUndoMenuItems(AudacityProject &project)
 {
    wxString desc;
-   auto &undoManager = UndoManager::Get( project );
-   auto &commandManager = CommandManager::Get( project );
+   auto &undoManager = *project.GetUndoManager();
+   auto &commandManager = *project.GetCommandManager();
    int cur = undoManager.GetCurrentState();
 
    if (undoManager.UndoAvailable()) {
@@ -954,13 +351,12 @@ void MenuCreator::RebuildMenuBar(AudacityProject &project)
    // Delete the menus, since we will soon recreate them.
    // Rather oddly, the menus don't vanish as a result of doing this.
    {
-      auto &window = ProjectWindow::Get( project );
-      std::unique_ptr<wxMenuBar> menuBar{ window.GetMenuBar() }; // DestroyPtr ?
-      window.DetachMenuBar();
+      std::unique_ptr<wxMenuBar> menuBar{ project.GetMenuBar() };
+      project.DetachMenuBar();
       // menuBar gets deleted here
    }
 
-   CommandManager::Get( project ).PurgeData();
+   project.GetCommandManager()->PurgeData();
 
    CreateMenusAndCommands(project);
 
@@ -971,18 +367,18 @@ CommandFlag MenuManager::GetFocusedFrame(AudacityProject &project)
 {
    wxWindow *w = wxWindow::FindFocus();
 
-   while (w) {
-      if (w == ToolManager::Get( project ).GetTopDock()) {
+   while (w && project.GetToolManager() && project.GetTrackPanel()) {
+      if (w == project.GetToolManager()->GetTopDock()) {
          return TopDockHasFocus;
       }
 
-      if (w == &AdornedRulerPanel::Get( project ))
+      if (w == project.GetRulerPanel())
          return RulerHasFocus;
 
       if (dynamic_cast<NonKeystrokeInterceptingWindow*>(w)) {
          return TrackPanelHasFocus;
       }
-      if (w == ToolManager::Get( project ).GetBotDock()) {
+      if (w == project.GetToolManager()->GetBotDock()) {
          return BotDockHasFocus;
       }
 
@@ -991,7 +387,6 @@ CommandFlag MenuManager::GetFocusedFrame(AudacityProject &project)
 
    return AlwaysEnabledFlag;
 }
-
 
 CommandFlag MenuManager::GetUpdateFlags
 (AudacityProject &project, bool checkActive)
@@ -1005,8 +400,7 @@ CommandFlag MenuManager::GetUpdateFlags
    static auto lastFlags = flags;
 
    // if (auto focus = wxWindow::FindFocus()) {
-   auto &window = ProjectWindow::Get( project );
-   if (wxWindow * focus = &window) {
+   if (wxWindow * focus = &project) {
       while (focus && focus->GetParent())
          focus = focus->GetParent();
       if (focus && !static_cast<wxTopLevelWindow*>(focus)->IsIconized())
@@ -1025,7 +419,7 @@ CommandFlag MenuManager::GetUpdateFlags
       flags |= NotPausedFlag;
 
    // quick 'short-circuit' return.
-   if ( checkActive && !window.IsActive() ){
+   if ( checkActive && !project.IsActive() ){
       const auto checkedFlags = 
          NotMinimizedFlag | AudioIONotBusyFlag | AudioIOBusyFlag |
          PausedFlag | NotPausedFlag;
@@ -1035,14 +429,14 @@ CommandFlag MenuManager::GetUpdateFlags
       return flags;
    }
 
-   auto &viewInfo = ViewInfo::Get( project );
+   auto &viewInfo = project.GetViewInfo();
    const auto &selectedRegion = viewInfo.selectedRegion;
 
    if (!selectedRegion.isPoint())
       flags |= TimeSelectedFlag;
 
-   auto &tracks = TrackList::Get( project );
-   auto trackRange = tracks.Any();
+   auto tracks = project.GetTracks();
+   auto trackRange = tracks->Any();
    if ( trackRange )
       flags |= TracksExistFlag;
    trackRange.Visit(
@@ -1061,7 +455,7 @@ CommandFlag MenuManager::GetUpdateFlags
             }
          }
 
-         if (LabelTrackView::Get( *lt ).IsTextSelected()) {
+         if (lt->IsTextSelected()) {
             flags |= CutCopyAvailableFlag;
          }
       },
@@ -1100,7 +494,7 @@ CommandFlag MenuManager::GetUpdateFlags
    if((AudacityProject::msClipT1 - AudacityProject::msClipT0) > 0.0)
       flags |= ClipboardFlag;
 
-   auto &undoManager = UndoManager::Get( project );
+   auto &undoManager = *project.GetUndoManager();
 
    if (undoManager.UnsavedChanges() || !project.IsProjectSaved())
       flags |= UnsavedChangesFlag;
@@ -1114,10 +508,10 @@ CommandFlag MenuManager::GetUpdateFlags
    if (project.RedoAvailable())
       flags |= RedoAvailableFlag;
 
-   if (ViewInfo::Get( project ).ZoomInAvailable() && (flags & TracksExistFlag))
+   if (project.GetViewInfo().ZoomInAvailable() && (flags & TracksExistFlag))
       flags |= ZoomInAvailableFlag;
 
-   if (ViewInfo::Get( project ).ZoomOutAvailable() && (flags & TracksExistFlag))
+   if (project.GetViewInfo().ZoomOutAvailable() && (flags & TracksExistFlag))
       flags |= ZoomOutAvailableFlag;
 
    // TextClipFlag is currently unused (Jan 2017, 2.1.3 alpha)
@@ -1128,10 +522,11 @@ CommandFlag MenuManager::GetUpdateFlags
 
    flags |= GetFocusedFrame(project);
 
-   const auto &playRegion = viewInfo.playRegion;
-   if (playRegion.Locked())
+   double start, end;
+   project.GetPlayRegion(&start, &end);
+   if (project.IsPlayRegionLocked())
       flags |= PlayRegionLockedFlag;
-   else if (!playRegion.Empty())
+   else if (start != end)
       flags |= PlayRegionNotLockedFlag;
 
    if (flags & AudioIONotBusyFlag) {
@@ -1153,10 +548,11 @@ CommandFlag MenuManager::GetUpdateFlags
    if (!EffectManager::Get().RealtimeIsActive())
       flags |= IsRealtimeNotActiveFlag;
 
-      if (!window.IsCapturing())
+      if (!project.IsCapturing())
       flags |= CaptureNotBusyFlag;
 
-   if (TransportState::CanStopAudioStream())
+   ControlToolBar *bar = project.GetControlToolBar();
+   if (bar->ControlToolBar::CanStopAudioStream())
       flags |= CanStopAudioStreamFlag;
 
    lastFlags = flags;
@@ -1168,7 +564,7 @@ void MenuManager::ModifyAllProjectToolbarMenus()
    AProjectArray::iterator i;
    for (i = gAudacityProjects.begin(); i != gAudacityProjects.end(); ++i) {
       auto &project = **i;
-      MenuManager::Get(project).ModifyToolbarMenus(project);
+      GetMenuManager(project).ModifyToolbarMenus(project);
    }
 }
 
@@ -1176,40 +572,43 @@ void MenuManager::ModifyToolbarMenus(AudacityProject &project)
 {
    // Refreshes can occur during shutdown and the toolmanager may already
    // be deleted, so protect against it.
-   auto &toolManager = ToolManager::Get( project );
+   auto toolManager = project.GetToolManager();
+   if (!toolManager) {
+      return;
+   }
 
-   auto &commandManager = CommandManager::Get( project );
+   auto &commandManager = *project.GetCommandManager();
 
    commandManager.Check(wxT("ShowScrubbingTB"),
-                         toolManager.IsVisible(ScrubbingBarID));
+                         toolManager->IsVisible(ScrubbingBarID));
    commandManager.Check(wxT("ShowDeviceTB"),
-                         toolManager.IsVisible(DeviceBarID));
+                         toolManager->IsVisible(DeviceBarID));
    commandManager.Check(wxT("ShowEditTB"),
-                         toolManager.IsVisible(EditBarID));
+                         toolManager->IsVisible(EditBarID));
    commandManager.Check(wxT("ShowMeterTB"),
-                         toolManager.IsVisible(MeterBarID));
+                         toolManager->IsVisible(MeterBarID));
    commandManager.Check(wxT("ShowRecordMeterTB"),
-                         toolManager.IsVisible(RecordMeterBarID));
+                         toolManager->IsVisible(RecordMeterBarID));
    commandManager.Check(wxT("ShowPlayMeterTB"),
-                         toolManager.IsVisible(PlayMeterBarID));
+                         toolManager->IsVisible(PlayMeterBarID));
    commandManager.Check(wxT("ShowMixerTB"),
-                         toolManager.IsVisible(MixerBarID));
+                         toolManager->IsVisible(MixerBarID));
    commandManager.Check(wxT("ShowSelectionTB"),
-                         toolManager.IsVisible(SelectionBarID));
+                         toolManager->IsVisible(SelectionBarID));
 #ifdef EXPERIMENTAL_SPECTRAL_EDITING
    commandManager.Check(wxT("ShowSpectralSelectionTB"),
-                         toolManager.IsVisible(SpectralSelectionBarID));
+                         toolManager->IsVisible(SpectralSelectionBarID));
 #endif
    commandManager.Check(wxT("ShowToolsTB"),
-                         toolManager.IsVisible(ToolsBarID));
+                         toolManager->IsVisible(ToolsBarID));
    commandManager.Check(wxT("ShowTranscriptionTB"),
-                         toolManager.IsVisible(TranscriptionBarID));
+                         toolManager->IsVisible(TranscriptionBarID));
    commandManager.Check(wxT("ShowTransportTB"),
-                         toolManager.IsVisible(TransportBarID));
+                         toolManager->IsVisible(TransportBarID));
 
    // Now, go through each toolbar, and call EnableDisableButtons()
    for (int i = 0; i < ToolBarCount; i++) {
-      toolManager.GetToolBar(i)->EnableDisableButtons();
+      toolManager->GetToolBar(i)->EnableDisableButtons();
    }
 
    // These don't really belong here, but it's easier and especially so for
@@ -1250,7 +649,7 @@ void MenuManager::UpdateMenus(AudacityProject &project, bool checkActive)
    if (&project != GetActiveProject())
       return;
 
-   auto flags = MenuManager::Get(project).GetUpdateFlags(project, checkActive);
+   auto flags = GetMenuManager(project).GetUpdateFlags(project, checkActive);
    auto flags2 = flags;
 
    // We can enable some extra items if we have select-all-on-none.
@@ -1285,7 +684,7 @@ void MenuManager::UpdateMenus(AudacityProject &project, bool checkActive)
       return;
    mLastFlags = flags;
 
-   auto &commandManager = CommandManager::Get( project );
+   auto &commandManager = *project.GetCommandManager();
 
    commandManager.EnableUsingFlags(flags2 , NoFlagsSpecified);
 
@@ -1333,7 +732,7 @@ void MenuCreator::RebuildAllMenuBars()
    for( size_t i = 0; i < gAudacityProjects.size(); i++ ) {
       AudacityProject *p = gAudacityProjects[i].get();
 
-      MenuManager::Get(*p).RebuildMenuBar(*p);
+      GetMenuManager(*p).RebuildMenuBar(*p);
 #if defined(__WXGTK__)
       // Workaround for:
       //
@@ -1354,8 +753,9 @@ bool MenuManager::ReportIfActionNotAllowed
    bool bAllowed = TryToMakeActionAllowed( project, flags, flagsRqd, mask );
    if( bAllowed )
       return true;
-   auto &cm = CommandManager::Get( project );
-   cm.TellUserWhyDisallowed( Name, flags & mask, flagsRqd & mask);
+   CommandManager* cm = project.GetCommandManager();
+      if (!cm) return false;
+   cm->TellUserWhyDisallowed( Name, flags & mask, flagsRqd & mask);
    return false;
 }
 
@@ -1370,7 +770,7 @@ bool MenuManager::TryToMakeActionAllowed
    bool bAllowed;
 
    if( !flags )
-      flags = MenuManager::Get(project).GetUpdateFlags(project);
+      flags = GetMenuManager(project).GetUpdateFlags(project);
 
    bAllowed = ((flags & mask) == (flagsRqd & mask));
    if( bAllowed )
@@ -1383,7 +783,7 @@ bool MenuManager::TryToMakeActionAllowed
    if( mStopIfWasPaused && (MissingFlags & AudioIONotBusyFlag ) ){
       project.StopIfPaused();
       // Hope this will now reflect stopped audio.
-      flags = MenuManager::Get(project).GetUpdateFlags(project);
+      flags = GetMenuManager(project).GetUpdateFlags(project);
       bAllowed = ((flags & mask) == (flagsRqd & mask));
       if( bAllowed )
          return true;
@@ -1415,7 +815,7 @@ bool MenuManager::TryToMakeActionAllowed
    // When autoselect triggers, it might not select all audio in all tracks.
    // So changed to DoSelectAll.
    SelectActions::DoSelectAll(project);
-   flags = MenuManager::Get(project).GetUpdateFlags(project);
+   flags = GetMenuManager(project).GetUpdateFlags(project);
    bAllowed = ((flags & mask) == (flagsRqd & mask));
    return bAllowed;
 }

@@ -21,20 +21,15 @@ class CloseButtonHandle;
 class MenuButtonHandle;
 class MinimizeButtonHandle;
 class SelectButtonHandle;
-struct TrackPanelDrawingContext;
 class TrackSelectHandle;
 
 class TrackControls /* not final */ : public CommonTrackPanelCell
-   , public std::enable_shared_from_this< TrackControls >
 {
 public:
    explicit
    TrackControls( std::shared_ptr<Track> pTrack );
 
    virtual ~TrackControls() = 0;
-
-   static TrackControls &Get( Track &track );
-   static const TrackControls &Get( const Track &track );
 
    // This is passed to the InitMenu() methods of the PopupMenuTable
    // objects returned by GetMenuExtension:
@@ -45,50 +40,6 @@ public:
       wxWindow *pParent;
       unsigned result;
    };
-
-   void Reparent( Track &parent );
-
-   // an entry in a table describing the controls in a Track Control Panel
-   struct TCPLine {
-
-      enum : unsigned {
-         // The sequence is not significant, just keep bits distinct
-         kItemBarButtons       = 1 << 0,
-         kItemStatusInfo1      = 1 << 1,
-         kItemMute             = 1 << 2,
-         kItemSolo             = 1 << 3,
-         kItemGain             = 1 << 4,
-         kItemPan              = 1 << 5,
-         kItemVelocity         = 1 << 6,
-         kItemMidiControlsRect = 1 << 7,
-         kItemMinimize         = 1 << 8,
-         kItemSyncLock         = 1 << 9,
-         kItemStatusInfo2      = 1 << 10,
-
-         kHighestBottomItem = kItemMinimize,
-      };
-
-      using DrawFunction = void (*)(
-         TrackPanelDrawingContext &context,
-         const wxRect &rect,
-         const Track *maybeNULL
-      );
-
-      unsigned items; // a bitwise OR of values of the enum above
-      int height;
-      int extraSpace;
-      DrawFunction drawFunction;
-   };
-   using TCPLines = std::vector< TCPLine >;
-
-   // Virtual function retrieves a description of control layout appopriate
-   // to the subclass of track
-   virtual const TCPLines &GetControlLines() const;
-
-   static unsigned FindDefaultTrackHeight( const TCPLines &topLines );
-
-   // Compute default track height from the control lines
-   unsigned DefaultTrackHeight() const;
 
 protected:
    std::shared_ptr<Track> DoFindTrack() override;
@@ -105,14 +56,6 @@ protected:
 
    Track *GetTrack() const;
 
-   // TrackPanelDrawable implementation
-   void Draw(
-      TrackPanelDrawingContext &context,
-      const wxRect &rect, unsigned iPass ) override;
-
-   wxRect DrawingArea(
-      const wxRect &rect, const wxRect &panelRect, unsigned iPass ) override;
-
    std::weak_ptr<Track> mwTrack;
 
    std::weak_ptr<CloseButtonHandle> mCloseHandle;
@@ -121,11 +64,5 @@ protected:
    std::weak_ptr<SelectButtonHandle> mSelectButtonHandle;
    std::weak_ptr<TrackSelectHandle> mSelectHandle;
 };
-
-extern const TrackControls::TCPLines noteTrackTCPLines;
-extern const TrackControls::TCPLines waveTrackTCPLines;
-
-extern std::pair< int, int >
-CalcItemY( const TrackControls::TCPLines &lines, unsigned iItem );
 
 #endif

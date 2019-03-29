@@ -39,7 +39,6 @@
 #include <wx/tokenzr.h>
 
 #include "../../ShuttleGui.h"
-#include "../../wxFileNameWrapper.h"
 #include "../../widgets/valnum.h"
 #include "../../widgets/wxPanelWrapper.h"
 
@@ -138,10 +137,9 @@ wxString AudioUnitEffectsModule::GetDescription()
 // ModuleInterface implementation
 // ============================================================================
 
-const FileExtensions &AudioUnitEffectsModule::GetFileExtensions()
+FileExtensions AudioUnitEffectsModule::GetFileExtensions()
 {
-   static FileExtensions result{{ _T("au") }};
-   return result;
+   return {{ _T("au") }};
 }
 
 bool AudioUnitEffectsModule::Initialize()
@@ -698,7 +696,7 @@ void AudioUnitEffectImportDialog::PopulateOrExchange(ShuttleGui & S)
                PRESET_LOCAL_PATH,
                mEffect->mVendor,
                mEffect->mName);
-   wxFileNameWrapper fn{ path };
+   wxFileName fn(path);
    fn.Normalize();
    
    // Get all presets in the local domain for this effect

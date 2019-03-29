@@ -57,8 +57,14 @@ private:
    bool mPopulating;
 };
 
-/// A PrefsPanel::Factory that creates one WaveformPrefs panel.
-/// This factory can be parametrized by a single track, to change settings
-/// non-globally
-extern PrefsPanel::Factory WaveformPrefsFactory(WaveTrack *wt);
+/// A PrefsPanelFactory that creates one WaveformPrefs panel.
+class WaveformPrefsFactory final : public PrefsPanelFactory
+{
+public:
+   explicit WaveformPrefsFactory(WaveTrack *wt = 0);
+   PrefsPanel *operator () (wxWindow *parent, wxWindowID winid) override;
+
+private:
+   WaveTrack *const mWt;
+};
 #endif

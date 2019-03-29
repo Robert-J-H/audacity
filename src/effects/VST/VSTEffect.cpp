@@ -370,10 +370,9 @@ void VSTEffectsModule::Terminate()
    return;
 }
 
-const FileExtensions &VSTEffectsModule::GetFileExtensions()
+FileExtensions VSTEffectsModule::GetFileExtensions()
 {
-   static FileExtensions result{{ _T("vst") }};
-   return result;
+   return {{ _T("vst") }};
 }
 
 FilePath VSTEffectsModule::InstallPath()
@@ -3952,7 +3951,7 @@ void VSTEffect::HandleXMLContent(const wxString & content)
    }
 }
 
-XMLTagHandlerPtr VSTEffect::HandleXMLChild(const wxChar *tag)
+XMLTagHandler *VSTEffect::HandleXMLChild(const wxChar *tag)
 {
    if (wxStrcmp(tag, wxT("vstprogrampersistence")) == 0)
    {

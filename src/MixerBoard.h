@@ -24,14 +24,11 @@
 #include "widgets/wxPanelWrapper.h"
 #include "commands/CommandManagerWindowClasses.h"
 
-#include "Prefs.h"
-
 class wxArrayString;
 class wxBitmapButton;
 class wxMemoryDC;
 class AButton;
 struct TrackListEvent;
-struct TrackListGroupEvent;
 
 // containment hierarchy:
 //    MixerBoardFrame -> MixerBoard -> MixerBoardScrolledWindow -> MixerTrackCluster(s)
@@ -194,7 +191,7 @@ public:
 class MixerBoardFrame;
 class TrackList;
 
-class MixerBoard final : public wxWindow, private PrefsListener
+class MixerBoard final : public wxWindow
 {
    friend class MixerBoardFrame;
 
@@ -204,7 +201,7 @@ public:
                const wxPoint& pos = wxDefaultPosition,
                const wxSize& size = wxDefaultSize);
 
-   void UpdatePrefs() override;
+   void UpdatePrefs();
 
    // Add clusters for any tracks we're not yet showing.
    // Update pointers for tracks we're aleady showing.
@@ -239,10 +236,7 @@ private:
    void OnSize(wxSizeEvent &evt);
    void OnTimer(wxCommandEvent &event);
    void OnTrackSetChanged(wxEvent &event);
-
    void OnTrackChanged(TrackListEvent &event);
-   void OnTrackGroupChanged(TrackListGroupEvent &event);
-
    void OnStartStop(wxCommandEvent &event);
 
 public:
@@ -272,15 +266,12 @@ public:
 class MixerBoardFrame final
    : public wxFrame
    , public TopLevelKeystrokeHandlingWindow
-   , public PrefsListener
 {
 public:
    MixerBoardFrame(AudacityProject* parent);
    virtual ~MixerBoardFrame();
 
    void Recreate(AudacityProject *pProject);
-
-   void UpdatePrefs() override;
 
 private:
    // event handlers

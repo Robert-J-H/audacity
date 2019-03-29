@@ -362,7 +362,7 @@ void Envelope::DrawPoints
                true, dBRange, false);
 
             // This follows the same logic as the envelop drawing in
-            // DrawEnvelope().
+            // TrackArt::DrawEnvelope().
             // TODO: make this calculation into a reusable function.
             if (y2 - y < 9) {
                int value = (int)((zoomMax / (zoomMax - zoomMin)) * r.height);
@@ -420,7 +420,7 @@ bool Envelope::HandleXMLTag(const wxChar *tag, const wxChar **attrs)
    return true;
 }
 
-XMLTagHandlerPtr Envelope::HandleXMLChild(const wxChar *tag)
+XMLTagHandler *Envelope::HandleXMLChild(const wxChar *tag)
 {
    if (wxStrcmp(tag, wxT("controlpoint")))
       return NULL;

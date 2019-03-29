@@ -1340,12 +1340,12 @@ void PluginDescriptor::SetImporterExtensions( FileExtensions extensions )
 // Registry has the list of plug ins
 #define REGVERKEY wxString(wxT("/pluginregistryversion"))
 #define REGVERCUR wxString(wxT("1.1"))
-const wxString REGROOT{ "/pluginregistry" };
+#define REGROOT wxString(wxT("/pluginregistry/"))
 
 // Settings has the values of the plug in settings.
 #define SETVERKEY wxString(wxT("/pluginsettingsversion"))
 #define SETVERCUR wxString(wxT("1.0"))
-const wxString SETROOT { "/pluginsettings" };
+#define SETROOT wxString(wxT("/pluginsettings/"))
 
 #define KEY_ID                         wxT("ID")
 #define KEY_PATH                       wxT("Path")
@@ -1491,12 +1491,12 @@ void PluginManager::FindFilesInPathList(const wxString & pattern,
 
    // Add the "per-user" plug-ins directory
    {
-      const wxFileNameWrapper ff{ FileNames::PlugInDir() };
+      const wxFileName &ff = FileNames::PlugInDir();
       paths.push_back(ff.GetFullPath());
    }
  
    // Add the "Audacity" plug-ins directory
-   wxFileNameWrapper ff{ PlatformCompatibility::GetExecutablePath() };
+   wxFileName ff = PlatformCompatibility::GetExecutablePath();
 #if defined(__WXMAC__)
    // Path ends for example in "Audacity.app/Contents/MacOSX"
    //ff.RemoveLastDir();
@@ -1793,7 +1793,7 @@ bool PluginManager::DropFile(const wxString &fileName)
          continue;
 
       const auto &ff = module->InstallPath();
-      const auto &extensions = module->GetFileExtensions();
+      auto extensions = module->GetFileExtensions();
       if ( !ff.empty() &&
           extensions.Index(src.GetExt(), false) != wxNOT_FOUND ) {
          wxString errMsg;
@@ -1807,7 +1807,8 @@ bool PluginManager::DropFile(const wxString &fileName)
             // actions should not be tried.
 
             // Find path to copy it
-            wxFileNameWrapper dst{ ff + wxFILE_SEP_PATH };
+            wxFileName dst;
+            dst.AssignDir( ff );
             dst.SetFullName( src.GetFullName() );
             if ( dst.Exists() ) {
                // Query whether to overwrite
@@ -1913,16 +1914,16 @@ void PluginManager::Load()
       wxString groupName;
       long groupIndex;
       wxString group = GetPluginTypeString(PluginTypeEffect);
-      wxString cfgPath = REGROOT + wxCONFIG_PATH_SEPARATOR + group;
+      wxString cfgPath = REGROOT + group + wxCONFIG_PATH_SEPARATOR;
       wxArrayString groupsToDelete;
 
       registry.SetPath(cfgPath);
       for (bool cont = registry.GetFirstGroup(groupName, groupIndex);
          cont;
+         registry.SetPath(cfgPath),
          cont = registry.GetNextGroup(groupName, groupIndex))
       {
-         wxConfigPathChanger changer{ &registry,
-            groupName + wxCONFIG_PATH_SEPARATOR };
+         registry.SetPath(groupName);
          wxString effectSymbol = registry.Read(KEY_SYMBOL, "");
          wxString effectVersion = registry.Read(KEY_VERSION, "");
 
@@ -1937,10 +1938,10 @@ void PluginManager::Load()
             // Old version of SDE was in Analyze menu.  Now it is in Tools.
             // We don't want both the old and the new.
             } else if ((effectSymbol == "Sample Data Export") && (effectVersion == "n/a")) {
-               groupsToDelete.push_back(cfgPath + wxCONFIG_PATH_SEPARATOR + groupName);
+               groupsToDelete.push_back(cfgPath + groupName);
             // Old version of SDI was in Generate menu.  Now it is in Tools.
             } else if ((effectSymbol == "Sample Data Import") && (effectVersion == "n/a")) {
-               groupsToDelete.push_back(cfgPath + wxCONFIG_PATH_SEPARATOR + groupName);
+               groupsToDelete.push_back(cfgPath + groupName);
             }
          }
 
@@ -1980,7 +1981,7 @@ void PluginManager::LoadGroup(wxFileConfig *pRegistry, PluginType type)
    const auto fullExePath = PlatformCompatibility::GetExecutablePath();
 
    // Strip rightmost path components up to *.app
-   wxFileNameWrapper exeFn{ fullExePath };
+   wxFileName exeFn{ fullExePath };
    exeFn.SetEmptyExt();
    exeFn.SetName(wxString{});
    while(exeFn.GetDirCount() && !exeFn.GetDirs().back().EndsWith(".app"))
@@ -2010,23 +2011,27 @@ void PluginManager::LoadGroup(wxFileConfig *pRegistry, PluginType type)
    wxString groupName;
    long groupIndex;
    wxString group = GetPluginTypeString(type);
-   wxString cfgPath = REGROOT + wxCONFIG_PATH_SEPARATOR + group;
+   wxString cfgPath = REGROOT + group + wxCONFIG_PATH_SEPARATOR;
 
    pRegistry->SetPath(cfgPath);
    for (bool cont = pRegistry->GetFirstGroup(groupName, groupIndex);
         cont;
+        pRegistry->SetPath(cfgPath),
         cont = pRegistry->GetNextGroup(groupName, groupIndex))
    {
       PluginDescriptor plug;
 
-      wxConfigPathChanger changer{ pRegistry,
-         groupName + wxCONFIG_PATH_SEPARATOR };
+      pRegistry->SetPath(groupName);
 
       groupName = ConvertID(groupName);
 
       // Bypass group if the ID is already in use
       if (mPlugins.find(groupName) != mPlugins.end())
+      {
+         pRegistry->SetPath(wxT(".."));
+
          continue;
+      }
 
       // Set the ID and type
       plug.SetID(groupName);
@@ -2272,7 +2277,7 @@ void PluginManager::SaveGroup(wxFileConfig *pRegistry, PluginType type)
          continue;
       }
 
-      pRegistry->SetPath(REGROOT + wxCONFIG_PATH_SEPARATOR + group + wxCONFIG_PATH_SEPARATOR + ConvertID(plug.GetID()));
+      pRegistry->SetPath(REGROOT + group + wxCONFIG_PATH_SEPARATOR + ConvertID(plug.GetID()));
 
       pRegistry->Write(KEY_PATH, plug.GetPath());
       pRegistry->Write(KEY_SYMBOL, plug.GetSymbol().Internal());
@@ -2776,8 +2781,10 @@ bool PluginManager::HasGroup(const RegistryPath & group)
    if (res)
    {
       // The group exists, but empty groups aren't considered valid
-      wxConfigPathChanger changer{ settings, group + wxCONFIG_PATH_SEPARATOR };
+      wxString oldPath = settings->GetPath();
+      settings->SetPath(group);
       res = settings->GetNumberOfEntries() || settings->GetNumberOfGroups();
+      settings->SetPath(oldPath);
    }
 
    return res;
@@ -2790,8 +2797,8 @@ bool PluginManager::GetSubgroups(const RegistryPath & group, RegistryPaths & sub
       return false;
    }
 
-   wxConfigPathChanger changer{ GetSettings(),
-      group + wxCONFIG_PATH_SEPARATOR };
+   wxString path = GetSettings()->GetPath();
+   GetSettings()->SetPath(group);
 
    wxString name;
    long index = 0;
@@ -2802,6 +2809,8 @@ bool PluginManager::GetSubgroups(const RegistryPath & group, RegistryPaths & sub
          subgroups.push_back(name);
       } while (GetSettings()->GetNextGroup(name, index));
    }
+
+   GetSettings()->SetPath(path);
 
    return true;
 }
@@ -2978,9 +2987,11 @@ RegistryPath PluginManager::SettingsPath(const PluginID & ID, bool shared)
                  wxT("_") +
                  (shared ? wxT("") : plug.GetSymbol().Internal());
 
-   return SETROOT + wxCONFIG_PATH_SEPARATOR +
-          ConvertID(id) + wxCONFIG_PATH_SEPARATOR +
-          (shared ? wxT("shared") : wxT("private"));
+   return SETROOT +
+          ConvertID(id) +
+          wxCONFIG_PATH_SEPARATOR +
+          (shared ? wxT("shared") : wxT("private")) +
+          wxCONFIG_PATH_SEPARATOR;
 }
 
 /* Return value is a key for lookup in a config file */
@@ -2991,7 +3002,7 @@ RegistryPath PluginManager::SharedGroup(const PluginID & ID, const RegistryPath 
    wxFileName ff(group);
    if (!ff.GetName().empty())
    {
-      path += wxCONFIG_PATH_SEPARATOR + ff.GetFullPath(wxPATH_UNIX);
+      path += ff.GetFullPath(wxPATH_UNIX) + wxCONFIG_PATH_SEPARATOR;
    }
 
    return path;
@@ -3006,7 +3017,7 @@ RegistryPath PluginManager::SharedKey(const PluginID & ID, const RegistryPath & 
       return path;
    }
 
-   return path + wxCONFIG_PATH_SEPARATOR + key;
+   return path + key;
 }
 
 /* Return value is a key for lookup in a config file */
@@ -3017,7 +3028,7 @@ RegistryPath PluginManager::PrivateGroup(const PluginID & ID, const RegistryPath
    wxFileName ff(group);
    if (!ff.GetName().empty())
    {
-      path += wxCONFIG_PATH_SEPARATOR + ff.GetFullPath(wxPATH_UNIX);
+      path += ff.GetFullPath(wxPATH_UNIX) + wxCONFIG_PATH_SEPARATOR;
    }
 
    return path;
@@ -3032,7 +3043,7 @@ RegistryPath PluginManager::PrivateKey(const PluginID & ID, const RegistryPath &
       return path;
    }
 
-   return path + wxCONFIG_PATH_SEPARATOR + key;
+   return path + key;
 }
 
 // Sanitize the ID...not the best solution, but will suffice until this

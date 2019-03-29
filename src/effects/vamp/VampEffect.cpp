@@ -433,8 +433,7 @@ bool VampEffect::Process()
       const auto effectName = GetSymbol().Translation();
       addedTracks.push_back(AddAnalysisTrack(
          multiple
-         ? wxString::Format( _("%s: %s"),
-            left->GetGroupData().GetName(), effectName )
+         ? wxString::Format( _("%s: %s"), left->GetName(), effectName )
          : effectName
       ));
       LabelTrack *ltrack = addedTracks.back()->get();
@@ -758,7 +757,7 @@ void VampEffect::AddFeatures(LabelTrack *ltrack,
          }
       }
 
-      ltrack->AddLabel(SelectedRegion(ltime0, ltime1), label);
+      ltrack->AddLabel(SelectedRegion(ltime0, ltime1), label, -2);
    }
 }
 

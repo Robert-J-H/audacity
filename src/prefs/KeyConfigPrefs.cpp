@@ -121,7 +121,7 @@ void KeyConfigPrefs::Populate()
 
    mCommandSelected = wxNOT_FOUND;
 
-   mManager = &CommandManager::Get( *project );
+   mManager = project->GetCommandManager();
 
    // For speed, don't sort here.  We're just creating.
    // Instead sort when we do SetView later in this function.
@@ -677,18 +677,9 @@ wxString KeyConfigPrefs::HelpPageName()
    return "Keyboard_Preferences";
 }
 
-PrefsPanel::Factory
-KeyConfigPrefsFactory( const CommandID &name )
+PrefsPanel *KeyConfigPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
 {
-   return [=](wxWindow *parent, wxWindowID winid)
-   {
-      wxASSERT(parent); // to justify safenew
-      auto result = safenew KeyConfigPrefs{ parent, winid, name };
-      return result;
-   };
-}
-namespace{
-PrefsPanel::Registration sAttachment{ "KeyConfig",
-   KeyConfigPrefsFactory()
-};
+   wxASSERT(parent); // to justify safenew
+   auto result = safenew KeyConfigPrefs{ parent, winid, mName };
+   return result;
 }

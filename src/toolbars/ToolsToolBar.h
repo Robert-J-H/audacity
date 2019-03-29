@@ -27,7 +27,6 @@ class wxImage;
 class wxWindow;
 
 class AButton;
-class AudacityProject;
 
 // Code duplication warning: these apparently need to be in the
 // same order as the enum in ToolsToolBar.cpp
@@ -54,9 +53,6 @@ class ToolsToolBar final : public ToolBar {
    ToolsToolBar();
    virtual ~ToolsToolBar();
 
-   static ToolsToolBar &Get( AudacityProject &project );
-   static const ToolsToolBar &Get( const AudacityProject &project );
-
    void UpdatePrefs() override;
 
    void OnTool(wxCommandEvent & evt);
@@ -74,7 +70,6 @@ class ToolsToolBar final : public ToolBar {
 
  private:
 
-   void Create(wxWindow * parent) override;
    void RegenerateTooltips() override;
    wxImage *MakeToolImage(wxImage *tool, wxImage *mask, int style);
    static AButton *MakeTool(

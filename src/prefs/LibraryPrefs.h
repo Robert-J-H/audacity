@@ -45,4 +45,10 @@ class LibraryPrefs final : public PrefsPanel
    DECLARE_EVENT_TABLE()
 };
 
+/// A PrefsPanelFactory that creates one LibraryPrefs panel.
+class LibraryPrefsFactory final : public PrefsPanelFactory
+{
+public:
+   PrefsPanel *operator () (wxWindow *parent, wxWindowID winid) override;
+};
 #endif

@@ -20,7 +20,6 @@ class wxPoint;
 class wxStaticBitmap;
 
 class ASlider;
-class AudacityProject;
 
 class MixerToolBar final : public ToolBar {
 
@@ -28,9 +27,6 @@ class MixerToolBar final : public ToolBar {
 
    MixerToolBar();
    virtual ~MixerToolBar();
-
-   static MixerToolBar &Get( AudacityProject &project );
-   static const MixerToolBar &Get( const AudacityProject &project );
 
    void Create(wxWindow * parent) override;
 

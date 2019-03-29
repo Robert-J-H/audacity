@@ -17,7 +17,6 @@
 
 #if USE_SBSMS
 #include "TimeScale.h"
-#include "LoadEffects.h"
 
 #include <math.h>
 
@@ -51,13 +50,6 @@ Param( PitchPercentEnd,    double, wxT("PitchPercentChangeEnd"),   0.0,  -50.0, 
 //
 // EffectTimeScale
 //
-
-// two strings here
-// unusual case
-const ComponentInterfaceSymbol EffectTimeScale::Symbol
-{ wxT("Sliding Stretch"), XO("Sliding Stretch") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectTimeScale > reg; }
 
 BEGIN_EVENT_TABLE(EffectTimeScale, wxEvtHandler)
    EVT_TEXT(ID_RatePercentChangeStart, EffectTimeScale::OnText_RatePercentChangeStart)
@@ -95,7 +87,7 @@ EffectTimeScale::~EffectTimeScale()
 
 ComponentInterfaceSymbol EffectTimeScale::GetSymbol()
 {
-   return Symbol;
+   return TIMESCALE_PLUGIN_SYMBOL;
 }
 
 wxString EffectTimeScale::GetDescription()

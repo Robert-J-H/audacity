@@ -91,9 +91,15 @@ private:
 };
 
 
-/// A PrefsPanel::Factory that creates one KeyConfigPrefs panel.
-/// This factory can be parametrized by name, which specifies a command to be
-/// focused initially
-extern PrefsPanel::Factory KeyConfigPrefsFactory(
-   const CommandID &name = {} );
+/// A PrefsPanelFactory that creates one KeyConfigPrefs panel.
+class KeyConfigPrefsFactory final : public PrefsPanelFactory
+{
+public:
+   KeyConfigPrefsFactory(const CommandID &name = {})
+      : mName{ name } {}
+   PrefsPanel *operator () (wxWindow *parent, wxWindowID winid) override;
+
+private:
+   CommandID mName;
+};
 #endif

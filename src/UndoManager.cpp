@@ -64,20 +64,6 @@ struct UndoStackElem {
    wxString shortDescription;
 };
 
-static const AudacityProject::AttachedObjects::RegisteredFactory key{
-   [](AudacityProject&) { return std::make_unique<UndoManager>(); }
-};
-
-UndoManager &UndoManager::Get( AudacityProject &project )
-{
-   return project.AttachedObjects::Get< UndoManager >( key );
-}
-
-const UndoManager &UndoManager::Get( const AudacityProject &project )
-{
-   return Get( const_cast< AudacityProject & >( project ) );
-}
-
 UndoManager::UndoManager()
 {
    current = -1;
@@ -255,7 +241,7 @@ void UndoManager::ModifyState(const TrackList * l,
       if ( t->GetId() == TrackId{} )
          // Don't copy a pending added track
          continue;
-      tracksCopy->Add(t->Duplicate(), t->IsLeader());
+      tracksCopy->Add(t->Duplicate());
    }
 
    // Replace
@@ -295,7 +281,7 @@ void UndoManager::PushState(const TrackList * l,
       if ( t->GetId() == TrackId{} )
          // Don't copy a pending added track
          continue;
-      tracksCopy->Add(t->Duplicate(), t->IsLeader());
+      tracksCopy->Add(t->Duplicate());
    }
 
    mayConsolidate = true;

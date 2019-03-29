@@ -257,18 +257,8 @@ wxString LibraryPrefs::HelpPageName()
    return "Libraries_Preferences";
 }
 
-#if !defined(DISABLE_DYNAMIC_LOADING_FFMPEG) || !defined(DISABLE_DYNAMIC_LOADING_LAME)
-namespace{
-PrefsPanel::Registration sAttachment{ "Library",
-   [](wxWindow *parent, wxWindowID winid)
-   {
-      wxASSERT(parent); // to justify safenew
-      return safenew LibraryPrefs(parent, winid);
-   },
-   false,
-   // Register with an explicit ordering hint because this one is
-   // only conditionally compiled
-   { "", { Registry::OrderingHint::After, "Projects" } }
-};
+PrefsPanel *LibraryPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+{
+   wxASSERT(parent); // to justify safenew
+   return safenew LibraryPrefs(parent, winid);
 }
-#endif

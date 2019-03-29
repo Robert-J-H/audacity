@@ -30,7 +30,6 @@ The summary is eventually computed and written to a file in a background thread.
 #include "../FileException.h"
 #include "../FileFormats.h"
 #include "../Internat.h"
-#include "../WaveTrack.h"
 #include "NotYetAvailableException.h"
 
 const int bheaderTagLen = 20;
@@ -274,7 +273,7 @@ BlockFilePtr ODDecodeBlockFile::BuildFromXML(DirManager &dm, const wxChar **attr
             audioFileName.Assign(strValue);
          else if (XMLValueChecker::IsGoodFileName(strValue, dm.GetProjectDataDir()))
             // Allow fallback of looking for the file name, located in the data directory.
-            audioFileName = { dm.GetProjectDataDir(), strValue };
+            audioFileName.Assign(dm.GetProjectDataDir(), strValue);
          else if (XMLValueChecker::IsGoodPathString(strValue))
             // If the file is missing, we failed XMLValueChecker::IsGoodPathName()
             // and XMLValueChecker::IsGoodFileName, because both do existence tests,
@@ -291,8 +290,7 @@ BlockFilePtr ODDecodeBlockFile::BuildFromXML(DirManager &dm, const wxChar **attr
       {  // integer parameters
          if (!wxStricmp(attr, wxT("aliaslen")) && (nValue >= 0))
             aliasLen = nValue;
-         else if (!wxStricmp(attr, wxT("aliaschannel")) &&
-            WaveTrack::IsValidChannel(aliasChannel))
+         else if (!wxStricmp(attr, wxT("aliaschannel")) && XMLValueChecker::IsValidChannel(aliasChannel))
             aliasChannel = nValue;
          else if( !wxStricmp(attr, wxT("decodetype")) )
             decodeType = nValue;

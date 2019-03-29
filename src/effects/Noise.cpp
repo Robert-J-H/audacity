@@ -15,7 +15,6 @@
 
 #include "../Audacity.h"
 #include "Noise.h"
-#include "LoadEffects.h"
 
 #include <math.h>
 
@@ -55,11 +54,6 @@ Param( Amp,    double,  wxT("Amplitude"),  0.8,     0.0,  1.0,           1  );
 // EffectNoise
 //
 
-const ComponentInterfaceSymbol EffectNoise::Symbol
-{ XO("Noise") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectNoise > reg; }
-
 EffectNoise::EffectNoise()
 {
    mType = DEF_Type;
@@ -78,7 +72,7 @@ EffectNoise::~EffectNoise()
 
 ComponentInterfaceSymbol EffectNoise::GetSymbol()
 {
-   return Symbol;
+   return NOISE_PLUGIN_SYMBOL;
 }
 
 wxString EffectNoise::GetDescription()

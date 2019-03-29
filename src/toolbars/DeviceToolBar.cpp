@@ -16,7 +16,6 @@
 
 #include "../Audacity.h" // for USE_* macros
 #include "DeviceToolBar.h"
-#include "ToolManager.h"
 
 // For compilers that support precompilation, includes "wx/wx.h".
 #include <wx/wxprec.h>
@@ -65,12 +64,6 @@ BEGIN_EVENT_TABLE(DeviceToolBar, ToolBar)
    EVT_COMMAND(wxID_ANY, EVT_CAPTURE_KEY, DeviceToolBar::OnCaptureKey)
 END_EVENT_TABLE()
 
-static int DeviceToolbarPrefsId()
-{
-   static int value = wxNewId();
-   return value;
-}
-
 //Standard contructor
 DeviceToolBar::DeviceToolBar()
 : ToolBar(DeviceBarID, _("Device"), wxT("Device"), true)
@@ -79,17 +72,6 @@ DeviceToolBar::DeviceToolBar()
 
 DeviceToolBar::~DeviceToolBar()
 {
-}
-
-DeviceToolBar &DeviceToolBar::Get( AudacityProject &project )
-{
-   auto &toolManager = ToolManager::Get( project );
-   return *static_cast<DeviceToolBar*>( toolManager.GetToolBar(DeviceBarID) );
-}
-
-const DeviceToolBar &DeviceToolBar::Get( const AudacityProject &project )
-{
-   return Get( const_cast<AudacityProject&>( project )) ;
 }
 
 void DeviceToolBar::Create(wxWindow *parent)
@@ -340,13 +322,6 @@ void DeviceToolBar::UpdatePrefs()
    Refresh();
 }
 
-void DeviceToolBar::UpdateSelectedPrefs( int id )
-{
-   if (id == DeviceToolbarPrefsId())
-      UpdatePrefs();
-   ToolBar::UpdateSelectedPrefs( id );
-}
-
 
 void DeviceToolBar::EnableDisableButtons()
 {
@@ -360,7 +335,7 @@ void DeviceToolBar::EnableDisableButtons()
          if (focus == mHost || focus == mInput || focus == mOutput || focus == mInputChannels) {
             AudacityProject *activeProject = GetActiveProject();
             if (activeProject) {
-               TrackPanel::Get( *activeProject ).SetFocus();
+               activeProject->GetTrackPanel()->SetFocus();
             }
          }
       }
@@ -807,8 +782,10 @@ void DeviceToolBar::OnChoice(wxCommandEvent &event)
       gAudioIO->HandleDeviceChange();
    }
 
-   wxTheApp->AddPendingEvent(wxCommandEvent{
-      EVT_PREFS_UPDATE, DeviceToolbarPrefsId() });
+   // Update all projects' DeviceToolBar.
+   for (size_t i = 0; i < gAudacityProjects.size(); i++) {
+      gAudacityProjects[i]->GetDeviceToolBar()->UpdatePrefs();
+   }
 }
 
 void DeviceToolBar::ShowInputDialog()

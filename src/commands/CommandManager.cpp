@@ -249,7 +249,7 @@ public:
          //
          // Shouldn't they be tied to the application instead???
          AudacityProject *project = GetActiveProject();
-         if (!project || !ProjectWindow::Get( *project ).IsEnabled())
+         if (!project || !project->IsEnabled())
          {
             return Event_Skip;
          }
@@ -270,8 +270,8 @@ public:
          }
 
          // Capture handler didn't want it, so ask the Command Manager.
-         auto &manager = CommandManager::Get( *project );
-         if (manager.FilterKeyEvent(project, key))
+         CommandManager *manager = project->GetCommandManager();
+         if (manager && manager->FilterKeyEvent(project, key))
          {
             return Event_Processed;
          }
@@ -456,23 +456,6 @@ private:
 }monitor;
 
 ///
-static const AudacityProject::AttachedObjects::RegisteredFactory key{
-   [](AudacityProject&) {
-      return std::make_unique<CommandManager>();
-   }
-};
-
-CommandManager &CommandManager::Get( AudacityProject &project )
-{
-   return project.AttachedObjects::Get< CommandManager >( key );
-}
-
-const CommandManager &CommandManager::Get( const AudacityProject &project )
-{
-   return Get( const_cast< AudacityProject & >( project ) );
-}
-
-///
 ///  Standard Constructor
 ///
 CommandManager::CommandManager():
@@ -592,7 +575,7 @@ void CommandManager::PurgeData()
 
    mCommandNameHash.clear();
    mCommandKeyHash.clear();
-   mCommandNumericIDHash.clear();
+   mCommandIDHash.clear();
 
    mCurrentMenuName = COMMAND;
    mCurrentID = 17000;
@@ -797,6 +780,7 @@ void CommandManager::ClearCurrentMenu()
 
 void CommandManager::AddItem(const CommandID &name,
                              const wxChar *label_in,
+                             bool hasDialog,
                              CommandHandlerFinder finder,
                              CommandFunctorPointer callback,
                              CommandFlag flags,
@@ -805,7 +789,7 @@ void CommandManager::AddItem(const CommandID &name,
    if (options.global) {
       wxASSERT( flags == AlwaysEnabledFlag );
       AddGlobalCommand(
-         name, label_in, finder, callback, options );
+         name, label_in, hasDialog, finder, callback, options.accel );
       return;
    }
 
@@ -815,34 +799,35 @@ void CommandManager::AddItem(const CommandID &name,
    if (mask == NoFlagsSpecified)
       mask = flags;
 
+   CommandParameter cookedParameter;
+   const auto &parameter = options.parameter;
+   if( parameter.empty() )
+      cookedParameter = name;
+   else
+      cookedParameter = parameter;
    CommandListEntry *entry =
       NewIdentifier(name,
          label_in,
-         CurrentMenu(), finder, callback,
-         {}, 0, 0,
-         options);
+         options.longName,
+         hasDialog,
+         options.accel, CurrentMenu(), finder, callback,
+         {}, 0, 0, options.bIsEffect, cookedParameter);
    int ID = entry->id;
    wxString label = GetLabelWithDisabledAccel(entry);
 
    SetCommandFlags(name, flags, mask);
 
 
-   auto &checker = options.checker;
-   if (checker) {
+   auto checkmark = options.check;
+   if (checkmark >= 0) {
       CurrentMenu()->AppendCheckItem(ID, label);
-      CurrentMenu()->Check(ID, checker());
+      CurrentMenu()->Check(ID, checkmark != 0);
    }
    else {
       CurrentMenu()->Append(ID, label);
    }
 
    mbSeparatorAllowed = true;
-}
-
-auto CommandManager::Options::MakeCheckFn(
-   const wxString key, bool defaultValue ) -> CheckFn
-{
-   return [=](){ return gPrefs->ReadBool( key, defaultValue ); };
 }
 
 ///
@@ -861,20 +846,18 @@ void CommandManager::AddItemList(const CommandID & name,
 {
    for (size_t i = 0, cnt = nItems; i < cnt; i++) {
       auto translated = items[i].Translation();
-      auto stripped = translated.BeforeFirst(wxT('\t'));
-      auto accel = translated.AfterFirst(wxT('\t'));
-      CommandListEntry *entry =
-         NewIdentifier(name,
-            stripped,
-            CurrentMenu(),
-            finder,
-            callback,
-            items[i].Internal(),
-            i,
-            cnt,
-            Options{}
-               .Accel(accel)
-               .IsEffect(bIsEffect));
+      CommandListEntry *entry = NewIdentifier(name,
+                                              translated,
+                                              translated,
+                                              // No means yet to specify !
+                                              false,
+                                              CurrentMenu(),
+                                              finder,
+                                              callback,
+                                              items[i].Internal(),
+                                              i,
+                                              cnt,
+                                              bIsEffect);
       entry->mask = entry->flags = flags;
       CurrentMenu()->Append(entry->id, GetLabel(entry));
       mbSeparatorAllowed = true;
@@ -885,30 +868,38 @@ void CommandManager::AddItemList(const CommandID & name,
 /// Add a command that doesn't appear in a menu.  When the key is pressed, the
 /// given function pointer will be called (via the CommandManagerListener)
 void CommandManager::AddCommand(const CommandID &name,
+                                const wxChar *label,
+                                CommandHandlerFinder finder,
+                                CommandFunctorPointer callback,
+                                CommandFlag flags)
+{
+   AddCommand(name, label, finder, callback, wxT(""), flags);
+}
+
+void CommandManager::AddCommand(const CommandID &name,
                                 const wxChar *label_in,
                                 CommandHandlerFinder finder,
                                 CommandFunctorPointer callback,
-                                CommandFlag flags,
-                                const Options &options)
+                                const wxChar *accel,
+                                CommandFlag flags)
 {
    wxASSERT( flags != NoFlagsSpecified );
 
-   NewIdentifier(
-      name, label_in, NULL, finder, callback, {}, 0, 0,
-      options);
+   NewIdentifier(name, label_in, label_in, false, accel, NULL, finder, callback, {}, 0, 0, false, {});
 
    SetCommandFlags(name, flags, flags);
 }
 
 void CommandManager::AddGlobalCommand(const CommandID &name,
                                       const wxChar *label_in,
+                                      bool hasDialog,
                                       CommandHandlerFinder finder,
                                       CommandFunctorPointer callback,
-                                      const Options &options)
+                                      const wxChar *accel)
 {
    CommandListEntry *entry =
-      NewIdentifier(name, label_in, NULL, finder, callback,
-                    {}, 0, 0, options);
+      NewIdentifier(name, label_in, label_in, hasDialog, accel, NULL, finder, callback,
+                    {}, 0, 0, false, {});
 
    entry->enabled = false;
    entry->isGlobal = true;
@@ -939,36 +930,47 @@ int CommandManager::NextIdentifier(int ID)
 ///WARNING: Does this conflict with the identifiers set for controls/windows?
 ///If it does, a workaround may be to keep controls below wxID_LOWEST
 ///and keep menus above wxID_HIGHEST
+CommandListEntry *CommandManager::NewIdentifier(const CommandID & name,
+                                                const wxString & label,
+                                                const wxString & longLabel,
+                                                bool hasDialog,
+                                                wxMenu *menu,
+                                                CommandHandlerFinder finder,
+                                                CommandFunctorPointer callback,
+                                                const CommandID &nameSuffix,
+                                                int index,
+                                                int count,
+                                                bool bIsEffect)
+{
+   return NewIdentifier(name,
+                        label.BeforeFirst(wxT('\t')),
+                        longLabel.BeforeFirst(wxT('\t')),
+                        hasDialog,
+                        label.AfterFirst(wxT('\t')),
+                        menu,
+                        finder,
+                        callback,
+                        nameSuffix,
+                        index,
+                        count,
+                        bIsEffect,
+                        {});
+}
+
 CommandListEntry *CommandManager::NewIdentifier(const CommandID & nameIn,
-   const wxString & labelIn,
+   const wxString & label,
+   const wxString & longLabel,
+   bool hasDialog,
+   const wxString & accel,
    wxMenu *menu,
    CommandHandlerFinder finder,
    CommandFunctorPointer callback,
    const CommandID &nameSuffix,
    int index,
    int count,
-   const Options &options)
+   bool bIsEffect,
+   const CommandParameter &parameter)
 {
-   const auto &longLabelIn = options.longName;
-   bool hasDialog =
-      options.interactive || (!options.translated && labelIn.Contains("..."));
-   const wxString & accel = options.accel;
-   bool bIsEffect = options.bIsEffect;
-   wxString cookedParameter;
-   const auto &parameter = options.parameter;
-   if( parameter == "" )
-      cookedParameter = nameIn;
-   else
-      cookedParameter = parameter;
-
-   wxString label;
-   label = options.translated ? labelIn : ::wxGetTranslation( labelIn );
-
-   wxString longLabel;
-   if ( !longLabelIn.empty() )
-      longLabel = options.translated
-         ? longLabelIn : ::wxGetTranslation( longLabelIn );
-
    const bool multi = !nameSuffix.empty();
    auto name = nameIn;
 
@@ -1060,7 +1062,7 @@ CommandListEntry *CommandManager::NewIdentifier(const CommandID & nameIn,
 
    // New variable
    CommandListEntry *entry = &*mCommandList.back();
-   mCommandNumericIDHash[entry->id] = entry;
+   mCommandIDHash[entry->id] = entry;
 
 #if defined(__WXDEBUG__)
    prev = mCommandNameHash[entry->name];
@@ -1185,7 +1187,7 @@ void CommandManager::Enable(CommandListEntry *entry, bool enabled)
 
          // This menu item is not necessarily in the same menu, because
          // multi-items can be spread across multiple sub menus
-         CommandListEntry *multiEntry = mCommandNumericIDHash[ID];
+         CommandListEntry *multiEntry = mCommandIDHash[ID];
          if (multiEntry) {
             wxMenuItem *item = multiEntry->menu->FindItem(ID);
 
@@ -1393,7 +1395,6 @@ wxString CommandManager::DescribeCommandsAndShortcuts
 ///
 bool CommandManager::FilterKeyEvent(AudacityProject *project, const wxKeyEvent & evt, bool permit)
 {
-   auto pWindow = ProjectWindow::Find( project );
    CommandListEntry *entry = mCommandKeyHash[KeyEventToKeyString(evt)];
    if (entry == NULL)
    {
@@ -1416,10 +1417,10 @@ bool CommandManager::FilterKeyEvent(AudacityProject *project, const wxKeyEvent &
 
    wxWindow * pFocus = wxWindow::FindFocus();
    wxWindow * pParent = wxGetTopLevelParent( pFocus );
-   bool validTarget = pParent == pWindow;
+   bool validTarget = pParent == project;
    // Bug 1557.  MixerBoard should count as 'destined for project'
    // MixerBoard IS a TopLevelWindow, and its parent is the project.
-   if( pParent && pParent->GetParent() == pWindow ){
+   if( pParent && pParent->GetParent() == project){
       if( dynamic_cast< TopLevelKeystrokeHandlingWindow* >( pParent ) != NULL )
          validTarget = true;
    }
@@ -1431,7 +1432,7 @@ bool CommandManager::FilterKeyEvent(AudacityProject *project, const wxKeyEvent &
       return false;
    }
 
-   auto flags = MenuManager::Get(*project).GetUpdateFlags(*project);
+   auto flags = GetMenuManager(*project).GetUpdateFlags(*project);
 
    wxKeyEvent temp = evt;
 
@@ -1523,7 +1524,7 @@ bool CommandManager::HandleCommandEntry(const CommandListEntry * entry,
       NiceName.Replace(".","");// remove ...
       // NB: The call may have the side effect of changing flags.
       bool allowed =
-         MenuManager::Get(*proj).ReportIfActionNotAllowed( *proj,
+         GetMenuManager(*proj).ReportIfActionNotAllowed( *proj,
             NiceName, flags, entry->flags, combinedMask );
       // If the function was disallowed, it STILL should count as having been
       // handled (by doing nothing or by telling the user of the problem).
@@ -1548,15 +1549,15 @@ bool CommandManager::HandleCommandEntry(const CommandListEntry * entry,
 #include "../prefs/KeyConfigPrefs.h"
 bool CommandManager::HandleMenuID(int id, CommandFlag flags, CommandMask mask)
 {
-   CommandListEntry *entry = mCommandNumericIDHash[id];
+   CommandListEntry *entry = mCommandIDHash[id];
 
 #ifdef EXPERIMENTAL_EASY_CHANGE_KEY_BINDINGS
    if (::wxGetMouseState().ShiftDown()) {
       // Only want one page of the preferences
+      KeyConfigPrefsFactory keyConfigPrefsFactory{ entry->name };
       PrefsDialog::Factories factories;
-      factories.push_back(KeyConfigPrefsFactory( entry->name ));
-      GlobalPrefsDialog dialog(
-         &ProjectWindow::Get( *GetActiveProject() ), factories);
+      factories.push_back(&keyConfigPrefsFactory);
+      GlobalPrefsDialog dialog(GetActiveProject(), factories);
       dialog.ShowModal();
       MenuCreator::RebuildAllMenuBars();
       return true;
@@ -1723,9 +1724,9 @@ void CommandManager::GetAllCommandData(
    }
 }
 
-CommandID CommandManager::GetNameFromNumericID(int id)
+CommandID CommandManager::GetNameFromID(int id)
 {
-   CommandListEntry *entry = mCommandNumericIDHash[id];
+   CommandListEntry *entry = mCommandIDHash[id];
    if (!entry)
       return {};
    return entry->name;
@@ -1830,7 +1831,7 @@ void CommandManager::HandleXMLEndTag(const wxChar *tag)
    }
 }
 
-XMLTagHandlerPtr CommandManager::HandleXMLChild(const wxChar * WXUNUSED(tag))
+XMLTagHandler *CommandManager::HandleXMLChild(const wxChar * WXUNUSED(tag))
 {
    return this;
 }

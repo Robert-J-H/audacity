@@ -22,8 +22,9 @@
 
 #include "Experimental.h"
 
-#include "ClientData.h"
-#include "Prefs.h"
+#include "Track.h"
+#include "SelectionState.h"
+#include "ViewInfo.h"
 #include "commands/CommandManagerWindowClasses.h"
 
 #include "TrackPanelListener.h"
@@ -60,14 +61,34 @@ class ODLock;
 class Overlay;
 class RecordingRecoveryHandler;
 class TrackList;
+class Tags;
 
 class TrackPanel;
 class FreqWindow;
+class ContrastDialog;
 class MeterPanel;
+
+// toolbar classes
+class ControlToolBar;
+class DeviceToolBar;
+class EditToolBar;
+class MeterToolBar;
+class MixerToolBar;
+class Scrubber;
+class ScrubbingToolBar;
+class SelectionBar;
+class SpectralSelectionBar;
+class ToolManager;
+class ToolsToolBar;
+class TranscriptionToolBar;
 
 // windows and frames
 class AdornedRulerPanel;
+class HistoryWindow;
+class MacrosWindow;
 class LyricsWindow;
+class MixerBoard;
+class MixerBoardFrame;
 
 struct AudioIOStartStreamOptions;
 struct UndoState;
@@ -78,6 +99,7 @@ enum class UndoPush : unsigned char;
 
 class Track;
 class WaveClip;
+class BackgroundCell;
 
 
 AudacityProject *CreateNewAudacityProject();
@@ -99,6 +121,12 @@ using WaveTrackArray = std::vector < std::shared_ptr < WaveTrack > >;
 extern AProjectArray gAudacityProjects;
 
 
+enum class PlayMode : int {
+   normalPlay,
+   oneSecondPlay, // Disables auto-scrolling
+   loopedPlay // Disables auto-scrolling
+};
+
 enum StatusBarField {
    stateStatusBarField = 1,
    mainStatusBarField = 2,
@@ -117,7 +145,7 @@ class ImportXMLTagHandler final : public XMLTagHandler
    ImportXMLTagHandler(AudacityProject* pProject) { mProject = pProject; }
 
    bool HandleXMLTag(const wxChar *tag, const wxChar **attrs) override;
-   XMLTagHandlerPtr HandleXMLChild(const wxChar * WXUNUSED(tag))  override
+   XMLTagHandler *HandleXMLChild(const wxChar * WXUNUSED(tag))  override
       { return NULL; }
 
    // Don't want a WriteXML method because ImportXMLTagHandler is not a WaveTrack.
@@ -130,6 +158,7 @@ class ImportXMLTagHandler final : public XMLTagHandler
 
 class EffectPlugs;
 class CommandContext;
+class CommandManager;
 class Track;
 class TrackHolder;
 class TrackList;
@@ -141,46 +170,65 @@ class WaveTrack;
 
 class MenuManager;
 
-class AudacityProject;
-using AttachedObjects = ClientData::Site<
-   AudacityProject, ClientData::Base, ClientData::SkipCopying, std::shared_ptr
->;
-using AttachedWindows = ClientData::Site<
-   AudacityProject, wxWindow, ClientData::SkipCopying, wxWeakRef
->;
+class PrefsListener;
 
-using ProjectWindow = AudacityProject;
 class AUDACITY_DLL_API AudacityProject final : public wxFrame,
                                      public TrackPanelListener,
                                      public SelectionBarListener,
                                      public SpectralSelectionBarListener,
                                      public XMLTagHandler,
-                                     public AudioIOListener,
-                                     private PrefsListener
-   , public AttachedObjects
-   , public AttachedWindows
+                                     public AudioIOListener
 {
  public:
-   static ProjectWindow &Get( AudacityProject &project ) { return project; }
-   static const ProjectWindow &Get( const AudacityProject &project ) { return project; }
-   static ProjectWindow *Find( AudacityProject *pProject ) { return pProject; }
-   static const ProjectWindow *Find( const AudacityProject *pProject ) { return pProject; }
-   AudacityProject &GetProject() { return *this; }
- 
-   using AttachedObjects = ::AttachedObjects;
-   using AttachedWindows = ::AttachedWindows;
-
    AudacityProject(wxWindow * parent, wxWindowID id,
                    const wxPoint & pos, const wxSize & size);
    virtual ~AudacityProject();
 
+   using AttachedObject = PrefsListener;
+   using AttachedObjectFactory =
+      std::function< std::unique_ptr<AttachedObject>() >;
+
+   // Typically a static object.  Allows various application code to
+   // attach per-project state, without Project.cpp needing to include a header
+   // file or know the details.
+   class RegisteredAttachedObjectFactory {
+   public:
+      RegisteredAttachedObjectFactory( const AttachedObjectFactory &factory );
+
+   private:
+      friend AudacityProject;
+      size_t mIndex {};
+   };
+   AttachedObject &
+      GetAttachedObject( const RegisteredAttachedObjectFactory& factory );
+
    virtual void ApplyUpdatedTheme();
+
+   AudioIOStartStreamOptions GetDefaultPlayOptions();
+   AudioIOStartStreamOptions GetSpeedPlayOptions();
+
+   TrackList *GetTracks() { return mTracks.get(); }
+   const TrackList *GetTracks() const { return mTracks.get(); }
+   size_t GetTrackCount() const { return GetTracks()->size(); }
+   UndoManager *GetUndoManager() { return mUndoManager.get(); }
 
    sampleFormat GetDefaultFormat() { return mDefaultFormat; }
 
    double GetRate() const { return mRate; }
+   const ZoomInfo &GetZoomInfo() const { return mViewInfo; }
+   const ViewInfo &GetViewInfo() const { return mViewInfo; }
+   ViewInfo &GetViewInfo() { return mViewInfo; }
+
+   void GetPlayRegion(double* playRegionStart, double *playRegionEnd);
+   bool IsPlayRegionLocked() { return mLockPlayRegion; }
+   void SetPlayRegionLocked(bool value) { mLockPlayRegion = value; }
 
    wxString GetName();
+   const std::shared_ptr<DirManager> &GetDirManager();
+   TrackFactory *GetTrackFactory();
+   AdornedRulerPanel *GetRulerPanel();
+   const Tags *GetTags();
+   void SetTags( const std::shared_ptr<Tags> &tags );
    int GetAudioIOToken() const;
    bool IsAudioActive() const;
    void SetAudioIOToken(int token);
@@ -263,6 +311,9 @@ public:
    void SetProjectTitle( int number =-1);
 
    wxPanel *GetTopPanel() { return mTopPanel; }
+   TrackPanel * GetTrackPanel() {return mTrackPanel;}
+   const TrackPanel * GetTrackPanel() const {return mTrackPanel;}
+   SelectionState &GetSelectionState() { return mSelectionState; }
 
    bool GetTracksFitVerticallyZoomed() { return mTracksFitVerticallyZoomed; } //lda
    void SetTracksFitVerticallyZoomed(bool flag) { mTracksFitVerticallyZoomed = flag; } //lda
@@ -293,6 +344,11 @@ public:
    int GetEstimatedRecordingMinsLeftOnDisk(long lCaptureChannels = 0);
    // Converts number of minutes to human readable format
    wxString GetHoursMinsString(int iMinutes);
+
+   CommandManager *GetCommandManager()
+      { return mCommandManager.get(); }
+   const CommandManager *GetCommandManager() const
+      { return mCommandManager.get(); }
 
    // Keyboard capture
    static bool HasKeyboardCapture(const wxWindow *handler);
@@ -338,7 +394,7 @@ public:
    int GetProjectNumber(){ return mProjectNo;};
    static int CountUnnamed();
    static void RefreshAllTitles(bool bShowProjectNumbers );
-   void UpdatePrefs() override;
+   void UpdatePrefs();
    void UpdatePrefsVariables();
    void RedrawProject(const bool bForceWaveTracks = false);
    void RefreshCursor();
@@ -406,10 +462,34 @@ public:
    bool TP_ScrollUpDown(int delta) override;
    void TP_HandleResize() override;
 
+   // ToolBar
+
+   // In the GUI, ControlToolBar appears as the "Transport Toolbar". "Control Toolbar" is historic.
+   ControlToolBar *GetControlToolBar();
+
+   DeviceToolBar *GetDeviceToolBar();
+   EditToolBar *GetEditToolBar();
+   MixerToolBar *GetMixerToolBar();
+   ScrubbingToolBar *GetScrubbingToolBar();
+   SelectionBar *GetSelectionBar();
+#ifdef EXPERIMENTAL_SPECTRAL_EDITING
+   SpectralSelectionBar *GetSpectralSelectionBar();
+#endif
+   ToolsToolBar *GetToolsToolBar();
+   const ToolsToolBar *GetToolsToolBar() const;
+   TranscriptionToolBar *GetTranscriptionToolBar();
+
    MeterPanel *GetPlaybackMeter();
    void SetPlaybackMeter(MeterPanel *playback);
    MeterPanel *GetCaptureMeter();
    void SetCaptureMeter(MeterPanel *capture);
+
+   LyricsWindow* GetLyricsWindow(bool create = false);
+   MixerBoardFrame* GetMixerBoardFrame(bool create = false);
+   HistoryWindow *GetHistoryWindow(bool create = false);
+   MacrosWindow *GetMacrosWindow(bool bExpanded, bool create = false);
+   FreqWindow *GetFreqWindow(bool create = false);
+   ContrastDialog *GetContrastDialog(bool create = false);
 
    wxStatusBar* GetStatusBar() { return mStatusBar; }
 
@@ -444,13 +524,14 @@ public:
    // XMLTagHandler callback methods
 
    bool HandleXMLTag(const wxChar *tag, const wxChar **attrs) override;
-
-   void HandleXMLEndTag(const wxChar *tag) override;
-   XMLTagHandlerPtr HandleXMLChild(const wxChar *tag) override;
+   XMLTagHandler *HandleXMLChild(const wxChar *tag) override;
    void WriteXML(
       XMLWriter &xmlFile, bool bWantSaveCopy) /* not override */;
 
    void WriteXMLHeader(XMLWriter &xmlFile) const;
+
+   PlayMode mLastPlayMode{ PlayMode::normalPlay };
+   ViewInfo mViewInfo;
 
    // Audio IO callback methods
    void OnAudioIORate(int rate) override;
@@ -489,12 +570,22 @@ public:
    // The project's name and file info
    FilePath mFileName; // Note: extension-less
    bool mbLoadedFromAup;
+   std::shared_ptr<DirManager> mDirManager; // MM: DirManager now created dynamically
 
    static int mProjectCounter;// global counter.
    int mProjectNo; // count when this project was created.
 
    double mRate;
    sampleFormat mDefaultFormat;
+
+   // Tags (artist name, song properties, MP3 ID3 info, etc.)
+   // The structure may be shared with undo history entries
+   // To keep undo working correctly, always replace this with a NEW duplicate
+   // BEFORE doing any editing of it!
+   std::shared_ptr<Tags> mTags;
+
+   // List of tracks and display info
+   std::shared_ptr<TrackList> mTracks;
 
    int mSnapTo;
    NumericFormatSymbol mSelectionFormat;
@@ -516,7 +607,13 @@ public:
    static ODLock &AllProjectDeleteMutex();
 
 private:
+   // History/Undo manager
+   std::unique_ptr<UndoManager> mUndoManager;
    bool mDirty{ false };
+
+   // Commands
+
+   std::unique_ptr<CommandManager> mCommandManager;
 
    // Window elements
 
@@ -526,7 +623,11 @@ private:
 
    wxStatusBar *mStatusBar;
 
+   AdornedRulerPanel *mRuler{};
    wxPanel *mTopPanel{};
+   TrackPanel *mTrackPanel{};
+   SelectionState mSelectionState{};
+   std::unique_ptr<TrackFactory> mTrackFactory{};
    wxPanel * mMainPanel;
    wxScrollBar *mHsbar;
    wxScrollBar *mVsbar;
@@ -539,6 +640,15 @@ private:
    bool mActive{ true };
    bool mIconized;
 
+   MacrosWindow *mMacrosWindow{};
+   HistoryWindow *mHistoryWindow{};
+   LyricsWindow* mLyricsWindow{};
+   MixerBoardFrame* mMixerBoardFrame{};
+   MixerBoard* mMixerBoard{};
+
+   Destroy_ptr<FreqWindow> mFreqWindow;
+   Destroy_ptr<ContrastDialog> mContrastDialog;
+
    // dialog for missing alias warnings
    wxDialog            *mAliasMissingWarningDialog{};
 
@@ -548,7 +658,10 @@ private:
    MeterPanel *mPlaybackMeter{};
    MeterPanel *mCaptureMeter{};
 
+   std::unique_ptr<ToolManager> mToolManager;
+
  public:
+   ToolManager *GetToolManager() { return mToolManager.get(); }
    bool mShowSplashScreen;
    wxString mHelpPref;
    wxString mSoloPref;
@@ -583,6 +696,8 @@ public:
 private:
 
    bool mIsSyncLocked;
+
+   bool mLockPlayRegion;
 
    std::unique_ptr<ImportXMLTagHandler> mImportXMLTagHandler;
 
@@ -641,12 +756,24 @@ private:
    std::shared_ptr<Overlay>
       mIndicatorOverlay, mCursorOverlay;
 
+   std::shared_ptr<BackgroundCell> mBackgroundCell;
+
 #ifdef EXPERIMENTAL_SCRUBBING_BASIC
    std::shared_ptr<Overlay> mScrubOverlay;
+   std::unique_ptr<Scrubber> mScrubber;
+public:
+   Scrubber &GetScrubber() { return *mScrubber; }
+   const Scrubber &GetScrubber() const { return *mScrubber; }
 private:
 #endif
 
+private:
+   std::vector< std::unique_ptr<AttachedObject> > mAttachedObjects;
+   std::unique_ptr<MenuManager> mMenuManager;
+
 public:
+   friend MenuManager &GetMenuManager(AudacityProject &project);
+
    class PlaybackScroller final : public wxEvtHandler
    {
    public:
@@ -677,6 +804,8 @@ private:
 
 public:
    PlaybackScroller &GetPlaybackScroller() { return *mPlaybackScroller; }
+   std::shared_ptr<BackgroundCell> GetBackgroundCell() const
+      { return mBackgroundCell; }
 
    DECLARE_EVENT_TABLE()
 };

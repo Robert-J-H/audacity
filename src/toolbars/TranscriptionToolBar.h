@@ -34,7 +34,6 @@ class wxPen;
 
 class AButton;
 class ASlider;
-class AudacityProject;
 class TimeTrack;
 class WaveTrack;
 
@@ -74,9 +73,6 @@ class TranscriptionToolBar final : public ToolBar {
    TranscriptionToolBar();
    virtual ~TranscriptionToolBar();
 
-   static TranscriptionToolBar &Get( AudacityProject &project );
-   static const TranscriptionToolBar &Get( const AudacityProject &project );
-
    void Create(wxWindow *parent) override;
 
    void OnKeyEvent(wxKeyEvent & event);
@@ -108,6 +104,7 @@ class TranscriptionToolBar final : public ToolBar {
    //void Populate() override;
    //void Repaint(wxDC * WXUNUSED(dc)) override {}
    //void EnableDisableButtons() override;
+   //void UpdatePrefs() override;
 
    //void OnFocus(wxFocusEvent &event);
    //void OnCaptureKey(wxCommandEvent &event);

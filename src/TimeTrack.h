@@ -23,7 +23,8 @@ class Envelope;
 class Ruler;
 class ZoomInfo;
 struct TrackPanelDrawingContext;
-class TimeTrackView;
+
+class EnvelopeHandle;
 
 class TimeTrack final : public Track {
 
@@ -43,7 +44,6 @@ class TimeTrack final : public Track {
 
    virtual ~TimeTrack();
 
-   wxString GetDefaultName() const override;
 
    Holder Cut( double t0, double t1 ) override;
    Holder Copy( double t0, double t1, bool forClipboard ) const override;
@@ -51,6 +51,11 @@ class TimeTrack final : public Track {
    void Paste(double t, const Track * src) override;
    void Silence(double t0, double t1) override;
    void InsertSilence(double t, double len) override;
+
+   std::vector<UIHandlePtr> DetailedHitTest
+      (const TrackPanelMouseState &state,
+       const AudacityProject *pProject, int currentTool, bool bMultiTool)
+      override;
 
    // TimeTrack parameters
 
@@ -60,11 +65,14 @@ class TimeTrack final : public Track {
    double GetStartTime() const override { return 0.0; }
    double GetEndTime() const override { return 0.0; }
 
+   void Draw
+      ( TrackPanelDrawingContext &context, const wxRect & r ) const;
+
    // XMLTagHandler callback methods for loading and saving
 
    bool HandleXMLTag(const wxChar *tag, const wxChar **attrs) override;
    void HandleXMLEndTag(const wxChar *tag) override;
-   XMLTagHandlerPtr HandleXMLChild(const wxChar *tag) override;
+   XMLTagHandler *HandleXMLChild(const wxChar *tag) override;
    void WriteXML(XMLWriter &xmlFile) const override;
 
    // Lock and unlock the track: you must lock the track before
@@ -137,6 +145,8 @@ class TimeTrack final : public Track {
    bool             mDisplayLog;
    bool             mRescaleXMLValues; // needed for backward-compatibility with older project files
 
+   std::weak_ptr<EnvelopeHandle> mEnvelopeHandle;
+
    /** @brief Copy the metadata from another track but not the points
     *
     * Copies the Name, DefaultName, Range and Display data from the source track
@@ -145,16 +155,13 @@ class TimeTrack final : public Track {
    void Init(const TimeTrack &orig);
 
    using Holder = std::unique_ptr<TimeTrack>;
-
-private:
-   Track::Holder Clone() const override;
+   Track::Holder Duplicate() const override;
 
    friend class TrackFactory;
-   friend TimeTrackView;
 
 protected:
-   std::shared_ptr<TrackView> DoGetView() override;
    std::shared_ptr<TrackControls> DoGetControls() override;
+   std::shared_ptr<TrackVRulerControls> DoGetVRulerControls() override;
 };
 
 

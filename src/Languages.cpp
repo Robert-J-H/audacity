@@ -33,8 +33,6 @@
 #include "Audacity.h"
 #include "Languages.h"
 
-#include "audacity/Types.h"
-
 #include <wx/defs.h>
 #include <wx/hashmap.h>
 #include <wx/intl.h>

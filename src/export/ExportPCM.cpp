@@ -413,7 +413,7 @@ ProgressResult ExportPCM::Export(AudacityProject *project,
                        int subformat)
 {
    double       rate = project->GetRate();
-   const auto &tracks = TrackList::Get( *project );
+   const TrackList   *tracks = project->GetTracks();
    int sf_format;
 
    if (subformat < 0 || static_cast<unsigned int>(subformat) >= WXSIZEOF(kFormats))
@@ -473,7 +473,7 @@ ProgressResult ExportPCM::Export(AudacityProject *project,
       }
       // Retrieve tags if not given a set
       if (metadata == NULL)
-         metadata = &Tags::Get( *project );
+         metadata = project->GetTags();
 
       // Install the metata at the beginning of the file (except for
       // WAV and WAVEX formats)
@@ -493,11 +493,11 @@ ProgressResult ExportPCM::Export(AudacityProject *project,
       size_t maxBlockLen = 44100 * 5;
 
       const WaveTrackConstArray waveTracks =
-      tracks.GetWaveTrackConstArray(selectionOnly, false);
+      tracks->GetWaveTrackConstArray(selectionOnly, false);
       {
          wxASSERT(info.channels >= 0);
          auto mixer = CreateMixer(waveTracks,
-                                  tracks.GetTimeTrack(),
+                                  tracks->GetTimeTrack(),
                                   t0, t1,
                                   info.channels, maxBlockLen, true,
                                   rate, format, true, mixerSpec);

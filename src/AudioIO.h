@@ -122,16 +122,9 @@ struct ScrubbingOptions;
 
 using PRCrossfadeData = std::vector< std::vector < float > >;
 
-class AudacityProject;
-
 // To avoid growing the argument list of StartStream, add fields here
 struct AudioIOStartStreamOptions
 {
-   static AudioIOStartStreamOptions
-      PlayDefaults( AudacityProject &project );
-   static AudioIOStartStreamOptions
-      SpeedPlayDefaults( AudacityProject &project );
-
    explicit
    AudioIOStartStreamOptions(double rate_)
       : timeTrack(NULL)

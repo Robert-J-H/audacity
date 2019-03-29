@@ -753,7 +753,7 @@ ImportFileHandle::~ImportFileHandle()
 
 void ImportFileHandle::CreateProgress()
 {
-   wxFileNameWrapper ff{ mFilename };
+   wxFileName ff( mFilename );
    wxString title;
 
    title.Printf(_("Importing %s"), GetFileDescription());

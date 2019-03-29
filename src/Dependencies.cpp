@@ -75,7 +75,7 @@ using BoolBlockFileHash = std::unordered_map<BlockFile *, bool>;
 static void GetAllSeqBlocks(AudacityProject *project,
                             BlockPtrArray *outBlocks)
 {
-   for (auto waveTrack : TrackList::Get( *project ).Any< WaveTrack >()) {
+   for (auto waveTrack : project->GetTracks()->Any< WaveTrack >()) {
       for(const auto &clip : waveTrack->GetAllClips()) {
          Sequence *sequence = clip->GetSequence();
          BlockArray &blocks = sequence->GetBlockArray();
@@ -163,7 +163,7 @@ static void RemoveDependencies(AudacityProject *project,
                                AliasedFileArray &aliasedFiles)
 // STRONG-GUARANTEE
 {
-   auto &dirManager = DirManager::Get( *project );
+   const auto &dirManager = project->GetDirManager();
 
    ProgressDialog progress
       (_("Removing Dependencies"),
@@ -208,7 +208,7 @@ static void RemoveDependencies(AudacityProject *project,
             // can allow exceptions from ReadData too
             f->ReadData(buffer.ptr(), format, 0, len);
             newBlockFile =
-               dirManager.NewSimpleBlockFile(buffer.ptr(), len, format);
+               dirManager->NewSimpleBlockFile(buffer.ptr(), len, format);
          }
 
          // Update our hash so we know what block files we've done
@@ -594,7 +594,6 @@ void DependencyDialog::SaveFutureActionChoice()
 bool ShowDependencyDialogIfNeeded(AudacityProject *project,
                                   bool isSaving)
 {
-   auto pWindow = ProjectWindow::Find( project );
    AliasedFileArray aliasedFiles;
    FindDependencies(project, aliasedFiles);
 
@@ -609,7 +608,7 @@ you may lose data.");
          AudacityMessageBox(msg,
                       _("Dependency Check"),
                       wxOK | wxICON_INFORMATION,
-                      pWindow);
+                      project);
       }
       return true; // Nothing to do.
    }
@@ -631,7 +630,7 @@ you may lose data.");
          return true;
    }
 
-   DependencyDialog dlog(pWindow, -1, project, aliasedFiles, isSaving);
+   DependencyDialog dlog(project, -1, project, aliasedFiles, isSaving);
    int returnCode = dlog.ShowModal();
    if (returnCode == wxID_CANCEL)
       return false;

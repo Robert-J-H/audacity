@@ -11,21 +11,6 @@
 
 #include "ViewInfo.h"
 #include "Track.h"
-#include "Project.h"
-
-static const AudacityProject::AttachedObjects::RegisteredFactory key{
-  [](AudacityProject &){ return std::make_shared< SelectionState >(); }
-};
-
-SelectionState &SelectionState::Get( AudacityProject &project )
-{
-   return project.AttachedObjects::Get< SelectionState >( key );
-}
-
-const SelectionState &SelectionState::Get( const AudacityProject &project )
-{
-   return Get( const_cast< AudacityProject & >( project ) );
-}
 
 // Set selection length to the length of a track -- but if sync-lock is turned
 // on, use the largest possible selection in the sync-lock group.
@@ -54,7 +39,8 @@ void SelectionState::SelectTrack(
 {
    //bool wasCorrect = (selected == track.GetSelected());
 
-   track.GetGroupData().SetSelected( selected );
+   for (auto channel : TrackList::Channels(&track))
+      channel->SetSelected(selected);
 
    if (updateLastPicked)
       mLastPickedTrack = track.SharedPointer();
@@ -149,8 +135,8 @@ SelectionStateChanger::SelectionStateChanger
 {
    // Save initial state of track selections
    mInitialTrackSelection.clear();
-   for (const auto group : tracks.Any().ByGroups()) {
-      const bool isSelected = group.data->GetSelected();
+   for (const auto track : tracks.Any()) {
+      const bool isSelected = track->GetSelected();
       mInitialTrackSelection.push_back(isSelected);
    }
 }
@@ -164,10 +150,10 @@ SelectionStateChanger::~SelectionStateChanger()
          it = mInitialTrackSelection.begin(),
          end = mInitialTrackSelection.end();
 
-      for (auto group : mTracks.Any().ByGroups()) {
+      for (auto track : mTracks.Any()) {
          if (it == end)
             break;
-         group.data->SetSelected( *it++ );
+         track->SetSelected( *it++ );
       }
    }
 }

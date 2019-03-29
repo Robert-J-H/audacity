@@ -17,19 +17,12 @@
 #include "../Audacity.h"
 #include "ImportExportCommands.h"
 
-#include "LoadCommands.h"
 #include "../Project.h"
 #include "../Track.h"
-#include "../ViewInfo.h"
 #include "../export/Export.h"
 #include "../Shuttle.h"
 #include "../ShuttleGui.h"
 #include "CommandContext.h"
-
-const ComponentInterfaceSymbol ImportCommand::Symbol
-{ XO("Import2") };
-
-namespace{ BuiltinCommandsModule::Registration< ImportCommand > reg; }
 
 bool ImportCommand::DefineParams( ShuttleParams & S ){
    S.Define( mFileName, wxT("Filename"),  "" );
@@ -59,11 +52,6 @@ bool ExportCommand::DefineParams( ShuttleParams & S ){
    return true;
 }
 
-const ComponentInterfaceSymbol ExportCommand::Symbol
-{ XO("Export2") };
-
-namespace{ BuiltinCommandsModule::Registration< ExportCommand > reg2; }
-
 void ExportCommand::PopulateOrExchange(ShuttleGui & S)
 {
    S.AddSpace(0, 5);
@@ -79,9 +67,8 @@ void ExportCommand::PopulateOrExchange(ShuttleGui & S)
 bool ExportCommand::Apply(const CommandContext & context)
 {
    double t0, t1;
-   auto &selectedRegion = ViewInfo::Get( context.project ).selectedRegion;
-   t0 = selectedRegion.t0();
-   t1 = selectedRegion.t1();
+   t0 = context.GetProject()->mViewInfo.selectedRegion.t0();
+   t1 = context.GetProject()->mViewInfo.selectedRegion.t1();
 
    // Find the extension and check it's valid
    int splitAt = mFileName.Find(wxUniChar('.'), true);

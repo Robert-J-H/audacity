@@ -17,7 +17,6 @@ Paul Licameli split from TrackPanel.cpp
 #include <vector>
 #include <wx/longlong.h>
 
-#include "../../ClientData.h"
 #include "../../widgets/Overlay.h"
 #include "../../commands/CommandFunctors.h"
 #include "../../commands/CommandContext.h"
@@ -67,16 +66,11 @@ struct ScrubbingOptions {
 };
 
 // Scrub state object
-class Scrubber final
-   : public wxEvtHandler
-   , public ClientData::Base
+class Scrubber : public wxEvtHandler
 {
 public:
    static constexpr unsigned ScrubPollInterval_ms = 50;
    
-   static Scrubber &Get( AudacityProject &project );
-   static const Scrubber &Get( const AudacityProject &project );
-
    Scrubber(AudacityProject *project);
    ~Scrubber();
 

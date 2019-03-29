@@ -18,7 +18,6 @@
 #include <vector>
 #include <wx/defs.h>
 
-#include "../Prefs.h"
 #include "../Theme.h"
 #include "../widgets/wxPanelWrapper.h"
 
@@ -85,9 +84,7 @@ enum
 // How may pixels padding each side of a floating toolbar
 enum { ToolBarFloatMargin = 1 };
 
-class ToolBar /* not final */
-: public wxPanelWrapper
-, protected PrefsListener
+class ToolBar /* not final */ : public wxPanelWrapper
 {
 
  public:
@@ -104,7 +101,7 @@ class ToolBar /* not final */
    virtual void Create(wxWindow *parent);
    virtual void EnableDisableButtons() = 0;
    virtual void ReCreateButtons();
-   void UpdatePrefs() override;
+   virtual void UpdatePrefs();
    virtual void RegenerateTooltips() = 0;
 
    int GetType();

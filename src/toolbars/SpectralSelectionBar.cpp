@@ -30,8 +30,7 @@ with changes in the SpectralSelectionBar.
 #include "SpectralSelectionBar.h"
 #include "SpectralSelectionBarListener.h"
 
-#include "Project.h"
-#include "ToolManager.h"
+#include "../Experimental.h"
 
 #include <algorithm>
 #include "../MemoryX.h"
@@ -107,22 +106,9 @@ SpectralSelectionBar::~SpectralSelectionBar()
    // Do nothing, sizer deletes the controls
 }
 
-SpectralSelectionBar &SpectralSelectionBar::Get( AudacityProject &project )
-{
-   auto &toolManager = ToolManager::Get( project );
-   return *static_cast<SpectralSelectionBar*>(
-      toolManager.GetToolBar(SpectralSelectionBarID) );
-}
-
-const SpectralSelectionBar &SpectralSelectionBar::Get( const AudacityProject &project )
-{
-   return Get( const_cast<AudacityProject&>( project )) ;
-}
-
 void SpectralSelectionBar::Create(wxWindow * parent)
 {
    ToolBar::Create(parent);
-   UpdatePrefs();
    mHeight = wxWindowBase::GetSizer()->GetSize().GetHeight();
 }
 
@@ -386,14 +372,12 @@ void SpectralSelectionBar::OnUpdate(wxCommandEvent &evt)
    if (type == EVT_FREQUENCYTEXTCTRL_UPDATED) {
       NumericTextCtrl *frequencyCtrl = (mbCenterAndWidth ? mCenterCtrl : mLowCtrl);
       auto frequencyFormatName = frequencyCtrl->GetBuiltinName(index);
-      if (mListener)
-         mListener->SSBL_SetFrequencySelectionFormatName(frequencyFormatName);
+      mListener->SSBL_SetFrequencySelectionFormatName(frequencyFormatName);
    }
    else if (mbCenterAndWidth &&
             type == EVT_BANDWIDTHTEXTCTRL_UPDATED) {
       auto bandwidthFormatName = mWidthCtrl->GetBuiltinName(index);
-      if (mListener)
-         mListener->SSBL_SetBandwidthSelectionFormatName(bandwidthFormatName);
+      mListener->SSBL_SetBandwidthSelectionFormatName(bandwidthFormatName);
    }
 
    // ToolBar::ReCreateButtons() will get rid of our sizers and controls

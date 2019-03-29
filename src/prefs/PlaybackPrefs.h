@@ -33,4 +33,12 @@ class PlaybackPrefs final : public PrefsPanel
    void Populate();
 };
 
+
+/// A PrefsPanelFactory that creates one PlaybackPrefs panel.
+class PlaybackPrefsFactory final : public PrefsPanelFactory
+{
+public:
+   PrefsPanel *operator () (wxWindow *parent, wxWindowID winid) override;
+};
+
 #endif

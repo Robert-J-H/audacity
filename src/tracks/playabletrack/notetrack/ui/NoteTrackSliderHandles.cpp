@@ -10,7 +10,6 @@
 
 #include "../../../../Audacity.h"
 #include "NoteTrackSliderHandles.h"
-#include "NoteTrackControls.h"
 
 #include "../../../../Experimental.h"
 
@@ -77,15 +76,15 @@ UIHandlePtr VelocitySliderHandle::HitTest
       return {};
 
    wxRect sliderRect;
-   NoteTrackControls::GetVelocityRect(rect.GetTopLeft(), sliderRect);
+   TrackInfo::GetVelocityRect(rect.GetTopLeft(), sliderRect);
    if ( TrackInfo::HideTopItem( rect, sliderRect, kTrackInfoSliderAllowance ) )
       return {};
    if (sliderRect.Contains(state.m_x, state.m_y)) {
       auto sliderFn =
       []( AudacityProject *pProject, const wxRect &sliderRect, Track *pTrack ) {
-         return NoteTrackControls::VelocitySlider
+         return TrackInfo::VelocitySlider
             (sliderRect, static_cast<NoteTrack*>( pTrack ), true,
-             &TrackPanel::Get( *pProject ));
+             const_cast<TrackPanel*>(pProject->GetTrackPanel()));
       };
       auto result = std::make_shared<VelocitySliderHandle>(
          sliderFn, sliderRect, pTrack );

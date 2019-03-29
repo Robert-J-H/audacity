@@ -21,8 +21,6 @@ class wxPoint;
 class wxChoice;
 struct DeviceSourceMap;
 
-class AudacityProject;
-
 class DeviceToolBar final : public ToolBar {
 
  public:
@@ -30,13 +28,9 @@ class DeviceToolBar final : public ToolBar {
    DeviceToolBar();
    virtual ~DeviceToolBar();
 
-   static DeviceToolBar &Get( AudacityProject &project );
-   static const DeviceToolBar &Get( const AudacityProject &project );
-
    void Create(wxWindow * parent) override;
 
    void UpdatePrefs() override;
-   void UpdateSelectedPrefs( int ) override;
 
    void DeinitChildren();
    void Populate() override;

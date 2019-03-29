@@ -23,7 +23,6 @@
 
 #include "../Internat.h"
 #include "../NoteTrack.h"
-#include "../tracks/playabletrack/notetrack/ui/NoteTrackView.h"
 #include "../widgets/ErrorDialog.h"
 
 bool ImportMIDI(const FilePath &fName, NoteTrack * dest)
@@ -68,7 +67,7 @@ bool ImportMIDI(const FilePath &fName, NoteTrack * dest)
    dest->SetSequence(std::move(new_seq));
    dest->SetOffset(offset);
    wxString trackNameBase = fName.AfterLast(wxFILE_SEP_PATH).BeforeLast('.');
-   dest->GetGroupData().SetName(trackNameBase);
+   dest->SetName(trackNameBase);
    mf.Close();
    // the mean pitch should be somewhere in the middle of the display
    Alg_iterator iterator( &dest->GetSeq(), false );
@@ -89,7 +88,7 @@ bool ImportMIDI(const FilePath &fName, NoteTrack * dest)
    // initial track is about 27 half-steps high; if bottom note is C,
    // then middle pitch class is D. Round mean_pitch to the nearest D:
    int mid_pitch = ((mean_pitch - 2 + 6) / 12) * 12 + 2;
-   NoteTrackView::Get( *dest ).SetBottomNote( mid_pitch - 14 );
+   dest->SetBottomNote(mid_pitch - 14);
    return true;
 }
 

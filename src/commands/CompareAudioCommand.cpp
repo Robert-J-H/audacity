@@ -21,10 +21,8 @@ threshold of difference in two selected tracks
 #include "../Audacity.h"
 #include "CompareAudioCommand.h"
 
-#include "LoadCommands.h"
 #include "../MemoryX.h"
 #include "../Project.h"
-#include "../ViewInfo.h"
 #include "../WaveTrack.h"
 #include "Command.h"
 
@@ -38,11 +36,6 @@ threshold of difference in two selected tracks
 #include "../widgets/valnum.h"
 #include "../SampleFormat.h"
 #include "CommandContext.h"
-
-const ComponentInterfaceSymbol CompareAudioCommand::Symbol
-{ XO("Compare Audio") };
-
-namespace{ BuiltinCommandsModule::Registration< CompareAudioCommand > reg; }
 
 extern void RegisterCompareAudio( Registrar & R){
    R.AddCommand( std::make_unique<CompareAudioCommand>() );
@@ -75,9 +68,8 @@ void CompareAudioCommand::PopulateOrExchange(ShuttleGui & S)
 bool CompareAudioCommand::GetSelection(const CommandContext &context, AudacityProject &proj)
 {
    // Get the selected time interval
-   auto &selectedRegion = ViewInfo::Get( proj ).selectedRegion;
-   mT0 = selectedRegion.t0();
-   mT1 = selectedRegion.t1();
+   mT0 = proj.mViewInfo.selectedRegion.t0();
+   mT1 = proj.mViewInfo.selectedRegion.t1();
    if (mT0 >= mT1)
    {
       context.Error(wxT("There is no selection!"));
@@ -86,7 +78,7 @@ bool CompareAudioCommand::GetSelection(const CommandContext &context, AudacityPr
 
    // Get the selected tracks and check that there are at least two to
    // compare
-   auto trackRange = TrackList::Get( proj ).Selected< const WaveTrack >();
+   auto trackRange = proj.GetTracks()->Selected< const WaveTrack >();
    mTrack0 = *trackRange.first;
    if (mTrack0 == NULL)
    {
@@ -124,8 +116,8 @@ bool CompareAudioCommand::Apply(const CommandContext & context)
    }
 
    wxString msg = wxT("Comparing tracks '");
-   msg += mTrack0->GetGroupData().GetName() + wxT("' and '")
-      + mTrack1->GetGroupData().GetName() + wxT("'.");
+   msg += mTrack0->GetName() + wxT("' and '")
+      + mTrack1->GetName() + wxT("'.");
    context.Status(msg);
 
    long errorCount = 0;
@@ -171,4 +163,3 @@ bool CompareAudioCommand::Apply(const CommandContext & context)
    context.Status(wxString::Format(wxT("Finished comparison: %li samples (%.3f seconds) exceeded the error threshold of %f."), errorCount, errorSeconds, errorThreshold));
    return true;
 }
-

@@ -13,8 +13,6 @@
 #include "audacity/Types.h"
 
 #include <wx/string.h> // member variable
-#include "ClientData.h"
-#include "Prefs.h"
 
 class wxArrayString;
 class AudacityProject;
@@ -34,7 +32,12 @@ enum EffectType : int;
 typedef wxString PluginID;
 typedef wxArrayString PluginIDs;
 
-namespace Registry{ class Visitor; }
+class PrefsListener
+{
+public:
+   virtual ~PrefsListener();
+   virtual void UpdatePrefs(); // default is no-op
+};
 
 class MenuCreator
 {
@@ -53,21 +56,9 @@ public:
    PluginID mLastEffect{};
 };
 
-class MenuManager final
-   : public MenuCreator
-   , private PrefsListener
-   , public ClientData::Base
+class MenuManager : public MenuCreator
 {
 public:
-
-   static MenuManager &Get( AudacityProject &project );
-   static const MenuManager &Get( const AudacityProject &project );
-
-   MenuManager();
-
-   static void Visit(
-      Registry::Visitor &visitor, AudacityProject &project );
-
    static void ModifyUndoMenuItems(AudacityProject &project);
    static void ModifyToolbarMenus(AudacityProject &project);
    // Calls ModifyToolbarMenus() on all projects
@@ -81,7 +72,7 @@ public:
    // inactive project as it is needlessly expensive.
    CommandFlag GetUpdateFlags(
       AudacityProject &project, bool checkActive = false);
-   void UpdatePrefs() override;
+   void UpdatePrefs();
 
    // Command Handling
    bool ReportIfActionNotAllowed(
@@ -101,6 +92,8 @@ private:
    bool mStopIfWasPaused;
 };
 
+
+MenuManager &GetMenuManager(AudacityProject &project);
 
 // Exported helper functions from various menu handling source files
 

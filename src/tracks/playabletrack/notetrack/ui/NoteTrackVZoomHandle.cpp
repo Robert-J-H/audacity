@@ -14,15 +14,12 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "../../../../Experimental.h"
 
-#include "NoteTrackView.h"
-
 #include "NoteTrackVRulerControls.h"
 
 #include "../../../../HitTestResult.h"
 #include "../../../../NoteTrack.h"
 #include "../../../../Project.h"
 #include "../../../../RefreshCode.h"
-#include "../../../../TrackArtist.h"
 #include "../../../../TrackPanelMouseEvent.h"
 #include "../../../../widgets/PopupMenuTable.h"
 #include "../../../../../images/Cursors.h"
@@ -120,7 +117,7 @@ UIHandle::Result NoteTrackVZoomHandle::Drag
 (const TrackPanelMouseEvent &evt, AudacityProject *pProject)
 {
    using namespace RefreshCode;
-   auto pTrack = TrackList::Get( *pProject ).Lock(mpTrack);
+   auto pTrack = pProject->GetTracks()->Lock(mpTrack);
    if (!pTrack)
       return Cancelled;
 
@@ -214,17 +211,16 @@ void NoteTrackVRulerMenuTable::InitMenu(Menu *WXUNUSED(pMenu), void *pUserData)
 }
 
 void NoteTrackVRulerMenuTable::OnZoom( int iZoomCode ){
-   auto &view = NoteTrackView::Get( *mpData->pTrack );
    switch( iZoomCode ){
    case kZoomReset:
-      view.SetBottomNote(0);
-      view.SetPitchHeight(mpData->rect.height, 1);
+      mpData->pTrack->SetBottomNote(0);
+      mpData->pTrack->SetPitchHeight(mpData->rect.height, 1);
       break;
    case kZoomIn:
-      view.ZoomIn(mpData->rect, mpData->yy);
+      mpData->pTrack->ZoomIn(mpData->rect, mpData->yy);
       break;
    case kZoomOut:
-      view.ZoomOut(mpData->rect, mpData->yy);
+      mpData->pTrack->ZoomOut(mpData->rect, mpData->yy);
       break;
 
    }
@@ -248,10 +244,9 @@ UIHandle::Result NoteTrackVZoomHandle::Release
  wxWindow *pParent)
 {
    using namespace RefreshCode;
-   auto pTrack = TrackList::Get( *pProject ).Lock(mpTrack);
+   auto pTrack = pProject->GetTracks()->Lock(mpTrack);
    if (!pTrack)
       return RefreshNone;
-   auto &view = NoteTrackView::Get( *pTrack );
 
    const wxMouseEvent &event = evt.event;
    //const bool shiftDown = event.ShiftDown();
@@ -299,20 +294,20 @@ UIHandle::Result NoteTrackVZoomHandle::Release
       return RefreshAll;
 
    if (IsDragZooming(mZoomStart, mZoomEnd)) {
-      view.ZoomTo(evt.rect, mZoomStart, mZoomEnd);
+      pTrack->ZoomTo(evt.rect, mZoomStart, mZoomEnd);
    }
    else if (event.ShiftDown() || event.RightUp()) {
       if (event.ShiftDown() && event.RightUp()) {
          // Zoom out completely
-         view.SetBottomNote(0);
-         view.SetPitchHeight(evt.rect.height, 1);
+         pTrack->SetBottomNote(0);
+         pTrack->SetPitchHeight(evt.rect.height, 1);
       } else {
          // Zoom out
-         view.ZoomOut(evt.rect, mZoomEnd);
+         pTrack->ZoomOut(evt.rect, mZoomEnd);
       }
    }
    else {
-      view.ZoomIn(evt.rect, mZoomEnd);
+      pTrack->ZoomIn(evt.rect, mZoomEnd);
    }
 
    mZoomEnd = mZoomStart = 0;
@@ -328,27 +323,16 @@ UIHandle::Result NoteTrackVZoomHandle::Cancel(AudacityProject *WXUNUSED(pProject
    return RefreshCode::RefreshAll;
 }
 
-void NoteTrackVZoomHandle::Draw(
-   TrackPanelDrawingContext &context,
-   const wxRect &rect, unsigned iPass )
+void NoteTrackVZoomHandle::DrawExtras
+(DrawingPass pass, wxDC * dc, const wxRegion &, const wxRect &panelRect)
 {
-   if ( iPass == TrackArtist::PassZooming ) {
-      if (!mpTrack.lock()) //? TrackList::Lock()
-         return;
-      
-      if ( IsDragZooming( mZoomStart, mZoomEnd ) )
-         TrackVRulerControls::DrawZooming
-            ( context, rect, mZoomStart, mZoomEnd );
-   }
-}
+   if (!mpTrack.lock()) //? TrackList::Lock()
+      return;
 
-wxRect NoteTrackVZoomHandle::DrawingArea(
-   const wxRect &rect, const wxRect &panelRect, unsigned iPass )
-{
-   if ( iPass == TrackArtist::PassZooming )
-      return TrackVRulerControls::ZoomingArea( rect, panelRect );
-   else
-      return rect;
+   if ( pass == UIHandle::Cells &&
+        IsDragZooming( mZoomStart, mZoomEnd ) )
+      TrackVRulerControls::DrawZooming
+         ( dc, mRect, panelRect, mZoomStart, mZoomEnd );
 }
 
 #endif

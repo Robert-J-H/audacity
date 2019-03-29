@@ -58,7 +58,6 @@
 #include <wx/numdlg.h>
 #include <wx/radiobut.h>
 #include <wx/tooltip.h>
-#include <wx/wxcrtvararg.h>
 
 #include <math.h>
 
@@ -67,6 +66,8 @@
 #include "../ImageManipulation.h"
 #include "../prefs/GUISettings.h"
 #include "../Project.h"
+#include "../toolbars/MeterToolBar.h"
+#include "../toolbars/ControlToolBar.h"
 #include "../Prefs.h"
 #include "../ShuttleGui.h"
 
@@ -176,6 +177,9 @@ bool MeterUpdateQueue::Get(MeterUpdateMsg &msg)
 // How many pixels between items?
 const static int gap = 2;
 
+// Event used to notify all meters of preference changes
+wxDEFINE_EVENT(EVT_METER_PREFERENCES_CHANGED, wxCommandEvent);
+
 const static wxChar *PrefStyles[] =
 {
    wxT("AutomaticStereo"),
@@ -267,6 +271,11 @@ MeterPanel::MeterPanel(AudacityProject *project,
 
    mPeakPeakPen = wxPen(theTheme.Colour( clrMeterPeak),        1, wxPENSTYLE_SOLID);
    mDisabledPen = wxPen(theTheme.Colour( clrMeterDisabledPen), 1, wxPENSTYLE_SOLID);
+
+   // Register for our preference update event
+   wxTheApp->Bind(EVT_METER_PREFERENCES_CHANGED,
+                     &MeterPanel::OnMeterPrefsUpdated,
+                     this);
 
    if (mIsInput) {
       wxTheApp->Bind(EVT_AUDIOIO_MONITOR,
@@ -372,20 +381,6 @@ void MeterPanel::UpdatePrefs()
    Reset(mRate, false);
 
    mLayoutValid = false;
-
-   Refresh(false);
-}
-
-static int MeterPrefsId()
-{
-   static int value = wxNewId();
-   return value;
-}
-
-void MeterPanel::UpdateSelectedPrefs(int id)
-{
-   if (id == MeterPrefsId())
-      UpdatePrefs();
 }
 
 void MeterPanel::OnErase(wxEraseEvent & WXUNUSED(event))
@@ -665,7 +660,6 @@ bool MeterPanel::InIcon(wxMouseEvent *pEvent) const
 
 void MeterPanel::OnMouse(wxMouseEvent &evt)
 {
-   auto &window = ProjectWindow::Get( *GetActiveProject() );
    bool shouldHighlight = InIcon(&evt);
    if ((evt.GetEventType() == wxEVT_MOTION || evt.Entering() || evt.Leaving()) &&
        (mHighlighted != shouldHighlight)) {
@@ -679,14 +673,14 @@ void MeterPanel::OnMouse(wxMouseEvent &evt)
 
   #if wxUSE_TOOLTIPS // Not available in wxX11
    if (evt.Leaving()){
-      window.TP_DisplayStatusMessage(wxT(""));
+      GetActiveProject()->TP_DisplayStatusMessage(wxT(""));
    }
    else if (evt.Entering()) {
       // Display the tooltip in the status bar
       wxToolTip * pTip = this->GetToolTip();
       if( pTip ) {
          wxString tipText = pTip->GetTip();
-         window.TP_DisplayStatusMessage(tipText);
+         GetActiveProject()->TP_DisplayStatusMessage(tipText);
       }
    }
   #endif
@@ -1894,6 +1888,15 @@ void MeterPanel::OnMonitor(wxCommandEvent & WXUNUSED(event))
    StartMonitoring();
 }
 
+void MeterPanel::OnMeterPrefsUpdated(wxCommandEvent & evt)
+{
+   evt.Skip();
+
+   UpdatePrefs();
+
+   Refresh(false);
+}
+
 void MeterPanel::OnPreferences(wxCommandEvent & WXUNUSED(event))
 {
    wxTextCtrl *rate;
@@ -1911,8 +1914,7 @@ void MeterPanel::OnPreferences(wxCommandEvent & WXUNUSED(event))
    // Dialog is a child of the project, rather than of the toolbar.
    // This determines where it pops up.
 
-   wxDialogWrapper dlg( &ProjectWindow::Get( *GetActiveProject() ),
-      wxID_ANY, title );
+   wxDialogWrapper dlg(GetActiveProject(), wxID_ANY, title);
    dlg.SetName(dlg.GetTitle());
    ShuttleGui S(&dlg, eIsCreating);
    S.StartVerticalLay();
@@ -2021,8 +2023,9 @@ void MeterPanel::OnPreferences(wxCommandEvent & WXUNUSED(event))
       // Currently, there are 2 playback meters and 2 record meters and any number of 
       // mixerboard meters, so we have to send out an preferences updated message to
       // ensure they all update themselves.
-      wxTheApp->AddPendingEvent(wxCommandEvent{
-         EVT_PREFS_UPDATE, MeterPrefsId() });
+      wxCommandEvent e(EVT_METER_PREFERENCES_CHANGED);
+      e.SetEventObject(this);
+      GetParent()->GetEventHandler()->ProcessEvent(e);
    }
 }
 

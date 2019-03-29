@@ -50,4 +50,10 @@ class ModulePrefs final : public PrefsPanel
    FilePaths mPaths;
 };
 
+/// A PrefsPanelFactory that creates one ModulePrefs panel.
+class ModulePrefsFactory final : public PrefsPanelFactory
+{
+public:
+   PrefsPanel *operator () (wxWindow *parent, wxWindowID winid) override;
+};
 #endif

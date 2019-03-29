@@ -58,9 +58,8 @@ greater use in future.
 #include "../PluginManager.h"
 #include "../ShuttleGui.h"
 #include "../Shuttle.h"
-#include "../TransportState.h"
-#include "../ViewInfo.h"
 #include "../WaveTrack.h"
+#include "../toolbars/ControlToolBar.h"
 #include "../widgets/AButton.h"
 #include "../widgets/ProgressDialog.h"
 #include "../ondemand/ODManager.h"
@@ -73,7 +72,6 @@ greater use in future.
 #include "../FileNames.h"
 #include "../commands/AudacityCommand.h"
 #include "../commands/CommandContext.h"
-#include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
 
 #if defined(__WXMAC__)
 #include <Cocoa/Cocoa.h>
@@ -1217,8 +1215,8 @@ bool Effect::DoEffect(wxWindow *parent,
    // We don't yet know the effect type for code in the Nyquist Prompt, so
    // assume it requires a track and handle errors when the effect runs.
    if ((GetType() == EffectTypeGenerate || GetPath() == NYQUIST_PROMPT_ID) && (mNumTracks == 0)) {
-      newTrack = mTracks->Add(mFactory->NewWaveTrack(), true);
-      newTrack->GetGroupData().SetSelected(true);
+      newTrack = mTracks->Add(mFactory->NewWaveTrack());
+      newTrack->SetSelected(true);
    }
 
    mT0 = selectedRegion->t0();
@@ -1398,9 +1396,9 @@ bool Effect::ProcessPass()
          // which is a leader.
          for (auto channel :
               TrackList::Channels(left).StartingWith(left)) {
-            if (channel->GetChannel() == WaveTrack::LeftChannel)
+            if (channel->GetChannel() == Track::LeftChannel)
                map[mNumChannels] = ChannelNameFrontLeft;
-            else if (channel->GetChannel() == WaveTrack::RightChannel)
+            else if (channel->GetChannel() == Track::RightChannel)
                map[mNumChannels] = ChannelNameFrontRight;
             else
                map[mNumChannels] = ChannelNameMono;
@@ -1585,9 +1583,13 @@ bool Effect::ProcessTrack(int count,
 
       // Create temporary tracks
       genLeft = mFactory->NewWaveTrack(left->GetSampleFormat(), left->GetRate());
+      genLeft->SetWaveColorIndex( left->GetWaveColorIndex() );
 
       if (right)
+      {
          genRight = mFactory->NewWaveTrack(right->GetSampleFormat(), right->GetRate());
+         genRight->SetWaveColorIndex( right->GetWaveColorIndex() );
+      }
    }
 
    // Call the effect until we run out of input or delayed samples
@@ -1869,7 +1871,7 @@ bool Effect::ProcessTrack(int count,
       // Transfer the data from the temporary tracks to the actual ones
       genLeft->Flush();
       // mT1 gives us the NEW selection. We want to replace up to GetSel1().
-      auto &selectedRegion = ViewInfo::Get( *p ).selectedRegion;
+      auto &selectedRegion = p->GetViewInfo().selectedRegion;
       left->ClearAndPaste(mT0,
          selectedRegion.t1(), genLeft.get(), true, true,
          nullptr /* &warper */);
@@ -2075,17 +2077,17 @@ void Effect::CopyInputTracks(bool allSyncLockSelected)
 
    for (auto aTrack : trackRange)
    {
-      Track *o = mOutputTracks->Add(aTrack->Duplicate(), aTrack->IsLeader());
+      Track *o = mOutputTracks->Add(aTrack->Duplicate());
       mIMap.push_back(aTrack);
       mOMap.push_back(o);
    }
 }
 
-Track *Effect::AddToOutputTracks(const std::shared_ptr<Track> &t, bool leader)
+Track *Effect::AddToOutputTracks(const std::shared_ptr<Track> &t)
 {
    mIMap.push_back(NULL);
    mOMap.push_back(t.get());
-   return mOutputTracks->Add(t, leader);
+   return mOutputTracks->Add(t);
 }
 
 Effect::AddedAnalysisTrack::AddedAnalysisTrack(Effect *pEffect, const wxString &name)
@@ -2094,8 +2096,8 @@ Effect::AddedAnalysisTrack::AddedAnalysisTrack(Effect *pEffect, const wxString &
    LabelTrack::Holder pTrack{ pEffect->mFactory->NewLabelTrack() };
    mpTrack = pTrack.get();
    if (!name.empty())
-      pTrack->GetGroupData().SetName(name);
-   pEffect->mTracks->Add( pTrack, true );
+      pTrack->SetName(name);
+   pEffect->mTracks->Add( pTrack );
 }
 
 Effect::AddedAnalysisTrack::AddedAnalysisTrack(AddedAnalysisTrack &&that)
@@ -2136,7 +2138,7 @@ Effect::ModifiedAnalysisTrack::ModifiedAnalysisTrack
    // Why doesn't LabelTrack::Copy complete the job? :
    mpTrack->SetOffset(pOrigTrack->GetStartTime());
    if (!name.empty())
-      mpTrack->GetGroupData().SetName(name);
+      mpTrack->SetName(name);
 
    // mpOrigTrack came from mTracks which we own but expose as const to subclasses
    // So it's okay that we cast it back to const
@@ -2197,21 +2199,12 @@ void Effect::ReplaceProcessedTracks(const bool bGoodResult)
    wxASSERT(mOutputTracks); // Make sure we at least did the CopyInputTracks().
 
    auto iterOut = mOutputTracks->ListOfTracks::begin(),
-      iterEnd = mOutputTracks->ListOfTracks::end(),
-      iterNextLeader = iterOut;
+      iterEnd = mOutputTracks->ListOfTracks::end();
 
    size_t cnt = mOMap.size();
    size_t i = 0;
 
    for (; iterOut != iterEnd; ++i) {
-      // Whether the replacement track is a leader depends on position in
-      // mOutputTracks; figure that out before destroying some of the structure
-      // of mOutputTracks in erase().
-      bool leader = (iterOut == iterNextLeader);
-      if (leader)
-         do
-            ++iterNextLeader;
-         while ( iterNextLeader != iterEnd && !(*iterNextLeader)->IsLeader() );
       ListOfTracks::value_type o = *iterOut;
       // If tracks were removed from mOutputTracks, then there will be
       // tracks in the map that must be removed from mTracks.
@@ -2233,7 +2226,7 @@ void Effect::ReplaceProcessedTracks(const bool bGoodResult)
       if (t == NULL)
       {
          // This track is a NEW addition to output tracks; add it to mTracks
-         mTracks->Add( o, leader );
+         mTracks->Add( o );
       }
       else
       {
@@ -2558,28 +2551,24 @@ void Effect::Preview(bool dryOnly)
          return;
 
       mixLeft->Offset(-mixLeft->GetStartTime());
-      mixLeft->GetGroupData().SetSelected(true);
-      auto &data = WaveTrackViewGroupData::Get( *mixLeft );
-      data.SetDisplay(WaveTrackViewConstants::NoDisplay);
-      auto pLeft = mTracks->Add( mixLeft, true );
+      mixLeft->SetSelected(true);
+      mixLeft->SetDisplay(WaveTrack::NoDisplay);
+      auto pLeft = mTracks->Add( mixLeft );
       Track *pRight{};
       if (mixRight) {
          mixRight->Offset(-mixRight->GetStartTime());
-         pRight = mTracks->Add( mixRight, false );
+         mixRight->SetSelected(true);
+         pRight = mTracks->Add( mixRight );
       }
+      mTracks->GroupChannels(*pLeft, pRight ? 2 : 1);
    }
    else {
       for (auto src : saveTracks->Any< const WaveTrack >()) {
          if (src->GetSelected() || mPreviewWithNotSelected) {
-            bool isLeader = src->IsLeader();
             auto dest = src->Copy(mT0, t1);
-            if (isLeader)
-               dest->GetGroupData().SetSelected(
-                  src->GetGroupData().GetSelected() );
-            auto &data = WaveTrackViewGroupData::Get(
-               *static_cast<WaveTrack*>( dest.get() ) );
-            data.SetDisplay(WaveTrackViewConstants::NoDisplay);
-            mTracks->Add( dest, isLeader );
+            dest->SetSelected(src->GetSelected());
+            static_cast<WaveTrack*>(dest.get())->SetDisplay(WaveTrack::NoDisplay);
+            mTracks->Add( dest );
          }
       }
    }
@@ -3261,11 +3250,11 @@ void EffectUIHost::OnApply(wxCommandEvent & evt)
       mEffect && 
       mEffect->GetType() != EffectTypeGenerate && 
       mEffect->GetType() != EffectTypeTool && 
-      ViewInfo::Get( *mProject ).selectedRegion.isPoint())
+      mProject->mViewInfo.selectedRegion.isPoint())
    {
       auto flags = AlwaysEnabledFlag;
       bool allowed =
-         MenuManager::Get(*mProject).ReportIfActionNotAllowed(
+         GetMenuManager(*mProject).ReportIfActionNotAllowed(
          *mProject,
          mEffect->GetTranslatedName(),
          flags,
@@ -3494,22 +3483,21 @@ void EffectUIHost::OnPlay(wxCommandEvent & WXUNUSED(evt))
    if (mPlaying)
    {
       mPlayPos = gAudioIO->GetStreamTime();
-      TransportState::StopPlaying();
+      mProject->GetControlToolBar()->StopPlaying();
    }
    else
    {
-      auto &viewInfo = ViewInfo::Get( *mProject );
-      const auto &playRegion = viewInfo.playRegion;
-      const auto &selectedRegion = viewInfo.selectedRegion;
-      if ( playRegion.Locked() )
+      if (mProject->IsPlayRegionLocked())
       {
-         mRegion.setTimes(playRegion.GetStart(), playRegion.GetEnd());
+         double t0, t1;
+         mProject->GetPlayRegion(&t0, &t1);
+         mRegion.setTimes(t0, t1);
          mPlayPos = mRegion.t0();
       }
-      else if (selectedRegion.t0() != mRegion.t0() ||
-             selectedRegion.t1() != mRegion.t1())
+      else if (mProject->mViewInfo.selectedRegion.t0() != mRegion.t0() ||
+               mProject->mViewInfo.selectedRegion.t1() != mRegion.t1())
       {
-         mRegion = selectedRegion;
+         mRegion = mProject->mViewInfo.selectedRegion;
          mPlayPos = mRegion.t0();
       }
 
@@ -3518,10 +3506,9 @@ void EffectUIHost::OnPlay(wxCommandEvent & WXUNUSED(evt))
          mPlayPos = mRegion.t1();
       }
 
-      TransportState::PlayPlayRegion(
-         SelectedRegion(mPlayPos, mRegion.t1()),
-         AudioIOStartStreamOptions::PlayDefaults( *mProject ),
-         PlayMode::normalPlay );
+      mProject->GetControlToolBar()->PlayPlayRegion
+         (SelectedRegion(mPlayPos, mRegion.t1()),
+          mProject->GetDefaultPlayOptions(), PlayMode::normalPlay);
    }
 }
 
@@ -3591,7 +3578,7 @@ void EffectUIHost::OnPlayback(wxCommandEvent & evt)
 
    if (mPlaying)
    {
-      mRegion = ViewInfo::Get( *mProject ).selectedRegion;
+      mRegion = mProject->mViewInfo.selectedRegion;
       mPlayPos = mRegion.t0();
    }
 

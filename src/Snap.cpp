@@ -18,7 +18,6 @@
 #include "LabelTrack.h"
 #include "NoteTrack.h"
 #include "WaveClip.h"
-#include "ViewInfo.h"
 #include "WaveTrack.h"
 
 inline bool operator < (SnapPoint s1, SnapPoint s2)

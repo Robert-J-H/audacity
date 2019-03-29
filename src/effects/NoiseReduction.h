@@ -17,9 +17,10 @@
 
 #include "../MemoryX.h"
 
+#define NOISEREDUCTION_PLUGIN_SYMBOL ComponentInterfaceSymbol{ XO("Noise Reduction") }
+
 class EffectNoiseReduction final : public Effect {
 public:
-   static const ComponentInterfaceSymbol Symbol;
 
    EffectNoiseReduction();
    virtual ~EffectNoiseReduction();

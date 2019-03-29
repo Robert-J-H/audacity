@@ -39,7 +39,10 @@ class DirectoriesPrefs final : public PrefsPanel
    DECLARE_EVENT_TABLE()
 };
 
-/// A PrefsPanel::Factory that creates one DirectoriesPrefs panel.
-/// This one is used not only in the Preferences command.
-extern PrefsPanel::Factory DirectoriesPrefsFactory();
+/// A PrefsPanelFactory that creates one DirectoriesPrefs panel.
+class DirectoriesPrefsFactory final : public PrefsPanelFactory
+{
+public:
+   PrefsPanel *operator () (wxWindow *parent, wxWindowID winid) override;
+};
 #endif

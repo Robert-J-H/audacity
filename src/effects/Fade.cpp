@@ -18,18 +18,6 @@
 
 #include <wx/intl.h>
 
-#include "LoadEffects.h"
-
-const ComponentInterfaceSymbol EffectFadeIn::Symbol
-{ XO("Fade In") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectFadeIn > reg; }
-
-const ComponentInterfaceSymbol EffectFadeOut::Symbol
-{ XO("Fade Out") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectFadeOut > reg2; }
-
 EffectFade::EffectFade(bool fadeIn)
 {
    mFadeIn = fadeIn;
@@ -44,8 +32,8 @@ EffectFade::~EffectFade()
 ComponentInterfaceSymbol EffectFade::GetSymbol()
 {
    return mFadeIn
-      ? EffectFadeIn::Symbol
-      : EffectFadeOut::Symbol;
+      ? FADEIN_PLUGIN_SYMBOL
+      : FADEOUT_PLUGIN_SYMBOL;
 }
 
 wxString EffectFade::GetDescription()

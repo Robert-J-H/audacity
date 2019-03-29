@@ -96,12 +96,8 @@ wxString WarningsPrefs::HelpPageName()
    return "Warnings_Preferences";
 }
 
-namespace{
-PrefsPanel::Registration sAttachment{ "Warnings",
-   [](wxWindow *parent, wxWindowID winid)
-   {
-      wxASSERT(parent); // to justify safenew
-      return safenew WarningsPrefs(parent, winid);
-   }
-};
+PrefsPanel *WarningsPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+{
+   wxASSERT(parent); // to justify safenew
+   return safenew WarningsPrefs(parent, winid);
 }

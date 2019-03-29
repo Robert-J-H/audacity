@@ -17,6 +17,7 @@
 
 #include "Effect.h"
 
+#define AMPLIFY_PLUGIN_SYMBOL ComponentInterfaceSymbol{ XO("Amplify") }
 
 class wxSlider;
 class wxCheckBox;
@@ -26,8 +27,6 @@ class ShuttleGui;
 class EffectAmplify final : public Effect
 {
 public:
-   static const ComponentInterfaceSymbol Symbol;
-
    EffectAmplify();
    virtual ~EffectAmplify();
 

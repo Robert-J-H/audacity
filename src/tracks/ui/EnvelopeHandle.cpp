@@ -13,12 +13,8 @@ Paul Licameli split from TrackPanel.cpp
 
 #include "../../Experimental.h"
 
-#include "TrackView.h"
-
 #include "../../MemoryX.h"
 
-#include "../playabletrack/wavetrack/ui/WaveTrackView.h"
-#include "../playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
 #include "../../Envelope.h"
 #include "../../HitTestResult.h"
 #include "../../prefs/WaveformSettings.h"
@@ -59,7 +55,7 @@ namespace {
       (const AudacityProject &project, const TimeTrack &tt,
        double &dBRange, bool &dB, float &zoomMin, float &zoomMax)
    {
-      const auto &viewInfo = ViewInfo::Get( project );
+      const auto &viewInfo = project.GetViewInfo();
       dBRange = viewInfo.dBr;
       dB = tt.GetDisplayLog();
       zoomMin = tt.GetRangeLower(), zoomMax = tt.GetRangeUpper();
@@ -95,25 +91,24 @@ UIHandlePtr EnvelopeHandle::WaveTrackHitTest
 {
    /// method that tells us if the mouse event landed on an
    /// envelope boundary.
-   Envelope *const envelope = WaveTrackView::GetEnvelopeAtX(*wt, state.GetX());
+   Envelope *const envelope = wt->GetEnvelopeAtX(state.GetX());
 
    if (!envelope)
       return {};
 
-   auto &data = WaveTrackViewGroupData::Get( *wt );
-   const int displayType = data.GetDisplay();
+   const int displayType = wt->GetDisplay();
    // Not an envelope hit, unless we're using a type of wavetrack display
    // suitable for envelopes operations, ie one of the Wave displays.
-   if (displayType != WaveTrackViewConstants::Waveform)
+   if (displayType != WaveTrack::Waveform)
       return {};  // No envelope, not a hit, so return.
 
    // Get envelope point, range 0.0 to 1.0
-   const bool dB = !data.GetWaveformSettings().isLinear();
+   const bool dB = !wt->GetWaveformSettings().isLinear();
 
    float zoomMin, zoomMax;
-   data.GetDisplayBounds(&zoomMin, &zoomMax);
+   wt->GetDisplayBounds(&zoomMin, &zoomMax);
 
-   const float dBRange = data.GetWaveformSettings().dBRange;
+   const float dBRange = wt->GetWaveformSettings().dBRange;
 
    return EnvelopeHandle::HitEnvelope
        (holder, state, rect, pProject, envelope, zoomMin, zoomMax, dB, dBRange, false);
@@ -125,7 +120,7 @@ UIHandlePtr EnvelopeHandle::HitEnvelope
  Envelope *envelope, float zoomMin, float zoomMax,
  bool dB, float dBRange, bool timeTrack)
 {
-   const auto &viewInfo = ViewInfo::Get( *pProject );
+   const ViewInfo &viewInfo = pProject->GetViewInfo();
 
    const double envValue =
       envelope->GetValue(viewInfo.PositionToTime(state.m_x, rect.x));
@@ -181,9 +176,8 @@ UIHandle::Result EnvelopeHandle::Click
       return Cancelled;
 
    const wxMouseEvent &event = evt.event;
-   const auto &viewInfo = ViewInfo::Get( *pProject );
-   const auto pView = std::static_pointer_cast<TrackView>(evt.pCell);
-   const auto pTrack = pView ? pView->FindTrack().get() : nullptr;
+   const ViewInfo &viewInfo = pProject->GetViewInfo();
+   const auto pTrack = static_cast<Track*>(evt.pCell.get());
 
    mEnvelopeEditors.clear();
 
@@ -191,23 +185,22 @@ UIHandle::Result EnvelopeHandle::Click
    if (pTrack)
       result = pTrack->TypeSwitch< decltype(RefreshNone) >(
       [&](WaveTrack *wt) {
-         auto &data = WaveTrackViewGroupData::Get( *wt );
-         if (data.GetDisplay() != WaveTrackViewConstants::Waveform)
+         if (wt->GetDisplay() != WaveTrack::Waveform)
             return Cancelled;
 
          if (!mEnvelope)
             return Cancelled;
 
-         mLog = !data.GetWaveformSettings().isLinear();
-         data.GetDisplayBounds(&mLower, &mUpper);
-         mdBRange = data.GetWaveformSettings().dBRange;
+         mLog = !wt->GetWaveformSettings().isLinear();
+         wt->GetDisplayBounds(&mLower, &mUpper);
+         mdBRange = wt->GetWaveformSettings().dBRange;
          auto channels = TrackList::Channels( wt );
          for ( auto channel : channels ) {
             if (channel == wt)
                mEnvelopeEditors.push_back(
                   std::make_unique< EnvelopeEditor >( *mEnvelope, true ) );
             else {
-               auto e2 = WaveTrackView::GetEnvelopeAtX(*channel, event.GetX());
+               auto e2 = channel->GetEnvelopeAtX(event.GetX());
                if (e2)
                   mEnvelopeEditors.push_back(
                      std::make_unique< EnvelopeEditor >( *e2, true ) );
@@ -249,7 +242,7 @@ UIHandle::Result EnvelopeHandle::Drag
 {
    using namespace RefreshCode;
    const wxMouseEvent &event = evt.event;
-   const auto &viewInfo = ViewInfo::Get( *pProject );
+   const ViewInfo &viewInfo = pProject->GetViewInfo();
    const bool unsafe = pProject->IsAudioActive();
    if (unsafe) {
       this->Cancel(pProject);
@@ -288,7 +281,7 @@ UIHandle::Result EnvelopeHandle::Release
  wxWindow *)
 {
    const wxMouseEvent &event = evt.event;
-   const auto &viewInfo = ViewInfo::Get( *pProject );
+   const ViewInfo &viewInfo = pProject->GetViewInfo();
    const bool unsafe = pProject->IsAudioActive();
    if (unsafe)
       return this->Cancel(pProject);

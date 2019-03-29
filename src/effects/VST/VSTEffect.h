@@ -238,7 +238,7 @@ private:
    bool HandleXMLTag(const wxChar *tag, const wxChar **attrs) override;
    void HandleXMLEndTag(const wxChar *tag) override;
    void HandleXMLContent(const wxString & content) override;
-   XMLTagHandlerPtr HandleXMLChild(const wxChar *tag) override;
+   XMLTagHandler *HandleXMLChild(const wxChar *tag) override;
 
    // Utility methods
 
@@ -416,7 +416,7 @@ public:
    bool Initialize() override;
    void Terminate() override;
 
-   const FileExtensions &GetFileExtensions() override;
+   FileExtensions GetFileExtensions() override;
    FilePath InstallPath() override;
 
    bool AutoRegisterPlugins(PluginManagerInterface & pm) override;

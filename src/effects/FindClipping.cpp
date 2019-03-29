@@ -21,7 +21,6 @@
 
 #include "../Audacity.h"
 #include "FindClipping.h"
-#include "LoadEffects.h"
 
 #include <math.h>
 
@@ -42,11 +41,6 @@
 Param( Start,  int,  wxT("Duty Cycle Start"), 3,    1,    INT_MAX, 1   );
 Param( Stop,   int,  wxT("Duty Cycle End"),   3,    1,    INT_MAX, 1   );
 
-const ComponentInterfaceSymbol EffectFindClipping::Symbol
-{ XO("Find Clipping") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectFindClipping > reg; }
-
 EffectFindClipping::EffectFindClipping()
 {
    mStart = DEF_Start;
@@ -61,7 +55,7 @@ EffectFindClipping::~EffectFindClipping()
 
 ComponentInterfaceSymbol EffectFindClipping::GetSymbol()
 {
-   return Symbol;
+   return FINDCLIPPING_PLUGIN_SYMBOL;
 }
 
 wxString EffectFindClipping::GetDescription()
@@ -116,8 +110,7 @@ bool EffectFindClipping::Process()
    const wxString name{ _("Clipping") };
 
    auto clt = *inputTracks()->Any< const LabelTrack >().find_if(
-      [&]( const Track *track ){
-         return track->GetGroupData().GetName() == name; } );
+      [&]( const Track *track ){ return track->GetName() == name; } );
 
    LabelTrack *lt{};
    if (!clt)
@@ -224,7 +217,8 @@ bool EffectFindClipping::ProcessOne(LabelTrack * lt,
             if (stoprun >= mStop) {
                lt->AddLabel(SelectedRegion(startTime,
                                           wt->LongSamplesToTime(start + s - mStop)),
-                           wxString::Format(wxT("%lld of %lld"), startrun.as_long_long(), (samps - mStop).as_long_long()));
+                           wxString::Format(wxT("%lld of %lld"), startrun.as_long_long(), (samps - mStop).as_long_long()),
+                           -2);
                startrun = 0;
                stoprun = 0;
                samps = 0;

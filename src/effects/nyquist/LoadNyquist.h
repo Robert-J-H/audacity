@@ -37,7 +37,7 @@ public:
    bool Initialize() override;
    void Terminate() override;
 
-   const FileExtensions &GetFileExtensions() override;
+   FileExtensions GetFileExtensions() override;
    FilePath InstallPath() override;
 
    bool AutoRegisterPlugins(PluginManagerInterface & pm) override;

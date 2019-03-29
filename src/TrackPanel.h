@@ -21,7 +21,6 @@
 #include <wx/timer.h>
 
 #include "HitTestResult.h"
-#include "Prefs.h"
 
 #include "SelectedRegion.h"
 
@@ -44,6 +43,8 @@ class Ruler;
 class SnapManager;
 class AdornedRulerPanel;
 class LWSlider;
+class ControlToolBar; //Needed because state of controls can affect what gets drawn.
+class ToolsToolBar; //Needed because state of controls can affect what gets drawn.
 
 class TrackPanelAx;
 
@@ -71,6 +72,18 @@ namespace TrackInfo
    void ReCreateSliders( wxWindow *pParent );
 
    unsigned MinimumTrackHeight();
+
+   struct TCPLine;
+
+   void DrawItems
+      ( TrackPanelDrawingContext &context,
+        const wxRect &rect, const Track &track );
+
+   void DrawItems
+      ( TrackPanelDrawingContext &context,
+        const wxRect &rect, const Track *pTrack,
+        const std::vector<TCPLine> &topLines,
+        const std::vector<TCPLine> &bottomLines );
 
    void CloseTitleDrawFunction
       ( TrackPanelDrawingContext &context,
@@ -136,6 +149,11 @@ namespace TrackInfo
    void SetTrackInfoFont(wxDC *dc);
 
 
+   void DrawBackground(
+      wxDC * dc, const wxRect & rect, bool bSelected, const int vrul );
+   // void DrawBordersWithin(
+   //   wxDC * dc, const wxRect & rect, const Track &track ) const;
+
    void GetCloseBoxHorizontalBounds( const wxRect & rect, wxRect &dest );
    void GetCloseBoxRect(const wxRect & rect, wxRect &dest);
 
@@ -158,6 +176,10 @@ namespace TrackInfo
 
    void GetPanRect(const wxPoint & topLeft, wxRect &dest);
 
+#ifdef EXPERIMENTAL_MIDI_OUT
+   void GetVelocityRect(const wxPoint & topLeft, wxRect &dest);
+#endif
+
    void GetMinimizeHorizontalBounds( const wxRect &rect, wxRect &dest );
    void GetMinimizeRect(const wxRect & rect, wxRect &dest);
 
@@ -176,6 +198,7 @@ namespace TrackInfo
    bool HideTopItem( const wxRect &rect, const wxRect &subRect,
                                int allowance = 0 );
 
+   unsigned DefaultNoteTrackHeight();
    unsigned DefaultWaveTrackHeight();
 
    LWSlider * GainSlider
@@ -185,10 +208,15 @@ namespace TrackInfo
       (const wxRect &sliderRect, const WaveTrack *t, bool captured,
        wxWindow *pParent);
 
-   // Non-member, namespace function relying on TrackPanel to invoke it
-   // when it handles preference update events
+#ifdef EXPERIMENTAL_MIDI_OUT
+   LWSlider * VelocitySlider
+      (const wxRect &sliderRect, const NoteTrack *t, bool captured,
+       wxWindow *pParent);
+#endif
+
    void UpdatePrefs( wxWindow *pParent );
 };
+
 
 const int DragThreshold = 3;// Anything over 3 pixels is a drag, else a click.
 
@@ -227,26 +255,20 @@ enum : int {
 class AUDACITY_DLL_API TrackPanel final
    : public CellularPanel
    , public NonKeystrokeInterceptingWindow
-   , private PrefsListener
 {
  public:
-   static TrackPanel *Find( AudacityProject &project );
-   static TrackPanel &Get( AudacityProject &project );
-   static const TrackPanel &Get( const AudacityProject &project );
-   static void Destroy( AudacityProject &project );
- 
    TrackPanel(wxWindow * parent,
               wxWindowID id,
               const wxPoint & pos,
               const wxSize & size,
               const std::shared_ptr<TrackList> &tracks,
               ViewInfo * viewInfo,
-              AudacityProject * project,
+              TrackPanelListener * listener,
               AdornedRulerPanel * ruler );
 
    virtual ~ TrackPanel();
 
-   void UpdatePrefs() override;
+   void UpdatePrefs();
    void ApplyUpdatedTheme();
 
    void OnPaint(wxPaintEvent & event);
@@ -301,7 +323,7 @@ class AUDACITY_DLL_API TrackPanel final
 
    void UpdateVRulers();
    void UpdateVRuler(Track *t);
-   void UpdateTrackVRuler(Track *t);
+   void UpdateTrackVRuler(const Track *t);
    void UpdateVRulerSize();
 
    // Returns the time corresponding to the pixel column one past the track area
@@ -358,11 +380,30 @@ public:
               const wxSize & size,
               const std::shared_ptr<TrackList> &tracks,
               ViewInfo * viewInfo,
-              AudacityProject * project,
+              TrackPanelListener * listener,
               AdornedRulerPanel * ruler);
 
 protected:
    void DrawTracks(wxDC * dc);
+
+   void DrawEverythingElse(TrackPanelDrawingContext &context,
+                           const wxRegion & region,
+                           const wxRect & clip);
+   void DrawOutside(
+      TrackPanelDrawingContext &context,
+      const Track *leaderTrack, const wxRect & teamRect);
+
+   void HighlightFocusedTrack (wxDC* dc, const wxRect &rect);
+   void DrawShadow            ( wxDC* dc, const wxRect & rect );
+   void DrawBordersAroundTrack(wxDC* dc, const wxRect & rect );
+   void ClearTopMargin        (
+      TrackPanelDrawingContext &context, const wxRect &clip);
+   void ClearLeftAndRightMargins    (
+      TrackPanelDrawingContext &context, const wxRect & clip);
+   void ClearSeparator    (
+      TrackPanelDrawingContext &context, const wxRect & rect);
+   void DrawSash              (
+      wxDC* dc, const wxRect & rect, int labelw, bool bSelected );
 
 public:
    // Set the object that performs catch-all event handling when the pointer

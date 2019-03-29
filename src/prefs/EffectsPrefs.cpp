@@ -177,12 +177,8 @@ wxString EffectsPrefs::HelpPageName()
    return "Effects_Preferences";
 }
 
-namespace{
-PrefsPanel::Registration sAttachment{ "Effects",
-   [](wxWindow *parent, wxWindowID winid)
-   {
-      wxASSERT(parent); // to justify safenew
-      return safenew EffectsPrefs(parent, winid);
-   }
-};
+PrefsPanel *EffectsPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+{
+   wxASSERT(parent); // to justify safenew
+   return safenew EffectsPrefs(parent, winid);
 }

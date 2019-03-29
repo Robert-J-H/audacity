@@ -109,7 +109,7 @@ wxString FileNames::TempDir()
 
 // originally an ExportMultiple method. Append suffix if newName appears in otherNames.
 void FileNames::MakeNameUnique(FilePaths &otherNames,
-   wxFileNameWrapper &newName)
+   wxFileName &newName)
 {
    if (otherNames.Index(newName.GetFullName(), false) >= 0) {
       int i=2;
@@ -128,7 +128,7 @@ void FileNames::MakeNameUnique(FilePaths &otherNames,
 // Audacity user data directories
 FilePath FileNames::AutoSaveDir()
 {
-   wxFileNameWrapper autoSaveDir{ FileNames::DataDir(), wxT("AutoSave") };
+   wxFileName autoSaveDir(FileNames::DataDir(), wxT("AutoSave"));
    return FileNames::MkDir(autoSaveDir.GetFullPath());
 }
 
@@ -158,7 +158,7 @@ FilePath FileNames::DataDir()
       // If there is a directory "Portable Settings" relative to the
       // executable's EXE file, the prefs are stored in there, otherwise
       // the prefs are stored in the user data dir provided by the OS.
-      wxFileNameWrapper exePath{ PlatformCompatibility::GetExecutablePath() };
+      wxFileName exePath(PlatformCompatibility::GetExecutablePath());
 #if defined(__WXMAC__)
       // Path ends for example in "Audacity.app/Contents/MacOSX"
       //exePath.RemoveLastDir();
@@ -193,7 +193,7 @@ FilePath FileNames::ResourcesDir(){
 FilePath FileNames::HtmlHelpDir()
 {
 #if defined(__WXMAC__)
-   wxFileNameWrapper exePath{ PlatformCompatibility::GetExecutablePath() };
+   wxFileName exePath(PlatformCompatibility::GetExecutablePath());
       // Path ends for example in "Audacity.app/Contents/MacOSX"
       //exePath.RemoveLastDir();
       //exePath.RemoveLastDir();
@@ -213,42 +213,42 @@ FilePath FileNames::HtmlHelpDir()
 FilePath FileNames::LegacyChainDir()
 {
    // Don't force creation of it
-   return wxFileNameWrapper{ DataDir(), wxT("Chains") }.GetFullPath();
+   return wxFileName{ DataDir(), wxT("Chains") }.GetFullPath();
 }
 
 FilePath FileNames::MacroDir()
 {
-   return FileNames::MkDir( wxFileNameWrapper( DataDir(), wxT("Macros") ).GetFullPath() );
+   return FileNames::MkDir( wxFileName( DataDir(), wxT("Macros") ).GetFullPath() );
 }
 
 FilePath FileNames::NRPDir()
 {
-   return FileNames::MkDir( wxFileNameWrapper( DataDir(), wxT("NRP") ).GetFullPath() );
+   return FileNames::MkDir( wxFileName( DataDir(), wxT("NRP") ).GetFullPath() );
 }
 
 FilePath FileNames::NRPFile()
 {
-   return wxFileNameWrapper( NRPDir(), wxT("noisegate.nrp") ).GetFullPath();
+   return wxFileName( NRPDir(), wxT("noisegate.nrp") ).GetFullPath();
 }
 
 FilePath FileNames::PlugInDir()
 {
-   return FileNames::MkDir( wxFileNameWrapper( DataDir(), wxT("Plug-Ins") ).GetFullPath() );
+   return FileNames::MkDir( wxFileName( DataDir(), wxT("Plug-Ins") ).GetFullPath() );
 }
 
 FilePath FileNames::PluginRegistry()
 {
-   return wxFileNameWrapper( DataDir(), wxT("pluginregistry.cfg") ).GetFullPath();
+   return wxFileName( DataDir(), wxT("pluginregistry.cfg") ).GetFullPath();
 }
 
 FilePath FileNames::PluginSettings()
 {
-   return wxFileNameWrapper( DataDir(), wxT("pluginsettings.cfg") ).GetFullPath();
+   return wxFileName( DataDir(), wxT("pluginsettings.cfg") ).GetFullPath();
 }
 
 FilePath FileNames::BaseDir()
 {
-   wxFileNameWrapper baseDir;
+   wxFileName baseDir;
 
 #if defined(__WXMAC__)
    baseDir = PlatformCompatibility::GetExecutablePath();
@@ -272,7 +272,7 @@ FilePath FileNames::BaseDir()
 
 FilePath FileNames::ModulesDir()
 {
-   wxFileNameWrapper modulesDir{ BaseDir(), wxEmptyString };
+   wxFileName modulesDir(BaseDir(), wxEmptyString);
 
    modulesDir.AppendDir(wxT("modules"));
 
@@ -281,34 +281,34 @@ FilePath FileNames::ModulesDir()
 
 FilePath FileNames::ThemeDir()
 {
-   return FileNames::MkDir( wxFileNameWrapper{ DataDir(), wxT("Theme") }.GetFullPath() );
+   return FileNames::MkDir( wxFileName( DataDir(), wxT("Theme") ).GetFullPath() );
 }
 
 FilePath FileNames::ThemeComponentsDir()
 {
-   return FileNames::MkDir( wxFileNameWrapper{ ThemeDir(), wxT("Components") }.GetFullPath() );
+   return FileNames::MkDir( wxFileName( ThemeDir(), wxT("Components") ).GetFullPath() );
 }
 
 FilePath FileNames::ThemeCachePng()
 {
-   return wxFileNameWrapper{ ThemeDir(), wxT("ImageCache.png") }.GetFullPath();
+   return wxFileName( ThemeDir(), wxT("ImageCache.png") ).GetFullPath();
 }
 
 FilePath FileNames::ThemeCacheHtm()
 {
-   return wxFileNameWrapper{ ThemeDir(), wxT("ImageCache.htm") }.GetFullPath();
+   return wxFileName( ThemeDir(), wxT("ImageCache.htm") ).GetFullPath();
 }
 
 FilePath FileNames::ThemeImageDefsAsCee()
 {
-   return wxFileNameWrapper{ ThemeDir(), wxT("ThemeImageDefsAsCee.h") }.GetFullPath();
+   return wxFileName( ThemeDir(), wxT("ThemeImageDefsAsCee.h") ).GetFullPath();
 }
 
 FilePath FileNames::ThemeCacheAsCee( )
 {
 // DA: Theme sourcery file name.
 #ifndef EXPERIMENTAL_DA
-   return wxFileNameWrapper{ ThemeDir(), wxT("ThemeAsCeeCode.h") }.GetFullPath();
+   return wxFileName( ThemeDir(), wxT("ThemeAsCeeCode.h") ).GetFullPath();
 #else
    return wxFileName( ThemeDir(), wxT("DarkThemeAsCeeCode.h") ).GetFullPath();
 #endif
@@ -316,7 +316,7 @@ FilePath FileNames::ThemeCacheAsCee( )
 
 FilePath FileNames::ThemeComponent(const wxString &Str)
 {
-   return wxFileNameWrapper{ ThemeComponentsDir(), Str, wxT("png") }.GetFullPath();
+   return wxFileName( ThemeComponentsDir(), Str, wxT("png") ).GetFullPath();
 }
 
 //

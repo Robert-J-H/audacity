@@ -21,6 +21,7 @@ class wxCheckBox;
 class wxTextCtrl;
 class ShuttleGui;
 
+#define DISTORTION_PLUGIN_SYMBOL ComponentInterfaceSymbol{ XO("Distortion") }
 #define STEPS 1024      // number of +ve or -ve steps in lookup tabe
 #define TABLESIZE 2049  // size of lookup table (steps * 2 + 1)
 
@@ -45,8 +46,6 @@ public:
 class EffectDistortion final : public Effect
 {
 public:
-   static const ComponentInterfaceSymbol Symbol;
-
    EffectDistortion();
    virtual ~EffectDistortion();
 

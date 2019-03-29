@@ -35,7 +35,7 @@ std::shared_ptr<WaveTrack> GainSliderHandle::GetWaveTrack()
 float GainSliderHandle::GetValue()
 {
    if (GetWaveTrack())
-      return GetWaveTrack()->GetGroupData().GetGain();
+      return GetWaveTrack()->GetGain();
    else
       return 0;
 }
@@ -46,8 +46,11 @@ UIHandle::Result GainSliderHandle::SetValue
    (void)pProject;//Compiler food
    auto pTrack = GetWaveTrack();
 
-   if (pTrack)
-      pTrack->GetGroupData().SetGain(newValue);
+   if (pTrack) {
+      for (auto channel :
+           TrackList::Channels(pTrack.get()))
+         channel->SetGain(newValue);
+   }
 
    return RefreshCode::RefreshNone;
 }
@@ -78,7 +81,7 @@ UIHandlePtr GainSliderHandle::HitTest
       []( AudacityProject *pProject, const wxRect &sliderRect, Track *pTrack ) {
          return TrackInfo::GainSlider
             (sliderRect, static_cast<WaveTrack*>( pTrack ), true,
-             &TrackPanel::Get( *pProject ));
+             const_cast<TrackPanel*>(pProject->GetTrackPanel()));
       };
       auto result =
          std::make_shared<GainSliderHandle>( sliderFn, sliderRect2, pTrack );
@@ -109,7 +112,7 @@ std::shared_ptr<WaveTrack> PanSliderHandle::GetWaveTrack()
 float PanSliderHandle::GetValue()
 {
    if (GetWaveTrack())
-      return GetWaveTrack()->GetGroupData().GetPan();
+      return GetWaveTrack()->GetPan();
    else
       return 0;
 }
@@ -121,8 +124,11 @@ UIHandle::Result PanSliderHandle::SetValue(AudacityProject *pProject, float newV
    Result result = RefreshNone;
    auto pTrack = GetWaveTrack();
 
-   if (pTrack)
-      pTrack->GetGroupData().SetPan(newValue);
+   if (pTrack) {
+      for (auto channel :
+           TrackList::Channels(pTrack.get()))
+         channel->SetPan(newValue);
+   }
 
    return result;
 }
@@ -151,7 +157,7 @@ UIHandlePtr PanSliderHandle::HitTest
       []( AudacityProject *pProject, const wxRect &sliderRect, Track *pTrack ) {
          return TrackInfo::PanSlider
             (sliderRect, static_cast<WaveTrack*>( pTrack ), true,
-             &TrackPanel::Get( *pProject ));
+             const_cast<TrackPanel*>(pProject->GetTrackPanel()));
       };
       auto result = std::make_shared<PanSliderHandle>(
          sliderFn, sliderRect, pTrack );

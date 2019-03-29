@@ -24,6 +24,8 @@ class ShuttleGui;
 
 #define NUM_STAGES 24
 
+#define PHASER_PLUGIN_SYMBOL ComponentInterfaceSymbol{ XO("Phaser") }
+
 class EffectPhaserState
 {
 public:
@@ -42,8 +44,6 @@ public:
 class EffectPhaser final : public Effect
 {
 public:
-   static const ComponentInterfaceSymbol Symbol;
-
    EffectPhaser();
    virtual ~EffectPhaser();
 

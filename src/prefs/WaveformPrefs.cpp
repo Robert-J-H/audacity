@@ -26,7 +26,7 @@ Paul Licameli
 
 #include "../TrackPanel.h"
 #include "../ShuttleGui.h"
-#include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewGroupData.h"
+#include "../WaveTrack.h"
 
 WaveformPrefs::WaveformPrefs(wxWindow * parent, wxWindowID winid, WaveTrack *wt)
 /* i18n-hint: A waveform is a visual representation of vibration */
@@ -35,8 +35,7 @@ WaveformPrefs::WaveformPrefs(wxWindow * parent, wxWindowID winid, WaveTrack *wt)
 , mPopulating(false)
 {
    if (mWt) {
-      auto &data = WaveTrackViewGroupData::Get( *wt );
-      WaveformSettings &settings = data.GetWaveformSettings();
+      WaveformSettings &settings = wt->GetWaveformSettings();
       mDefaulted = (&WaveformSettings::defaults() == &settings);
       mTempSettings = settings;
    }
@@ -148,34 +147,35 @@ bool WaveformPrefs::Commit()
    WaveformSettings::Globals::Get().SavePrefs();
 
    if (mWt) {
-      auto &data = WaveTrackViewGroupData::Get( *mWt );
-      if (mDefaulted)
-         data.SetWaveformSettings({});
-      else {
-         WaveformSettings &settings =
-            data.GetIndependentWaveformSettings();
-         settings = mTempSettings;
+      for (auto channel : TrackList::Channels(mWt)) {
+         if (mDefaulted)
+            channel->SetWaveformSettings({});
+         else {
+            WaveformSettings &settings =
+               channel->GetIndependentWaveformSettings();
+            settings = mTempSettings;
+         }
       }
    }
 
-   WaveformSettings *const pSettings = &WaveformSettings::defaults();
    if (!mWt || mDefaulted) {
+      WaveformSettings *const pSettings =
+         &WaveformSettings::defaults();
       *pSettings = mTempSettings;
       pSettings->SavePrefs();
    }
-   pSettings->LoadPrefs(); // always; in case Globals changed
 
    mTempSettings.ConvertToEnumeratedDBRange();
 
    if (mWt && isOpenPage) {
-      auto &data = WaveTrackViewGroupData::Get( *mWt );
-      data.SetDisplay(WaveTrackViewConstants::Waveform);
+      for (auto channel : TrackList::Channels(mWt))
+         channel->SetDisplay(WaveTrack::Waveform);
    }
 
    if (isOpenPage) {
-      auto &tp = TrackPanel::Get( *::GetActiveProject() );
-      tp.UpdateVRulers();
-      tp.Refresh(false);
+      TrackPanel *const tp = ::GetActiveProject()->GetTrackPanel();
+      tp->UpdateVRulers();
+      tp->Refresh(false);
    }
 
    return true;
@@ -232,23 +232,13 @@ EVT_CHOICE(ID_RANGE, WaveformPrefs::OnControl)
 EVT_CHECKBOX(ID_DEFAULTS, WaveformPrefs::OnDefaults)
 END_EVENT_TABLE()
 
-PrefsPanel::Factory
-WaveformPrefsFactory(WaveTrack *wt)
+WaveformPrefsFactory::WaveformPrefsFactory(WaveTrack *wt)
+: mWt(wt)
 {
-   return [=](wxWindow *parent, wxWindowID winid)
-   {
-      wxASSERT(parent); // to justify safenew
-      return safenew WaveformPrefs(parent, winid, wt);
-   };
 }
-#if 0
-namespace{
-PrefsPanel::Registration sAttachment{ "Waveform",
-   WaveformPrefsFactory( nullptr ),
-   false,
-   // Register with an explicit ordering hint because this one is
-   // only conditionally compiled; and place it at a lower tree level
-   { "Tracks", { Registry::OrderingHint::Before, "Spectrum" } }
-};
+
+PrefsPanel *WaveformPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+{
+   wxASSERT(parent); // to justify safenew
+   return safenew WaveformPrefs(parent, winid, mWt);
 }
-#endif

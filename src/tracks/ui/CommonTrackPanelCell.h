@@ -11,7 +11,6 @@ Paul Licameli split from TrackPanel.cpp
 #ifndef __AUDACITY_COMMON_TRACK_PANEL_CELL__
 #define __AUDACITY_COMMON_TRACK_PANEL_CELL__
 
-#include "../../Audacity.h"
 #include "../../TrackPanelCell.h"
 #include "../../MemoryX.h"
 #include <stdlib.h>

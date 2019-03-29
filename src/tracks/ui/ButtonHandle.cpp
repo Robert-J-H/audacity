@@ -40,7 +40,7 @@ UIHandle::Result ButtonHandle::Click
 (const TrackPanelMouseEvent &evt, AudacityProject *pProject)
 {
    using namespace RefreshCode;
-   auto pTrack = TrackList::Get( *pProject ).Lock(mpTrack);
+   auto pTrack = pProject->GetTracks()->Lock(mpTrack);
    if ( !pTrack )
       return Cancelled;
 
@@ -64,7 +64,7 @@ UIHandle::Result ButtonHandle::Drag
 {
    const wxMouseEvent &event = evt.event;
    using namespace RefreshCode;
-   auto pTrack = TrackList::Get( *pProject ).Lock(mpTrack);
+   auto pTrack = pProject->GetTracks()->Lock(mpTrack);
    if (!pTrack)
       return Cancelled;
 
@@ -87,7 +87,7 @@ UIHandle::Result ButtonHandle::Release
  wxWindow *pParent)
 {
    using namespace RefreshCode;
-   auto pTrack = TrackList::Get( *pProject ).Lock(mpTrack);
+   auto pTrack = pProject->GetTracks()->Lock(mpTrack);
    if (!pTrack)
       return Cancelled;
 

@@ -32,4 +32,10 @@ class EffectsPrefs final : public PrefsPanel
    void Populate();
 };
 
+/// A PrefsPanelFactory that creates one EffectsPrefs panel.
+class EffectsPrefsFactory final : public PrefsPanelFactory
+{
+public:
+   PrefsPanel *operator () (wxWindow *parent, wxWindowID winid) override;
+};
 #endif

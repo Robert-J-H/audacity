@@ -407,12 +407,8 @@ wxString DevicePrefs::HelpPageName()
    return "Devices_Preferences";
 }
 
-namespace{
-PrefsPanel::Registration sAttachment{ "Device",
-   [](wxWindow *parent, wxWindowID winid)
-   {
-      wxASSERT(parent); // to justify safenew
-      return safenew DevicePrefs(parent, winid);
-   }
-};
+PrefsPanel *DevicePrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+{
+   wxASSERT(parent); // to justify safenew
+   return safenew DevicePrefs(parent, winid);
 }

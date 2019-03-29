@@ -16,7 +16,6 @@
 
 #include "../Audacity.h"
 #include "Reverse.h"
-#include "LoadEffects.h"
 
 #include <math.h>
 
@@ -30,11 +29,6 @@
 // EffectReverse
 //
 
-const ComponentInterfaceSymbol EffectReverse::Symbol
-{ XO("Reverse") };
-
-namespace{ BuiltinEffectsModule::Registration< EffectReverse > reg; }
-
 EffectReverse::EffectReverse()
 {
 }
@@ -47,7 +41,7 @@ EffectReverse::~EffectReverse()
 
 ComponentInterfaceSymbol EffectReverse::GetSymbol()
 {
-   return Symbol;
+   return REVERSE_PLUGIN_SYMBOL;
 }
 
 wxString EffectReverse::GetDescription()

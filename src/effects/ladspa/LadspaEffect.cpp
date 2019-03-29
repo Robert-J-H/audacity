@@ -156,9 +156,9 @@ void LadspaEffectsModule::Terminate()
    return;
 }
 
-const FileExtensions &LadspaEffectsModule::GetFileExtensions()
+FileExtensions LadspaEffectsModule::GetFileExtensions()
 {
-   static FileExtensions result{{
+   return {{
 
 #ifdef __WXMSW__
 
@@ -176,7 +176,6 @@ const FileExtensions &LadspaEffectsModule::GetFileExtensions()
 #endif
 
    }};
-   return result;
 }
 
 FilePath LadspaEffectsModule::InstallPath()

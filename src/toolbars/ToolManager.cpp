@@ -86,7 +86,7 @@
 //
 ToolFrame::ToolFrame
    ( AudacityProject *parent, ToolManager *manager, ToolBar *bar, wxPoint pos )
-   : wxFrame( ProjectWindow::Find( parent ),
+   : wxFrame( parent,
           bar->GetId(),
           wxEmptyString,
           pos,
@@ -164,11 +164,6 @@ ToolFrame::~ToolFrame()
 {
    if(HasCapture())
       ReleaseMouse();
-}
-
-ProjectWindow *ToolFrame::GetParent() const
-{
-   return &ProjectWindow::Get( *mParent );
 }
 
 void ToolFrame::OnGrabber( GrabberEvent & event )
@@ -330,39 +325,12 @@ BEGIN_EVENT_TABLE( ToolManager, wxEvtHandler )
    EVT_TIMER( wxID_ANY, ToolManager::OnTimer )
 END_EVENT_TABLE()
 
-static const AudacityProject::AttachedObjects::RegisteredFactory key{
-  []( AudacityProject &parent ){
-     auto &window = ProjectWindow::Get( parent );
-     return std::make_shared< ToolManager >( &parent, window.GetTopPanel() ); }
-};
-
-ToolManager *ToolManager::Find( AudacityProject &project )
-{
-   return project.AttachedObjects::Find< ToolManager >( key );
-}
-
-ToolManager &ToolManager::Get( AudacityProject &project )
-{
-   return project.AttachedObjects::Get< ToolManager >( key );
-}
-
-const ToolManager &ToolManager::Get( const AudacityProject &project )
-{
-   return Get( const_cast< AudacityProject & >( project ) );
-}
-
-void ToolManager::Reset( AudacityProject &project )
-{
-   project.AttachedObjects::Assign( key, nullptr );
-}
-
 //
 // Constructor
 //
 ToolManager::ToolManager( AudacityProject *parent, wxWindow *topDockParent )
 : wxEvtHandler()
 {
-   auto pWindow = ProjectWindow::Find( parent );
    wxPoint pt[ 3 ];
 
 #if defined(__WXMAC__)
@@ -429,20 +397,19 @@ ToolManager::ToolManager( AudacityProject *parent, wxWindow *topDockParent )
 
    // Hook the parents mouse events...using the parent helps greatly
    // under GTK
-   auto &window = ProjectWindow::Get( *mParent );
-   window.Bind( wxEVT_LEFT_UP,
+   mParent->Bind( wxEVT_LEFT_UP,
                      &ToolManager::OnMouse,
                      this );
-   window.Bind( wxEVT_MOTION,
+   mParent->Bind( wxEVT_MOTION,
                      &ToolManager::OnMouse,
                      this );
-   window.Bind( wxEVT_MOUSE_CAPTURE_LOST,
+   mParent->Bind( wxEVT_MOUSE_CAPTURE_LOST,
                      &ToolManager::OnCaptureLost,
                      this );
 
    // Create the top and bottom docks
    mTopDock = safenew ToolDock( this, topDockParent, TopDockID );
-   mBotDock = safenew ToolDock( this, pWindow, BotDockID );
+   mBotDock = safenew ToolDock( this, mParent, BotDockID );
 
    // Create all of the toolbars
    // All have the project as parent window
@@ -671,7 +638,7 @@ int ToolManager::FilterEvent(wxEvent &event)
       if ( window &&
            !dynamic_cast<Grabber*>( window ) &&
            !dynamic_cast<ToolFrame*>( window ) &&
-           top == ProjectWindow::Find( mParent ) )
+           top == mParent )
          // Note this is a dangle-proof wxWindowRef:
          mLastFocus = window;
    }
@@ -684,6 +651,7 @@ int ToolManager::FilterEvent(wxEvent &event)
 //
 void ToolManager::ReadConfig()
 {
+   wxString oldpath = gPrefs->GetPath();
    std::vector<int> unordered[ DockCount ];
    std::vector<ToolBar*> dockedAndHidden;
    bool show[ ToolBarCount ];
@@ -698,9 +666,8 @@ void ToolManager::ReadConfig()
    wxSystemOptions::SetOption( wxMAC_WINDOW_PLAIN_TRANSITION, 1 );
 #endif
 
-   {
    // Change to the bar root
-   wxConfigPathChanger changer{ gPrefs, wxT("/GUI/ToolBars/") };
+   gPrefs->SetPath( wxT("/GUI/ToolBars") );
 
    ToolBarConfiguration::Legacy topLegacy, botLegacy;
 
@@ -726,8 +693,7 @@ void ToolManager::ReadConfig()
       //   wxSystemSettings::GetMetric( wxSYS_SCREEN_Y ) /2 );
 
       // Change to the bar subkey
-      wxConfigPathChanger changer2{ gPrefs,
-         bar->GetSection() + wxCONFIG_PATH_SEPARATOR };
+      gPrefs->SetPath( bar->GetSection() );
 
       bool bShownByDefault = true;
       int defaultDock = TopDockID;
@@ -872,6 +838,12 @@ void ToolManager::ReadConfig()
          // Show or hide it
          Expose( ndx, show[ ndx ] );
       }
+
+      // Change back to the bar root
+      //gPrefs->SetPath( wxT("..") );  <-- Causes a warning...
+      // May or may not have gone into a subdirectory,
+      // so use an absolute path.
+      gPrefs->SetPath( wxT("/GUI/ToolBars") );
    }
 
    mTopDock->GetConfiguration().PostRead(topLegacy);
@@ -945,7 +917,8 @@ void ToolManager::ReadConfig()
       bar->Expose(false);
    }
 
-   }
+   // Restore original config path
+   gPrefs->SetPath( oldpath );
 
 #if defined(__WXMAC__)
    // Reinstate original transition
@@ -966,11 +939,11 @@ void ToolManager::WriteConfig()
       return;
    }
 
+   wxString oldpath = gPrefs->GetPath();
    int ndx;
 
-   {
    // Change to the bar root
-   wxConfigPathChanger changer{ gPrefs, wxT("/GUI/ToolBars/") };
+   gPrefs->SetPath( wxT("/GUI/ToolBars") );
 
    // Save state of each bar
    for( ndx = 0; ndx < ToolBarCount; ndx++ )
@@ -978,8 +951,7 @@ void ToolManager::WriteConfig()
       ToolBar *bar = mBars[ ndx ].get();
 
       // Change to the bar subkey
-      wxConfigPathChanger changer2{ gPrefs,
-         bar->GetSection() + wxCONFIG_PATH_SEPARATOR };
+      gPrefs->SetPath( bar->GetSection() );
 
       // Search both docks for toolbar order
       bool to = mTopDock->GetConfiguration().Contains( bar );
@@ -1009,9 +981,13 @@ void ToolManager::WriteConfig()
       gPrefs->Write( wxT("Y"), pos.y );
       gPrefs->Write( wxT("W"), sz.x );
       gPrefs->Write( wxT("H"), sz.y );
+
+      // Change back to the bar root
+      gPrefs->SetPath( wxT("..") );
    }
 
-   }
+   // Restore original config path
+   gPrefs->SetPath( oldpath );
    gPrefs->Flush();
 }
 
@@ -1047,7 +1023,7 @@ void ToolManager::Updated()
 {
    // Queue an update event
    wxCommandEvent e( EVT_TOOLBAR_UPDATED );
-   ProjectWindow::Get( *mParent ).GetEventHandler()->AddPendingEvent( e );
+   mParent->GetEventHandler()->AddPendingEvent( e );
 }
 
 //
@@ -1118,6 +1094,21 @@ void ToolManager::LayoutToolBars()
 }
 
 //
+// Tell the toolbars that preferences have been updated
+//
+void ToolManager::UpdatePrefs()
+{
+   for( int ndx = 0; ndx < ToolBarCount; ndx++ )
+   {
+      ToolBar *bar = mBars[ ndx ].get();
+      if( bar )
+      {
+         bar->UpdatePrefs();
+      }
+   }
+}
+
+//
 // Handle toolbar dragging
 //
 void ToolManager::OnMouse( wxMouseEvent & event )
@@ -1179,7 +1170,7 @@ void ToolManager::OnMouse( wxMouseEvent & event )
          // Must set the bar afloat if it's currently docked
          mDidDrag = true;
          wxPoint mp = event.GetPosition();
-         mp = ProjectWindow::Get( *mParent ).ClientToScreen(mp);
+         mp = mParent->ClientToScreen(mp);
          if (!mDragWindow) {
             // We no longer have control
             if (mPrevDock)
@@ -1454,9 +1445,8 @@ void ToolManager::OnGrabber( GrabberEvent & event )
    }
 
    // We want all mouse events from this point on
-   auto &window = ProjectWindow::Get( *mParent );
-   if( !window.HasCapture() )
-      window.CaptureMouse();
+   if( !mParent->HasCapture() )
+      mParent->CaptureMouse();
 
    // Start monitoring shift key changes
    mLastState = wxGetKeyState( WXK_SHIFT );
@@ -1497,10 +1487,9 @@ void ToolManager::DoneDragging()
 {
    // Done dragging
    // Release capture
-   auto &window = ProjectWindow::Get( *mParent );
-   if( window.HasCapture() )
+   if( mParent->HasCapture() )
    {
-      window.ReleaseMouse();
+      mParent->ReleaseMouse();
    }
 
    // Hide the indicator

@@ -17,7 +17,7 @@
 
 #include <vector>
 #include "PrefsPanel.h"
-#include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.h"
+#include "../WaveTrack.h"
 
 class ShuttleGui;
 
@@ -37,10 +37,10 @@ class TracksPrefs final : public PrefsPanel
    
    static wxString GetDefaultAudioTrackNamePreference();
 
-   static WaveTrackViewConstants::Display ViewModeChoice();
-   static WaveTrackViewConstants::SampleDisplay SampleViewChoice();
-   static WaveTrackViewConstants::ZoomPresets Zoom1Choice();
-   static WaveTrackViewConstants::ZoomPresets Zoom2Choice();
+   static WaveTrack::WaveTrackDisplay ViewModeChoice();
+   static WaveTrack::SampleDisplay SampleViewChoice();
+   static WaveTrack::ZoomPresets Zoom1Choice();
+   static WaveTrack::ZoomPresets Zoom2Choice();
 
  private:
    void Populate();
@@ -49,4 +49,10 @@ class TracksPrefs final : public PrefsPanel
    static int iPreferencePinned;
 };
 
+/// A PrefsPanelFactory that creates one TracksPrefs panel.
+class TracksPrefsFactory final : public PrefsPanelFactory
+{
+public:
+   PrefsPanel *operator () (wxWindow *parent, wxWindowID winid) override;
+};
 #endif

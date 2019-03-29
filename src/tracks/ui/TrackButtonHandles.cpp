@@ -11,7 +11,6 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../Audacity.h"
 #include "TrackButtonHandles.h"
 
-#include "TrackView.h"
 #include "../../HitTestResult.h"
 #include "../../Menus.h"
 #include "../../Project.h"
@@ -19,7 +18,6 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../Track.h"
 #include "../../TrackPanel.h"
 #include "../../commands/CommandManager.h"
-#include "../../tracks/ui/TrackViewGroupData.h"
 
 MinimizeButtonHandle::MinimizeButtonHandle
 ( const std::shared_ptr<Track> &pTrack, const wxRect &rect )
@@ -38,9 +36,9 @@ UIHandle::Result MinimizeButtonHandle::CommitChanges
    auto pTrack = mpTrack.lock();
    if (pTrack)
    {
-      auto &data = TrackViewGroupData::Get( *pTrack );
-      bool wasMinimized = data.GetMinimized();
-      data.SetMinimized( !wasMinimized );
+      bool wasMinimized = pTrack->GetMinimized();
+      for (auto channel : TrackList::Channels(pTrack.get()))
+         channel->SetMinimized(!wasMinimized);
       pProject->ModifyState(true);
 
       // Redraw all tracks when any one of them expands or contracts
@@ -55,8 +53,7 @@ UIHandle::Result MinimizeButtonHandle::CommitChanges
 wxString MinimizeButtonHandle::Tip(const wxMouseState &) const
 {
    auto pTrack = GetTrack();
-   return TrackViewGroupData::Get( *pTrack ).GetMinimized()
-      ? _("Expand") : _("Collapse");
+   return pTrack->GetMinimized() ? _("Expand") : _("Collapse");
 }
 
 UIHandlePtr MinimizeButtonHandle::HitTest
@@ -169,13 +166,13 @@ wxString CloseButtonHandle::Tip(const wxMouseState &) const
    auto name = _("Close");
    auto project = ::GetActiveProject();
    auto focused =
-      TrackPanel::Get( *project ).GetFocusedTrack() == GetTrack().get();
+      project->GetTrackPanel()->GetFocusedTrack() == GetTrack().get();
    if (!focused)
       return name;
 
-   auto &commandManager = CommandManager::Get( *project );
+   auto commandManager = project->GetCommandManager();
    TranslatedInternalString command{ wxT("TrackClose"), name };
-   return commandManager.DescribeCommandsAndShortcuts( &command, 1u );
+   return commandManager->DescribeCommandsAndShortcuts( &command, 1u );
 }
 
 UIHandlePtr CloseButtonHandle::HitTest
@@ -211,7 +208,7 @@ MenuButtonHandle::~MenuButtonHandle()
 UIHandle::Result MenuButtonHandle::CommitChanges
 (const wxMouseEvent &, AudacityProject *pProject, wxWindow *WXUNUSED(pParent))
 {
-   auto &trackPanel = TrackPanel::Get( *pProject );
+   auto pPanel = pProject->GetTrackPanel();
    auto pCell = mpCell.lock();
    if (!pCell)
       return RefreshCode::Cancelled;
@@ -219,8 +216,7 @@ UIHandle::Result MenuButtonHandle::CommitChanges
       static_cast<CommonTrackPanelCell*>(pCell.get())->FindTrack();
    if (!pTrack)
       return RefreshCode::Cancelled;
-   trackPanel.CallAfter(
-      [&trackPanel,pTrack]{ trackPanel.OnTrackMenu( pTrack.get() ); } );
+   pPanel->CallAfter( [=]{ pPanel->OnTrackMenu( pTrack.get() ); } );
    return RefreshCode::RefreshNone;
 }
 
@@ -229,13 +225,13 @@ wxString MenuButtonHandle::Tip(const wxMouseState &) const
    auto name = _("Open menu...");
    auto project = ::GetActiveProject();
    auto focused =
-      TrackPanel::Get( *project ).GetFocusedTrack() == GetTrack().get();
+      project->GetTrackPanel()->GetFocusedTrack() == GetTrack().get();
    if (!focused)
       return name;
 
-   auto &commandManager = CommandManager::Get( *project );
+   auto commandManager = project->GetCommandManager();
    TranslatedInternalString command{ wxT("TrackMenu"), name };
-   return commandManager.DescribeCommandsAndShortcuts( &command, 1u );
+   return commandManager->DescribeCommandsAndShortcuts( &command, 1u );
 }
 
 UIHandlePtr MenuButtonHandle::HitTest

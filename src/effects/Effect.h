@@ -443,7 +443,7 @@ protected:
    void ReplaceProcessedTracks(const bool bGoodResult);
 
    // Use this to append a NEW output track.
-   Track *AddToOutputTracks(const std::shared_ptr<Track> &t, bool leader);
+   Track *AddToOutputTracks(const std::shared_ptr<Track> &t);
 
 //
 // protected data
