@@ -11,8 +11,7 @@
 #ifndef AUDACITY_VSTCONTROL_H
 #define AUDACITY_VSTCONTROL_H
 
-#include <wx/control.h>
-#include <wx/panel.h>
+#include <wx/control.h> // to inherit
 
 #include "aeffectx.h"
 

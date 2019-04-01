@@ -22,7 +22,6 @@
 #include "../MemoryX.h"
 #include "Keyboard.h"
 #include <vector>
-#include <wx/hashmap.h>
 
 #include "../xml/XMLTagHandler.h"
 
@@ -33,6 +32,8 @@
 class wxMenu;
 class wxMenuBar;
 class wxArrayString;
+class wxMenu;
+class wxMenuBar;
 class TranslatedInternalString;
 using CommandParameter = CommandID;
 

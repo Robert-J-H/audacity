@@ -10,8 +10,8 @@
 #define __AUDACITY_WXPANEL_WRAPPER__
 
 #include "../MemoryX.h"
-#include <wx/panel.h>
-#include <wx/dialog.h>
+#include <wx/panel.h> // to inherit
+#include <wx/dialog.h> // to inherit
 
 #include "../Internat.h"
 
@@ -105,7 +105,7 @@ public:
    }
 };
 
-#include <wx/dirdlg.h>
+#include <wx/dirdlg.h> // to inherit
 
 class AUDACITY_DLL_API wxDirDialogWrapper : public wxTabTraversalWrapper<wxDirDialog>
 {

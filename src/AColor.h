@@ -15,8 +15,8 @@
 #define __AUDACITY_COLOR__
 
 #include "MemoryX.h"
-#include <wx/brush.h>
-#include <wx/pen.h>
+#include <wx/brush.h> // member variable
+#include <wx/pen.h> // member variable
 
 class wxDC;
 class wxRect;

@@ -16,19 +16,16 @@ class CommandManager;
 class ShuttleGui;
 
 #include <wx/defs.h>
-#include <wx/imaglist.h>
-#include <wx/listctrl.h>
-#include <wx/radiobut.h>
-#include <wx/srchctrl.h>
-#include <wx/timer.h>
-
-#include "../widgets/KeyView.h"
+#include <wx/timer.h> // member variable
 
 #include "PrefsPanel.h"
 
+class wxRadioButton;
 class wxStaticText;
 class wxTextCtrl;
+class KeyView;
 struct NormalizedKeyString;
+enum ViewByType : int;
 
 class KeyConfigPrefs final : public PrefsPanel
 {

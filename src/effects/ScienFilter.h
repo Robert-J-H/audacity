@@ -15,13 +15,11 @@ Vaughan Johnson (Preview)
 
 #include <wx/setup.h> // for wxUSE_* macros
 
-#include <wx/bitmap.h>
-#include <wx/panel.h>
-
 #include "Biquad.h"
 
 #include "Effect.h"
 
+class wxBitmap;
 class wxChoice;
 class wxSlider;
 class wxStaticText;
@@ -174,13 +172,5 @@ private:
 
    DECLARE_EVENT_TABLE()
 };
-
-#if wxUSE_ACCESSIBILITY
-
-// ScienceFilter and Equalisation effects both need SliderAx class.
-// For now it is declared and defined in Equalisation effect.
-// TODO: Move it to its own file.
-
-#endif // wxUSE_ACCESSIBILITY
 
 #endif

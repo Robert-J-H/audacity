@@ -23,12 +23,11 @@
 #include "../MemoryX.h"
 #include <vector>
 #include <wx/defs.h>
-#include <wx/evtloop.h>
-#include <wx/gauge.h>
-#include <wx/utils.h>
+#include <wx/evtloop.h> // member variable
 
 #include "wxPanelWrapper.h"
 
+class wxGauge;
 class wxStaticText;
 
 enum class ProgressResult : unsigned

@@ -15,9 +15,6 @@
 #include <algorithm>
 #include <vector>
 
-#include <wx/brush.h>
-#include <wx/pen.h>
-
 #include "xml/XMLTagHandler.h"
 #include "Internat.h"
 

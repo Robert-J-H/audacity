@@ -16,12 +16,10 @@ Paul Licameli
 #include "ToolBar.h"
 #include "../widgets/NumericTextCtrl.h"
 
-class wxBitmap;
 class wxChoice;
 class wxComboBox;
 class wxCommandEvent;
 class wxDC;
-class wxRadioButton;
 class wxSizeEvent;
 
 class SpectralSelectionBarListener;

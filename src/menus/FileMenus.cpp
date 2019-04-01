@@ -14,6 +14,8 @@
 #include "../commands/CommandManager.h"
 #include "../export/Export.h"
 #include "../export/ExportMultiple.h"
+#include "../widgets/ErrorDialog.h"
+#include "../widgets/FileHistory.h"
 
 #ifdef USE_MIDI
 #include "../import/ImportMIDI.h"

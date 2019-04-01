@@ -18,19 +18,15 @@
 #include "ToolBar.h"
 
 #include "../MemoryX.h"
-#include <wx/brush.h>
-#include <wx/pen.h>
+#include <wx/brush.h> // member variable
 
 #include "audacity/Types.h"
 #include "../Theme.h"
 
-class wxBitmap;
-class wxBrush;
 class wxChoice;
 class wxCommandEvent;
 class wxImage;
 class wxKeyEvent;
-class wxPen;
 
 class AButton;
 class ASlider;
@@ -152,8 +148,6 @@ class TranscriptionToolBar final : public ToolBar {
    wxChoice *mKeyTypeChoice;
 #endif
 
-   wxBrush mBackgroundBrush;
-   wxPen mBackgroundPen;
    int mBackgroundWidth;
    int mBackgroundHeight;
 

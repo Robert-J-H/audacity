@@ -17,14 +17,15 @@
 #include "Audacity.h"
 
 #include <vector>
-#include <wx/bitmap.h>
 #include <wx/defs.h>
-#include <wx/image.h>
 #include <wx/window.h> // to inherit
 
 class wxArrayString;
+class wxBitmap;
 class wxColour;
 class wxFont;
+class wxImage;
+class wxPen;
 
 // JKC: will probably change name from 'teBmps' to 'tIndexBmp';
 typedef int teBmps; /// The index of a bitmap resource in Theme Resources.

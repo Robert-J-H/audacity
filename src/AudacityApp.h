@@ -20,22 +20,19 @@
 #include "Experimental.h"
 
 #include "MemoryX.h"
-#include <wx/app.h>
-#include <wx/cmdline.h>
-#include <wx/dir.h>
-#include <wx/docview.h>
-#include <wx/intl.h>
-#include <wx/snglinst.h>
-#include <wx/log.h>
-#include <wx/socket.h>
-#include <wx/timer.h>
+#include <wx/app.h> // to inherit
+#include <wx/dir.h> // for wxDIR_FILES
+#include <wx/timer.h> // member variable
 
-#include "widgets/FileHistory.h"
 #include "ondemand/ODTaskThread.h"
 
 #if defined(EXPERIMENTAL_CRASH_REPORT)
-#include <wx/debugrpt.h>
+#include <wx/debugrpt.h> // for wxDebugReport::Context
 #endif
+
+class wxSingleInstanceChecker;
+class wxSocketEvent;
+class wxSocketServer;
 
 class IPCServ;
 class Importer;
@@ -43,6 +40,7 @@ class CommandHandler;
 class AppCommandEvent;
 class AudacityLogger;
 class AudacityProject;
+class FileHistory;
 
 void SaveWindowSize();
 

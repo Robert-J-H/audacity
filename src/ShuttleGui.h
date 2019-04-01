@@ -57,7 +57,6 @@ class wxStaticText;
 class wxTreeCtrl;
 class wxTextCtrl;
 class wxSlider;
-class wxTreeListCtrl;
 class wxNotebook;
 typedef wxWindow wxNotebookPage;  // so far, any window can be a page
 class wxButton;
@@ -359,7 +358,8 @@ extern void SetIfCreated( wxStaticText *&Var, wxStaticText * Val );
 class GuiWaveTrack;
 class AttachableScrollBar;
 class ViewInfo;
-#include <wx/scrolbar.h>  // to get wxSB_HORIZONTAL
+
+#include <wx/defs.h>  // to get wxSB_HORIZONTAL
 
 // CreateStdButtonSizer defs...should probably move to widgets subdir
 enum

@@ -23,8 +23,8 @@
 #include <atomic>
 #include <utility>
 #include <vector>
-#include <wx/atomic.h>
-#include <wx/weakref.h>
+#include <wx/atomic.h> // member variable
+#include <wx/weakref.h> // member variable
 
 #ifdef USE_MIDI
 
@@ -49,7 +49,6 @@ using NoteTrackConstArray = std::vector < std::shared_ptr< const NoteTrack > >;
 #endif
 
 #include <wx/event.h> // to declare custom event types
-#include <wx/thread.h>
 
 #include "SampleFormat.h"
 

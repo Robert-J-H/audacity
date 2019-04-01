@@ -27,10 +27,12 @@
 
 #include <wx/wxcrtvararg.h>
 #include <wx/button.h>
+#include <wx/calctrl.h>
 #include <wx/checkbox.h>
 #include <wx/choice.h>
 #include <wx/defs.h>
 #include <wx/dir.h>
+#include <wx/datectrl.h>
 #include <wx/datetime.h>
 #include <wx/filedlg.h>
 #include <wx/intl.h>

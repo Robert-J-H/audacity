@@ -12,9 +12,6 @@
 #define _DIRMANAGER_
 
 #include "MemoryX.h"
-#include <wx/list.h>
-#include <wx/hashmap.h>
-#include <wx/utils.h>
 
 #include "audacity/Types.h"
 #include "xml/XMLTagHandler.h"
@@ -22,7 +19,6 @@
 #include <unordered_map>
 
 class wxFileNameWrapper;
-class wxHashTable;
 class BlockArray;
 class BlockFile;
 

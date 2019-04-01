@@ -13,13 +13,11 @@
 
 #include "../MemoryX.h"
 #include <vector>
-#include <wx/dialog.h>
-#include "../Tags.h"
+#include <wx/filename.h> // member variable
 #include "../SampleFormat.h"
 #include "../widgets/wxPanelWrapper.h"
 
 class wxArrayString;
-class wxFileName;
 class FileDialogWrapper;
 class wxFileCtrlEvent;
 class wxMemoryDC;
@@ -28,6 +26,7 @@ class wxStaticText;
 class AudacityProject;
 class DirManager;
 class WaveTrack;
+class Tags;
 class TrackList;
 class MixerSpec;
 class ProgressDialog;

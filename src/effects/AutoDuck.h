@@ -11,12 +11,10 @@
 #ifndef __AUDACITY_EFFECT_AUTODUCK__
 #define __AUDACITY_EFFECT_AUTODUCK__
 
-#include <wx/bitmap.h>
-#include <wx/gdicmn.h>
-
 #include "Effect.h"
 #include "../widgets/wxPanelWrapper.h"
 
+class wxBitmap;
 class wxTextCtrl;
 class EffectAutoDuckPanel;
 class ShuttleGui;

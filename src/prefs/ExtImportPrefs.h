@@ -12,8 +12,7 @@
 #define __AUDACITY_EXT_IMPORT_PREFS__
 
 #include <wx/defs.h>
-#include <wx/dnd.h>
-#include "../widgets/Grid.h"
+#include <wx/dnd.h> // to inherit wxDropTarget
 
 #include "PrefsPanel.h"
 
@@ -21,9 +20,12 @@
 #include "../import/ImportPlugin.h"
 
 class wxButton;
+class wxGridEvent;
+class wxGridRangeSelectEvent;
 class wxListCtrl;
 class wxListEvent;
 class ExtImportPrefs;
+class Grid;
 class ShuttleGui;
 
 class ExtImportPrefsDropTarget final : public wxDropTarget

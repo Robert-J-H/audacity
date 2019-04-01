@@ -14,19 +14,10 @@
 
 #include <wx/defs.h>
 
-#ifdef __WXMSW__
-    #include  <wx/ownerdrw.h>
-#endif
-
-//#include  "wx/log.h"
-#include  <wx/menuitem.h>
-#include  <wx/checklst.h>
-
 #include "BatchCommands.h"
 
 class wxWindow;
 class wxTextCtrl;
-class wxRadioButton;
 class wxListCtrl;
 class wxListEvent;
 class wxButton;

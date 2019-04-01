@@ -51,12 +51,14 @@ and in the spectrogram spectral selection.
 #include <wx/button.h>
 #include <wx/checkbox.h>
 #include <wx/choice.h>
+#include <wx/dcclient.h>
 #include <wx/font.h>
 #include <wx/image.h>
 #include <wx/dcmemory.h>
 #include <wx/file.h>
 #include <wx/filedlg.h>
 #include <wx/intl.h>
+#include <wx/scrolbar.h>
 #include <wx/sizer.h>
 #include <wx/slider.h>
 #include <wx/statbmp.h>

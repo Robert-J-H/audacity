@@ -13,11 +13,11 @@
 
 #include "Audacity.h" // for __UNIX__
 
-#include <wx/list.h>
-
 #include "audacity/Types.h"
 
 #include "sndfile.h"
+
+class wxString;
 
 //
 // enumerating headers
@@ -100,20 +100,6 @@ bool sf_subtype_is_integer(unsigned int format);
 extern FileExtensions sf_get_all_extensions();
 
 wxString sf_normalize_name(const char *name);
-
-//
-// Mac OS 4-char type
-//
-
-#ifdef __WXMAC__
-# ifdef __UNIX__
-#  include <CoreServices/CoreServices.h>
-# else
-#  include <Types.h>
-# endif
-
-OSType sf_header_mactype(int format);
-#endif
 
 // This function wrapper uses a mutex to serialize calls to the SndFile library.
 #include "MemoryX.h"

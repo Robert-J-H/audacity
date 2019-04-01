@@ -24,6 +24,7 @@
 #include <wx/filedlg.h>
 #include <wx/grid.h>
 #include <wx/intl.h>
+#include <wx/scrolbar.h>
 #include <wx/settings.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
@@ -37,6 +38,7 @@
 #include "ViewInfo.h"
 #include "widgets/NumericTextCtrl.h"
 #include "widgets/ErrorDialog.h"
+#include "widgets/Grid.h"
 #include "widgets/HelpSystem.h"
 
 #include "FileNames.h"

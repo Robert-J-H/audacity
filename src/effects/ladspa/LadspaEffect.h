@@ -14,8 +14,7 @@ class wxTextCtrl;
 class wxCheckBox;
 
 #include "../../MemoryX.h"
-#include <wx/dialog.h>
-#include <wx/dynlib.h>
+#include <wx/dynlib.h> // member variable
 
 #include "audacity/EffectInterface.h"
 #include "audacity/ModuleInterface.h"

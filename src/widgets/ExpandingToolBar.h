@@ -14,12 +14,9 @@
 #include "../MemoryX.h"
 #include <vector>
 #include <wx/defs.h>
-#include <wx/dialog.h>
-#include <wx/dragimag.h>
-#include <wx/panel.h>
-#include <wx/hashmap.h>
-#include <wx/timer.h>
-#include <wx/minifram.h>
+#include <wx/dragimag.h> // use macros and typedefs in this header
+#include <wx/timer.h> // member variable
+#include <wx/minifram.h> // to inherit
 
 #include "ImageRoll.h"
 #include "wxPanelWrapper.h"

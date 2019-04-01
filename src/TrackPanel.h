@@ -18,7 +18,7 @@
 #include <vector>
 
 #include <wx/setup.h> // for wxUSE_* macros
-#include <wx/timer.h>
+#include <wx/timer.h> // to inherit
 
 #include "HitTestResult.h"
 
@@ -29,7 +29,6 @@
 #include "commands/CommandManagerWindowClasses.h"
 
 
-class wxMenu;
 class wxRect;
 
 class LabelTrack;

@@ -30,9 +30,7 @@ for shared and private configs - which need to move out.
 #include <wx/dialog.h>
 #include <wx/dir.h>
 #include <wx/dynlib.h>
-#include <wx/hashmap.h>
 #include <wx/filename.h>
-#include <wx/list.h>
 #include <wx/listctrl.h>
 #include <wx/log.h>
 #include <wx/radiobut.h>
@@ -51,10 +49,6 @@ for shared and private configs - which need to move out.
 #include "effects/EffectManager.h"
 #include "widgets/ErrorDialog.h"
 #include "widgets/ProgressDialog.h"
-
-#if wxUSE_ACCESSIBILITY
-#include "widgets/WindowAccessible.h"
-#endif
 
 #include <unordered_map>
 

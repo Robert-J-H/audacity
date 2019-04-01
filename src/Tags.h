@@ -31,13 +31,10 @@
 
 #include "Audacity.h"
 
-#include "widgets/Grid.h"
 #include "xml/XMLTagHandler.h"
 
 #include "MemoryX.h"
 #include <utility>
-#include <wx/hashmap.h>
-#include <wx/notebook.h>
 
 #include "widgets/wxPanelWrapper.h"
 
@@ -46,7 +43,8 @@
 class wxArrayString;
 class wxComboBox;
 class wxGridCellChoiceEditor;
-class wxRadioButton;
+class wxGridCellStringRenderer;
+class wxGridEvent;
 class wxTextCtrl;
 
 class Grid;

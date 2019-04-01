@@ -42,6 +42,7 @@ a graph for EffectScienFilter.
 
 #include <wx/brush.h>
 #include <wx/choice.h>
+#include <wx/dcclient.h>
 #include <wx/dcmemory.h>
 #include <wx/intl.h>
 #include <wx/settings.h>
@@ -61,8 +62,8 @@ a graph for EffectScienFilter.
 #include "../WaveTrack.h"
 #include "../widgets/valnum.h"
 #include "../widgets/ErrorDialog.h"
-
-#include "Equalization.h" // For SliderAx
+#include "../widgets/Ruler.h"
+#include "../widgets/WindowAccessible.h"
 
 #if !defined(M_PI)
 #define PI = 3.1415926535897932384626433832795

@@ -11,11 +11,6 @@
 #ifndef __AUDACITY_EFFECT_NYQUIST__
 #define __AUDACITY_EFFECT_NYQUIST__
 
-#include <wx/datetime.h>
-#include <wx/dialog.h>
-#include <wx/intl.h>
-#include <wx/textbuf.h>
-
 #include "../Effect.h"
 
 #include "nyx.h"

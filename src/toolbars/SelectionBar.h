@@ -26,12 +26,10 @@
 
 #define SIZER_COLS 7
 
-class wxBitmap;
 class wxChoice;
 class wxComboBox;
 class wxCommandEvent;
 class wxDC;
-class wxRadioButton;
 class wxSizeEvent;
 class wxStaticText;
 
