@@ -104,8 +104,7 @@ enum {
    OnDownOctaveID,
 };
 
-/// This only applies to MIDI tracks.  Presumably, it shifts the
-/// whole sequence by an octave.
+/// Scrolls the note track up or down by an octave
 void NoteTrackMenuTable::OnChangeOctave(wxCommandEvent &event)
 {
    NoteTrack *const pTrack = static_cast<NoteTrack*>(mpData->pTrack);
@@ -114,11 +113,10 @@ void NoteTrackMenuTable::OnChangeOctave(wxCommandEvent &event)
       || event.GetId() == OnDownOctaveID);
 
    const bool bDown = (OnDownOctaveID == event.GetId());
-   pTrack->SetBottomNote
-      (pTrack->GetBottomNote() + ((bDown) ? -12 : 12));
+   pTrack->ShiftNoteRange((bDown) ? -12 : 12);
 
    AudacityProject *const project = ::GetActiveProject();
-   project->ModifyState(true);
+   project->ModifyState(false);
    mpData->result = RefreshCode::RefreshAll;
 }
 
