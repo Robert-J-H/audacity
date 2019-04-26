@@ -25,6 +25,7 @@
 
 #include "sndfile.h"
 
+#include "../AudacityApp.h" // for error reporting top level window.
 #include "../FileFormats.h"
 #include "../Internat.h"
 #include "../MemoryX.h"
@@ -407,12 +408,16 @@ void ExportPCM::ReportTooBigError(wxWindow * pParent)
    ShowErrorDialog(pParent, _("Error Exporting"),
                   _("You have attempted to Export a WAV file which would be greater than 4GB.\n"
                     "Audacity cannot do this, the Export was abandoned."),
-                  wxT("Error_wav_too_big"));
+                  wxT("Size_limits_for_WAV_files"));
 
+// This alternative error dialog was to cover the possibility we could not 
+// compute the size in advance.
+#if 0
    ShowErrorDialog(pParent, _("Error Exporting"),
                   _("Your exported WAV file has been truncated as Audacity cannot export WAV\n"
                     "files bigger than 4GB."),
-                  wxT("Error_wav_truncated"));
+                  wxT("Size_limits_for_WAV_files"));
+#endif
 }
 
 /**
@@ -508,6 +513,16 @@ ProgressResult ExportPCM::Export(AudacityProject *project,
          format = floatSample;
       else
          format = int16Sample;
+
+      float sampleCount = (float)(t1-t0)*rate*info.channels;
+      // floatSamples are always 4 byte, even if processor uses more.
+      float byteCount = sampleCount * ((format==int16Sample)?2:4);
+      // Test for 4 Gibibytes, rather than 4 Gigabytes
+      if( byteCount > 4.295e9)
+      {
+         ReportTooBigError( wxGetApp().GetTopWindow() );
+         return ProgressResult::Failed;
+      }
 
       size_t maxBlockLen = 44100 * 5;
 
