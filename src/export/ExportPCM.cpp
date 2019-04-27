@@ -25,7 +25,6 @@
 
 #include "sndfile.h"
 
-#include "../AudacityApp.h" // for error reporting top level window.
 #include "../FileFormats.h"
 #include "../Internat.h"
 #include "../MemoryX.h"
@@ -404,11 +403,19 @@ ExportPCM::ExportPCM()
 // We can hook it in properly whilst translation happens.
 void ExportPCM::ReportTooBigError(wxWindow * pParent)
 {
+   //Temporary translation hack, to say 'WAV or AIFF' rather than 'WAV'
+   wxString message = 
+      _("You have attempted to Export a WAV file which would be greater than 4GB.\n"
+      "Audacity cannot do this, the Export was abandoned.");
+   if( message == 
+      "You have attempted to Export a WAV file which would be greater than 4GB.\n"
+      "Audacity cannot do this, the Export was abandoned.")
+   {
+      message.Replace( "WAV", "WAV or AIFF");
+   }
 
-   ShowErrorDialog(pParent, _("Error Exporting"),
-                  _("You have attempted to Export a WAV file which would be greater than 4GB.\n"
-                    "Audacity cannot do this, the Export was abandoned."),
-                  wxT("Size_limits_for_WAV_files"));
+   ShowErrorDialog(pParent, _("Error Exporting"), message,
+                  wxT("Size_limits_for_WAV_and_AIFF_files"));
 
 // This alternative error dialog was to cover the possibility we could not 
 // compute the size in advance.
@@ -520,7 +527,7 @@ ProgressResult ExportPCM::Export(AudacityProject *project,
       // Test for 4 Gibibytes, rather than 4 Gigabytes
       if( byteCount > 4.295e9)
       {
-         ReportTooBigError( wxGetApp().GetTopWindow() );
+         ReportTooBigError( wxTheApp->GetTopWindow() );
          return ProgressResult::Failed;
       }
 
