@@ -29,8 +29,6 @@
 
 #include <wx/defs.h>
 
-#include "Project.h"
-#include "Shuttle.h"
 #include "WrappedType.h"
 #include "Prefs.h"
 

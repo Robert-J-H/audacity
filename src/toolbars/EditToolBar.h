@@ -19,7 +19,6 @@
 #include <wx/defs.h>
 
 #include "ToolBar.h"
-#include "../Theme.h"
 
 class wxCommandEvent;
 class wxDC;
@@ -75,7 +74,7 @@ class EditToolBar final : public ToolBar {
 
  public:
 
-   EditToolBar();
+   EditToolBar( AudacityProject &project );
    virtual ~EditToolBar();
 
    void Create(wxWindow *parent) override;

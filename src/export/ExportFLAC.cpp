@@ -32,16 +32,15 @@ and libvorbis examples, Monty <monty@xiph.org>
 #include "FLAC++/encoder.h"
 
 #include "../float_cast.h"
-#include "../Project.h"
+#include "../ProjectSettings.h"
 #include "../Mix.h"
 #include "../Prefs.h"
 #include "../ShuttleGui.h"
 
-#include "../Internat.h"
 #include "../Tags.h"
-
 #include "../Track.h"
-#include "../widgets/ErrorDialog.h"
+
+#include "../widgets/AudacityMessageBox.h"
 #include "../widgets/ProgressDialog.h"
 
 //----------------------------------------------------------------------------
@@ -253,8 +252,9 @@ ProgressResult ExportFLAC::Export(AudacityProject *project,
                         const Tags *metadata,
                         int WXUNUSED(subformat))
 {
-   double    rate    = project->GetRate();
-   const TrackList *tracks = project->GetTracks();
+   const auto &settings = ProjectSettings::Get( *project );
+   double    rate    = settings.GetRate();
+   const auto &tracks = TrackList::Get( *project );
 
    wxLogNull logNo;            // temporarily disable wxWidgets error messages
    auto updateResult = ProgressResult::Success;
@@ -366,10 +366,7 @@ ProgressResult ExportFLAC::Export(AudacityProject *project,
       }
    } );
 
-   const WaveTrackConstArray waveTracks =
-      tracks->GetWaveTrackConstArray(selectionOnly, false);
-   auto mixer = CreateMixer(waveTracks,
-                            tracks->GetTimeTrack(),
+   auto mixer = CreateMixer(tracks, selectionOnly,
                             t0, t1,
                             numChannels, SAMPLES_PER_RUN, false,
                             rate, format, true, mixerSpec);
@@ -448,7 +445,7 @@ bool ExportFLAC::GetMetadata(AudacityProject *project, const Tags *tags)
 {
    // Retrieve tags if needed
    if (tags == NULL)
-      tags = project->GetTags();
+      tags = &Tags::Get( *project );
 
    mMetadata.reset(::FLAC__metadata_object_new(FLAC__METADATA_TYPE_VORBIS_COMMENT));
 

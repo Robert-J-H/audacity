@@ -96,13 +96,13 @@ SF_FORMAT_INFO *sf_simple_format(int i);
 
 bool sf_subtype_more_than_16_bits(unsigned int format);
 bool sf_subtype_is_integer(unsigned int format);
+int sf_subtype_bytes_per_sample(unsigned int format);
 
 extern FileExtensions sf_get_all_extensions();
 
 wxString sf_normalize_name(const char *name);
 
 // This function wrapper uses a mutex to serialize calls to the SndFile library.
-#include "MemoryX.h"
 #include "ondemand/ODTaskThread.h"
 extern ODLock libSndFileMutex;
 template<typename R, typename F, typename... Args>

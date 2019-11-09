@@ -24,9 +24,6 @@
 #include "../Audacity.h" // for USE_* macros
 #include "XMLTagHandler.h"
 
-#include "../MemoryX.h"
-#include "../Internat.h"
-
 #ifdef _WIN32
    #include <windows.h>
    #include <wx/msw/winundef.h>
@@ -35,9 +32,6 @@
 #include <wx/defs.h>
 #include <wx/arrstr.h>
 #include <wx/filename.h>
-
-#include "../SampleFormat.h"
-#include "../Track.h"
 
 // Length check.  Is in part about not supplying malicious strings to file functions.
 bool XMLValueChecker::IsGoodString(const wxString & str)
@@ -172,7 +166,7 @@ bool XMLValueChecker::IsGoodInt64(const wxString & strInt)
 
 bool XMLValueChecker::IsValidChannel(const int nValue)
 {
-   return (nValue >= Track::LeftChannel) && (nValue <= Track::MonoChannel);
+   return (nValue >= LeftChannel) && (nValue <= MonoChannel);
 }
 
 #ifdef USE_MIDI

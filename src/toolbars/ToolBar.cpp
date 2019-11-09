@@ -52,8 +52,6 @@ in which buttons can be placed.
 #include "../AColor.h"
 #include "../ImageManipulation.h"
 #include "../Project.h"
-#include "../Theme.h"
-#include "../commands/Keyboard.h"
 #include "../commands/CommandManager.h"
 #include "../widgets/AButton.h"
 #include "../widgets/Grabber.h"
@@ -316,11 +314,13 @@ END_EVENT_TABLE()
 //
 // Constructor
 //
-ToolBar::ToolBar( int type,
+ToolBar::ToolBar( AudacityProject &project,
+                  int type,
                   const wxString &label,
                   const wxString &section,
                   bool resizable )
 : wxPanelWrapper()
+, mProject{ project }
 {
    // Save parameters
    mType = type;
@@ -617,6 +617,12 @@ void ToolBar::Updated()
 {
    if( IsDocked() )
       GetDock()->Updated();
+   else
+      // Bug 2120.  Changing the choice also changes the size of the toolbar so
+      // we need to update the client size, even if undocked.
+      // If modifying/improving this, remember to test both changing the choice,
+      // and clciking on the choice but not actually changing it.
+      GetParent()->SetClientSize( GetSize() + wxSize( 2,2));
    //wxCommandEvent e( EVT_TOOLBAR_UPDATED, GetId() );
    //GetParent()->GetEventHandler()->AddPendingEvent( e );
 }
@@ -844,12 +850,13 @@ void ToolBar::MakeAlternateImages(AButton &button, int idx,
 }
 
 void ToolBar::SetButtonToolTip
-(AButton &button, const TranslatedInternalString commands[], size_t nCommands)
+(AudacityProject &theProject,
+ AButton &button, const TranslatedInternalString commands[], size_t nCommands)
 {
    wxString result;
-   const auto project = GetActiveProject();
+   const auto project = &theProject;
    const auto commandManager =
-      project ? project->GetCommandManager() : nullptr;
+      project ? &CommandManager::Get( *project ) : nullptr;
    if (commandManager)
       result =
          commandManager->DescribeCommandsAndShortcuts(commands, nCommands);
@@ -914,4 +921,26 @@ void ToolBar::OnMouseEvents(wxMouseEvent &event)
 int ToolBar::GetResizeGrabberWidth()
 {
    return RWIDTH;
+}
+
+namespace {
+
+RegisteredToolbarFactory::Functions &GetFunctions()
+{
+   static RegisteredToolbarFactory::Functions factories( ToolBarCount );
+   return factories;
+}
+
+}
+
+RegisteredToolbarFactory::RegisteredToolbarFactory(
+   int id, const Function &function)
+{
+   wxASSERT( id >= 0 && id < ToolBarCount );
+   GetFunctions()[ id ] = function;
+}
+
+auto RegisteredToolbarFactory::GetFactories() -> const Functions&
+{
+   return GetFunctions();
 }

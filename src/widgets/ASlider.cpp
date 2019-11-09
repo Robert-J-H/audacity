@@ -41,6 +41,7 @@ or ASlider.
 #include <wx/dcbuffer.h>
 #include <wx/dcclient.h>
 #include <wx/dcmemory.h>
+#include <wx/frame.h>
 #include <wx/graphics.h>
 #include <wx/image.h>
 #include <wx/panel.h>
@@ -57,14 +58,12 @@ or ASlider.
 #include <wx/popupwin.h>
 #include <wx/window.h>
 
-#include "Ruler.h"
-
 #include "../AColor.h"
 #include "../ImageManipulation.h"
 #include "../Project.h"
+#include "../ProjectStatus.h"
 #include "../ShuttleGui.h"
 
-#include "../Theme.h"
 #include "../AllThemeResources.h"
 
 #if wxUSE_ACCESSIBILITY
@@ -1092,7 +1091,7 @@ void LWSlider::OnMouseEvent(wxMouseEvent & event)
    {
       // Display the tooltip in the status bar
       wxString tip = GetTip(mCurrentValue);
-      GetActiveProject()->TP_DisplayStatusMessage(tip);
+      ProjectStatus::Get( *GetActiveProject() ).Set(tip);
       Refresh();
    }
    else if (event.Leaving())
@@ -1101,7 +1100,7 @@ void LWSlider::OnMouseEvent(wxMouseEvent & event)
       {
          ShowTip(false);
       }
-      GetActiveProject()->TP_DisplayStatusMessage(wxT(""));
+      ProjectStatus::Get( *GetActiveProject() ).Set(wxT(""));
       Refresh();
    }
 

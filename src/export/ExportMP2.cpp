@@ -48,14 +48,13 @@
 
 #include "Export.h"
 #include "../FileIO.h"
-#include "../Internat.h"
 #include "../Mix.h"
 #include "../Prefs.h"
-#include "../Project.h"
+#include "../ProjectSettings.h"
 #include "../ShuttleGui.h"
 #include "../Tags.h"
 #include "../Track.h"
-#include "../widgets/ErrorDialog.h"
+#include "../widgets/AudacityMessageBox.h"
 #include "../widgets/ProgressDialog.h"
 
 #define LIBTWOLAME_STATIC
@@ -211,10 +210,11 @@ ProgressResult ExportMP2::Export(AudacityProject *project,
    bool selectionOnly, double t0, double t1, MixerSpec *mixerSpec, const Tags *metadata,
    int WXUNUSED(subformat))
 {
+   const auto &settings = ProjectSettings::Get( *project );
    bool stereo = (channels == 2);
    long bitrate = gPrefs->Read(wxT("/FileFormats/MP2Bitrate"), 160);
-   double rate = project->GetRate();
-   const TrackList *tracks = project->GetTracks();
+   double rate = settings.GetRate();
+   const auto &tracks = TrackList::Get( *project );
 
    wxLogNull logNo;             /* temporarily disable wxWidgets error messages */
 
@@ -236,7 +236,7 @@ ProgressResult ExportMP2::Export(AudacityProject *project,
 
    // Put ID3 tags at beginning of file
    if (metadata == NULL)
-      metadata = project->GetTags();
+      metadata = &Tags::Get( *project );
 
    FileIO outFile(fName, FileIO::Output);
    if (!outFile.IsOpened()) {
@@ -265,12 +265,9 @@ ProgressResult ExportMP2::Export(AudacityProject *project,
    // We have to multiply by 4 because one sample is 2 bytes wide!
    ArrayOf<unsigned char> mp2Buffer{ mp2BufferSize };
 
-   const WaveTrackConstArray waveTracks =
-      tracks->GetWaveTrackConstArray(selectionOnly, false);
    auto updateResult = ProgressResult::Success;
    {
-      auto mixer = CreateMixer(waveTracks,
-         tracks->GetTimeTrack(),
+      auto mixer = CreateMixer(tracks, selectionOnly,
          t0, t1,
          stereo ? 2 : 1, pcmBufferSize, true,
          rate, int16Sample, true, mixerSpec);

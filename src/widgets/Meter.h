@@ -22,13 +22,11 @@
 #include <wx/timer.h> // member variable
 
 #include "../SampleFormat.h"
+#include "../Prefs.h"
+#include "MeterPanelBase.h" // to inherit
 #include "Ruler.h" // member variable
 
 class AudacityProject;
-
-// Event used to notify all meters of preference changes
-wxDECLARE_EXPORTED_EVENT(AUDACITY_DLL_API,
-                         EVT_METER_PREFERENCES_CHANGED, wxCommandEvent);
 
 // Increase this when we add support for multichannel meters
 // (most of the code is already there)
@@ -94,7 +92,7 @@ class MeterAx;
 \brief MeterPanel is a panel that paints the meter used for monitoring
 or playback.
 ************************************************************************/
-class MeterPanel final : public wxPanelWrapper
+class MeterPanel final : public MeterPanelBase, private PrefsListener
 {
    DECLARE_DYNAMIC_CLASS(MeterPanel)
 
@@ -119,13 +117,9 @@ class MeterPanel final : public wxPanelWrapper
          Style style = HorizontalStereo,
          float fDecayRate = 60.0f);
 
-   bool AcceptsFocus() const override { return s_AcceptsFocus; }
-   bool AcceptsFocusFromKeyboard() const override { return true; }
-
    void SetFocusFromKbd() override;
 
-   void UpdatePrefs();
-   void Clear();
+   void Clear() override;
 
    Style GetStyle() const { return mStyle; }
    Style GetDesiredStyle() const { return mDesiredStyle; }
@@ -136,7 +130,7 @@ class MeterPanel final : public wxPanelWrapper
     * This method is thread-safe!  Feel free to call from a
     * different thread (like from an audio I/O callback).
     */
-   void Reset(double sampleRate, bool resetClipping);
+   void Reset(double sampleRate, bool resetClipping) override;
 
    /** \brief Update the meters with a block of audio data
     *
@@ -161,7 +155,7 @@ class MeterPanel final : public wxPanelWrapper
     * The second overload is for ease of use in MixerBoard.
     */
    void UpdateDisplay(unsigned numChannels,
-                      int numFrames, float *sampleData);
+                      int numFrames, float *sampleData) override;
 
    // Vaughan, 2010-11-29: This not currently used. See comments in MixerTrackCluster::UpdateMeter().
    //void UpdateDisplay(int numChannels, int numFrames,
@@ -175,11 +169,11 @@ class MeterPanel final : public wxPanelWrapper
     * This method is thread-safe!  Feel free to call from a
     * different thread (like from an audio I/O callback).
     */
-   bool IsMeterDisabled() const;
+   bool IsMeterDisabled() const override;
 
-   float GetMaxPeak() const;
+   float GetMaxPeak() const override;
 
-   bool IsClipping() const;
+   bool IsClipping() const override;
 
    void StartMonitoring();
    void StopMonitoring();
@@ -189,15 +183,11 @@ class MeterPanel final : public wxPanelWrapper
    State SaveState();
    void RestoreState(const State &state);
 
-   int GetDBRange() const { return mDB ? mDBRange : -1; }
+   int GetDBRange() const override { return mDB ? mDBRange : -1; }
 
  private:
-   static bool s_AcceptsFocus;
-   struct Resetter { void operator () (bool *p) const { if(p) *p = false; } };
-   using TempAllowFocus = std::unique_ptr<bool, Resetter>;
-
- public:
-   static TempAllowFocus TemporarilyAllowFocus();
+   void UpdatePrefs() override;
+   void UpdateSelectedPrefs( int ) override;
 
  private:
    //
@@ -232,7 +222,6 @@ class MeterPanel final : public wxPanelWrapper
    void ShowMenu(const wxPoint & pos);
    void OnMonitor(wxCommandEvent &evt);
    void OnPreferences(wxCommandEvent &evt);
-   void OnMeterPrefsUpdated(wxCommandEvent &evt);
 
    wxString Key(const wxString & key) const;
 

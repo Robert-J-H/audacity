@@ -31,12 +31,13 @@
 #include <wx/textdlg.h>
 
 #include "ShuttleGui.h"
-#include "Internat.h"
 #include "LabelTrack.h"
 #include "Prefs.h"
 #include "Project.h"
+#include "ProjectWindow.h"
 #include "ViewInfo.h"
-#include "widgets/NumericTextCtrl.h"
+#include "tracks/labeltrack/ui/LabelTrackView.h"
+#include "widgets/AudacityMessageBox.h"
 #include "widgets/ErrorDialog.h"
 #include "widgets/Grid.h"
 #include "widgets/HelpSystem.h"
@@ -352,7 +353,11 @@ bool LabelDialog::Show(bool show)
 {
    bool ret = wxDialogWrapper::Show(show);
 
-   mGrid->SetFocus();   // Required for Linux and Mac.
+#if defined(__WXMAC__) || defined(__WXGTK__)
+   if (show) {
+      mGrid->SetFocus();   // Required for Linux and Mac.
+   }
+#endif
 
    // Set initial row
    // (This will not work until the grid is actually displayed)
@@ -416,8 +421,8 @@ bool LabelDialog::TransferDataFromWindow()
          return false;
 
       // Add the label to it
-      lt->AddLabel(rd.selectedRegion, rd.title, -2);
-      lt->Unselect();
+      lt->AddLabel(rd.selectedRegion, rd.title);
+      LabelTrackView::Get( *lt ).SetSelectedIndex( -1 );
    }
 
    return true;
@@ -719,7 +724,7 @@ void LabelDialog::OnExport(wxCommandEvent & WXUNUSED(event))
    for (i = 0; i < cnt; i++) {
       RowData &rd = mData[i];
 
-      lt->AddLabel(rd.selectedRegion, rd.title,-2);
+      lt->AddLabel(rd.selectedRegion, rd.title);
    }
 
    // Export them and clean
@@ -743,7 +748,7 @@ void LabelDialog::OnSelectCell(wxGridEvent &event)
       RowData &rd = mData[event.GetRow()];
       mViewInfo->selectedRegion = rd.selectedRegion;
 
-      GetActiveProject()->RedrawProject();
+      ProjectWindow::Get( *GetActiveProject() ).RedrawProject();
    }
 
    event.Skip();

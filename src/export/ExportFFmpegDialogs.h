@@ -21,6 +21,7 @@ LRN
 #include "../FileNames.h"
 
 #include <unordered_map>
+#include "audacity/Types.h"
 
 class wxArrayStringEx;
 
@@ -194,6 +195,7 @@ public:
    ~ExportFFmpegOptions();
    void PopulateOrExchange(ShuttleGui & S);
    void OnOK(wxCommandEvent& event);
+   void OnGetURL(wxCommandEvent& event);
    void OnFormatList(wxCommandEvent& event);
    void DoOnFormatList();
    void OnCodecList(wxCommandEvent& event);
@@ -205,6 +207,8 @@ public:
    void OnDeletePreset(wxCommandEvent& event);
    void OnImportPresets(wxCommandEvent& event);
    void OnExportPresets(wxCommandEvent& event);
+   bool SavePreset( bool bCheckForOverwrite);
+
 
    // Static tables
    static CompatibilityEntry CompatibilityList[];
@@ -301,6 +305,9 @@ private:
    /// Retreives list of presets from configuration file
    void FetchPresetList();
 
+   bool ReportIfBadCombination();
+
+
    // Enables/disables controls based on format/codec combination,
    // leaving only relevant controls enabled.
    // Hiding the controls may have been a better idea,
@@ -334,8 +341,9 @@ public:
 
    void GetPresetList(wxArrayString &list);
    void LoadPreset(ExportFFmpegOptions *parent, wxString &name);
-   void SavePreset(ExportFFmpegOptions *parent, wxString &name);
+   bool SavePreset(ExportFFmpegOptions *parent, wxString &name);
    void DeletePreset(wxString &name);
+   bool OverwriteIsOk( wxString &name );
    FFmpegPreset *FindPreset(wxString &name);
 
    void ImportPresets(wxString &filename);

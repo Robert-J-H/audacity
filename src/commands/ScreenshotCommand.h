@@ -14,7 +14,6 @@
 #define __SCREENSHOT_COMMAND__
 
 #include "Command.h"
-#include "../commands/AudacityCommand.h"
 
 #include <wx/colour.h> // member variable
 
@@ -79,7 +78,7 @@ public:
       nCaptureWhats
    };
 
-   ScreenshotCommand(){ mbBringToTop=true;mIgnore=NULL;};
+   ScreenshotCommand();
    // ComponentInterface overrides
    ComponentInterfaceSymbol GetSymbol() override {return SCREENSHOT_PLUGIN_SYMBOL;};
    wxString GetDescription() override {return _("Takes screenshots.");};

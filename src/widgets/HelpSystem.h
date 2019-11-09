@@ -7,6 +7,15 @@
   Jimmy Johnson
   James Crook
 
+  was merged with LinkingHtmlWindow.h
+
+  Vaughan Johnson
+  Dominic Mazzoni
+
+  utility fn and
+  descendant of HtmlWindow that opens links in the user's
+  default browser
+
 **********************************************************************/
 
 #ifndef __AUDACITY_HELPSYSTEM__
@@ -104,32 +113,45 @@ public:
 
 class ShuttleGui;
 
-/** @brief Class which makes a dialog for displaying quick fixes to common issues.
- *
- * This class originated with the 'Stuck in a mode' problem, where far too many
- * users get into a mode without realising, and don't know how to get out.
- * It is a band-aid, and we should do more towards a full and proper solution
- * where there are fewer special modes, and they don't persisit.
- */
-class QuickFixDialog : public wxDialogWrapper
+#include "HtmlWindow.h" // to inherit
+
+void OpenInDefaultBrowser(const wxHtmlLinkInfo& link);
+
+
+/// \brief An HtmlWindow that handles linked clicked - usually the
+/// link will go to our own local copy of the manual, but it could
+/// launch a new browser window.
+class AUDACITY_DLL_API LinkingHtmlWindow final : public HtmlWindow
 {
-public: 
-   QuickFixDialog(wxWindow * pParent);
-   void Populate();
-   void PopulateOrExchange(ShuttleGui & S);
-   void AddStuck( ShuttleGui & S, bool & bBool, wxString Pref,  wxString Prompt, wxString Help );
+ public:
+   LinkingHtmlWindow(wxWindow *parent, wxWindowID id = -1,
+                     const wxPoint& pos = wxDefaultPosition,
+                     const wxSize& size = wxDefaultSize,
+                     long style = wxHW_SCROLLBAR_AUTO);
+   void OnLinkClicked(const wxHtmlLinkInfo& link) override;
+   //void OnSetTitle(const wxString& title) override;
 
-   void OnOk(wxCommandEvent &event);
-   void OnCancel(wxCommandEvent &event);
-   void OnHelp(wxCommandEvent &event);
-   void OnFix(wxCommandEvent &event);
+};
 
-   wxString StringFromEvent( wxCommandEvent &event );
 
-   int mItem;
-   bool mbSyncLocked;
-   bool mbInSnapTo;
-   bool mbSoundActivated;
+/// Adds some event handling to an HtmlWindow
+class BrowserDialog /* not final */ : public wxDialogWrapper
+{
+public:
+   enum { ID = 0 };
+   BrowserDialog(wxWindow *pParent, const wxString &title);
+
+   void OnForward(wxCommandEvent & event);
+   void OnBackward(wxCommandEvent & event);
+   void OnClose(wxCommandEvent & event);
+   void OnKeyDown(wxKeyEvent & event);
+
+   void UpdateButtons();
+   //void SetLabel(const wxString& label) override;
+
+
+   HtmlWindow * mpHtml;
+   bool mDismissed{};
    DECLARE_EVENT_TABLE()
 };
 

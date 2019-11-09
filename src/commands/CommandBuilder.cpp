@@ -25,12 +25,10 @@ system by constructing BatchCommandEval objects.
 #include "CommandBuilder.h"
 
 #include "CommandDirectory.h"
-#include "../Shuttle.h"
-#include "BatchEvalCommand.h"
 #include "Command.h"
-#include "CommandTargets.h"
-#include "ScriptCommandRelay.h"
 #include "CommandContext.h"
+#include "CommandTargets.h"
+#include "../Shuttle.h"
 
 CommandBuilder::CommandBuilder(const wxString &cmdString)
    : mValid(false)
@@ -84,7 +82,7 @@ void CommandBuilder::BuildCommand(const wxString &cmdName,
 {
    // Stage 1: create a Command object of the right type
 
-   auto scriptOutput = ScriptCommandRelay::GetResponseTarget();
+   auto scriptOutput = std::make_shared< ResponseQueueTarget >();
    auto output
       = std::make_unique<CommandOutputTargets>(std::make_unique<NullProgressTarget>(),
                                 scriptOutput,
@@ -193,7 +191,8 @@ void CommandBuilder::BuildCommand(const wxString &cmdStringArg)
    int splitAt = cmdString.Find(wxT(':'));
    if (splitAt < 0 && cmdString.Find(wxT(' ')) >= 0) {
       mError = wxT("Command is missing ':'");
-      ScriptCommandRelay::SendResponse(wxT("\n"));
+      ResponseQueueTarget::sResponseQueue().AddResponse(
+         Response{wxT("\n")});
       mValid = false;
       return;
    }

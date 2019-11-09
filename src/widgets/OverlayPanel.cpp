@@ -10,7 +10,6 @@
 #include "OverlayPanel.h"
 
 #include "Overlay.h"
-#include "../AColor.h"
 #include <algorithm>
 #include <wx/dcclient.h>
 
@@ -23,7 +22,16 @@ OverlayPanel::OverlayPanel(wxWindow * parent, wxWindowID id,
 
 void OverlayPanel::AddOverlay( const std::weak_ptr<Overlay> &pOverlay)
 {
-   mOverlays.push_back(pOverlay);
+   if (pOverlay.expired())
+      return;
+   Compress();
+   auto iter = std::lower_bound( mOverlays.begin(), mOverlays.end(),
+      pOverlay.lock()->SequenceNumber(),
+      []( const OverlayPtr &p, unsigned value ) {
+         return p.expired() || p.lock()->SequenceNumber() < value;
+      }
+   );
+   mOverlays.insert(iter, pOverlay);
 }
 
 void OverlayPanel::ClearOverlays()
@@ -125,3 +133,18 @@ void OverlayPanel::Compress()
 
 BEGIN_EVENT_TABLE(OverlayPanel, BackedPanel)
 END_EVENT_TABLE()
+
+// Maybe this class needs a better home
+void DCUnchanger::operator () (wxDC *pDC) const
+{
+   if (pDC) {
+      pDC->SetPen(pen);
+      pDC->SetBrush(brush);
+      pDC->SetLogicalFunction(wxRasterOperationMode(logicalOperation));
+   }
+}
+
+ADCChanger::ADCChanger(wxDC *pDC)
+   : Base{ pDC, ::DCUnchanger{ pDC->GetBrush(), pDC->GetPen(),
+      long(pDC->GetLogicalFunction()) } }
+{}

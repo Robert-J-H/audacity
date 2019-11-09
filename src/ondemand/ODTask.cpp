@@ -29,7 +29,7 @@ in a background thread.
 //#include "../Profiler.h"
 
 
-DEFINE_EVENT_TYPE(EVT_ODTASK_COMPLETE)
+wxDEFINE_EVENT(EVT_ODTASK_COMPLETE, wxCommandEvent);
 
 /// Constructs an ODTask
 ODTask::ODTask()
@@ -129,13 +129,13 @@ void ODTask::DoSome(float amountWork)
       ODManager::Instance()->AddTask(this);
 
       //we did a bit of progress - we should allow a resave.
-      ODLocker locker{ &AudacityProject::AllProjectDeleteMutex() };
-      for(unsigned i=0; i<gAudacityProjects.size(); i++)
+      ODLocker locker{ &AllProjects::Mutex() };
+      for ( auto pProject : AllProjects{} )
       {
-         if(IsTaskAssociatedWithProject(gAudacityProjects[i].get()))
+         if(IsTaskAssociatedWithProject(pProject.get()))
          {
             //mark the changes so that the project can be resaved.
-            gAudacityProjects[i]->GetUndoManager()->SetODChangesFlag();
+            UndoManager::Get( *pProject ).SetODChangesFlag();
             break;
          }
       }
@@ -153,15 +153,15 @@ void ODTask::DoSome(float amountWork)
 
       wxCommandEvent event( EVT_ODTASK_COMPLETE );
 
-      ODLocker locker{ &AudacityProject::AllProjectDeleteMutex() };
-      for(unsigned i=0; i<gAudacityProjects.size(); i++)
+      ODLocker locker{ &AllProjects::Mutex() };
+      for ( auto pProject : AllProjects{} )
       {
-         if(IsTaskAssociatedWithProject(gAudacityProjects[i].get()))
+         if(IsTaskAssociatedWithProject(pProject.get()))
          {
             //this assumes tasks are only associated with one project.
-            gAudacityProjects[i]->GetEventHandler()->AddPendingEvent(event);
+            pProject->wxEvtHandler::AddPendingEvent(event);
             //mark the changes so that the project can be resaved.
-            gAudacityProjects[i]->GetUndoManager()->SetODChangesFlag();
+            UndoManager::Get( *pProject ).SetODChangesFlag();
             break;
          }
       }
@@ -175,14 +175,14 @@ void ODTask::DoSome(float amountWork)
 
 bool ODTask::IsTaskAssociatedWithProject(AudacityProject* proj)
 {
-   for (auto tr : proj->GetTracks()->Any<const WaveTrack>())
+   for (auto tr : TrackList::Get( *proj ).Any<const WaveTrack>())
    {
       //go over all tracks in the project
       //look inside our task's track list for one that matches this projects one.
       mWaveTrackMutex.Lock();
       for(int i=0;i<(int)mWaveTracks.size();i++)
       {
-         if(mWaveTracks[i]==tr)
+         if ( mWaveTracks[i].lock().get() == tr )
          {
             //if we find one, then the project is associated with us;return true
             mWaveTrackMutex.Unlock();
@@ -252,19 +252,19 @@ bool ODTask::IsComplete()
 }
 
 
-WaveTrack* ODTask::GetWaveTrack(int i)
+std::shared_ptr< WaveTrack > ODTask::GetWaveTrack(int i)
 {
-   WaveTrack* track = NULL;
+   std::shared_ptr< WaveTrack > track;
    mWaveTrackMutex.Lock();
    if(i<(int)mWaveTracks.size())
-      track = mWaveTracks[i];
+      track = mWaveTracks[i].lock();
    mWaveTrackMutex.Unlock();
    return track;
 }
 
 ///Sets the wavetrack that will be analyzed for ODPCMAliasBlockFiles that will
 ///have their summaries computed and written to disk.
-void ODTask::AddWaveTrack(WaveTrack* track)
+void ODTask::AddWaveTrack( const std::shared_ptr< WaveTrack > &track)
 {
    mWaveTracks.push_back(track);
 }
@@ -321,7 +321,7 @@ void ODTask::DemandTrackUpdate(WaveTrack* track, double seconds)
    mWaveTrackMutex.Lock();
    for(size_t i=0;i<mWaveTracks.size();i++)
    {
-      if(track == mWaveTracks[i])
+      if ( track == mWaveTracks[i].lock().get() )
       {
          auto newDemandSample = (sampleCount)(seconds * track->GetRate());
          demandSampleChanged = newDemandSample != GetDemandSample();
@@ -342,21 +342,22 @@ void ODTask::StopUsingWaveTrack(WaveTrack* track)
    mWaveTrackMutex.Lock();
    for(size_t i=0;i<mWaveTracks.size();i++)
    {
-      if(mWaveTracks[i] == track)
-         mWaveTracks[i]=NULL;
+      if(mWaveTracks[i].lock().get() == track)
+         mWaveTracks[i].reset();
    }
    mWaveTrackMutex.Unlock();
 }
 
 ///Replaces all instances to a wavetrack with a NEW one, effectively transferring the task.
-void ODTask::ReplaceWaveTrack(Track *oldTrack, Track *newTrack)
+void ODTask::ReplaceWaveTrack(Track *oldTrack,
+   const std::shared_ptr< Track > &newTrack)
 {
    mWaveTrackMutex.Lock();
    for(size_t i=0;i<mWaveTracks.size();i++)
    {
-      if(oldTrack == mWaveTracks[i])
+      if(oldTrack == mWaveTracks[i].lock().get())
       {
-         mWaveTracks[i] = static_cast<WaveTrack*>( newTrack );
+         mWaveTracks[i] = std::static_pointer_cast<WaveTrack>( newTrack );
       }
    }
    mWaveTrackMutex.Unlock();

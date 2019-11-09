@@ -21,15 +21,15 @@ License: GPL v2.  See License.txt.
 #include "FFmpeg.h"
 
 #include "FileNames.h"
-#include "Internat.h"
 #include "widgets/HelpSystem.h"
-#include "widgets/ErrorDialog.h"
+#include "widgets/AudacityMessageBox.h"
 
 #include <wx/checkbox.h>
 #include <wx/dynlib.h>
 #include <wx/file.h>
 #include <wx/filedlg.h>
 #include <wx/log.h>
+#include <wx/textctrl.h>
 
 #if !defined(USE_FFMPEG)
 /// FFmpeg support may or may not be compiled in,
@@ -582,7 +582,7 @@ void FFmpegNotFoundDialog::PopulateOrExchange(ShuttleGui & S)
       S.AddFixedText(_(
 "Audacity attempted to use FFmpeg to import an audio file,\n\
 but the libraries were not found.\n\n\
-To use FFmpeg import, go to Preferences > Libraries\n\
+To use FFmpeg import, go to Edit > Preferences > Libraries\n\
 to download or locate the FFmpeg libraries."
       ));
 

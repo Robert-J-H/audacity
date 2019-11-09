@@ -28,10 +28,11 @@
 #include "ViewInfo.h"
 #include "WaveTrack.h"
 #include "widgets/Ruler.h"
-#include "widgets/ErrorDialog.h"
+#include "widgets/AudacityMessageBox.h"
 
 #include "TrackPanelDrawingContext.h"
-#include "Internat.h"
+
+#include "tracks/ui/TrackView.h"
 
 // Globals, so that we remember settings from session to session
 wxPrintData &gPrintData()
@@ -71,7 +72,8 @@ bool AudacityPrintout::OnPrintPage(int WXUNUSED(page))
    dc->GetSize(&width, &height);
 
    int rulerScreenHeight = 40;
-   int screenTotalHeight = mTracks->GetHeight() + rulerScreenHeight;
+   int screenTotalHeight =
+      TrackView::GetTotalHeight( *mTracks ) + rulerScreenHeight;
 
    double scale = height / (double)screenTotalHeight;
 
@@ -99,12 +101,12 @@ bool AudacityPrintout::OnPrintPage(int WXUNUSED(page))
       r.x = 0;
       r.y = y;
       r.width = width;
-      r.height = (int)(n->GetHeight() * scale);
+      r.height = (int)(TrackView::Get( *n ).GetHeight() * scale);
 
       TrackPanelDrawingContext context{
          *dc, {}, {}, &artist
       };
-      TrackArt::DrawTrack( context, n, r );
+      TrackView::Get( *n ).Draw( context, r, TrackArtist::PassTracks );
 
       dc->SetPen(*wxBLACK_PEN);
       AColor::Line(*dc, 0, r.y, width, r.y);

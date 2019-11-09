@@ -1,25 +1,36 @@
 #include "../Audacity.h"
 #include "../Experimental.h"
 
-#include "../AudacityApp.h"
+#include "../CommonCommandFlags.h"
 #include "../LabelTrack.h"
 #include "../Menus.h"
+#include "../MissingAliasFileDialog.h"
 #include "../Mix.h"
 
 #include "../Prefs.h"
 #include "../Project.h"
+#include "../ProjectAudioIO.h"
+#include "../ProjectHistory.h"
+#include "../ProjectSettings.h"
 #include "../PluginManager.h"
+#include "../ProjectStatus.h"
+#include "../ProjectWindow.h"
+#include "../SelectUtilities.h"
 #include "../ShuttleGui.h"
 #include "../TimeTrack.h"
+#include "../TrackPanelAx.h"
 #include "../TrackPanel.h"
+#include "../TrackUtilities.h"
 #include "../UndoManager.h"
 #include "../WaveClip.h"
+#include "../ViewInfo.h"
 #include "../WaveTrack.h"
 #include "../commands/CommandContext.h"
 #include "../commands/CommandManager.h"
 #include "../effects/EffectManager.h"
+#include "../tracks/playabletrack/wavetrack/ui/WaveTrackControls.h"
 #include "../widgets/ASlider.h"
-#include "../widgets/ErrorDialog.h"
+#include "../widgets/AudacityMessageBox.h"
 #include "../widgets/ProgressDialog.h"
 
 #include <wx/combobox.h>
@@ -37,22 +48,24 @@ namespace {
 void DoMixAndRender
 (AudacityProject &project, bool toNewTrack)
 {
-   auto tracks = project.GetTracks();
-   auto trackFactory = project.GetTrackFactory();
-   auto rate = project.GetRate();
-   auto defaultFormat = project.GetDefaultFormat();
-   auto trackPanel = project.GetTrackPanel();
+   const auto &settings = ProjectSettings::Get( project );
+   auto &tracks = TrackList::Get( project );
+   auto &trackFactory = TrackFactory::Get( project );
+   auto rate = settings.GetRate();
+   auto defaultFormat = settings.GetDefaultFormat();
+   auto &trackPanel = TrackPanel::Get( project );
+   auto &window = ProjectWindow::Get( project );
 
-   wxGetApp().SetMissingAliasedFileWarningShouldShow(true);
+   MissingAliasFilesDialog::SetShouldShow(true);
 
    WaveTrack::Holder uNewLeft, uNewRight;
    ::MixAndRender(
-      tracks, trackFactory, rate, defaultFormat, 0.0, 0.0, uNewLeft, uNewRight);
+      &tracks, &trackFactory, rate, defaultFormat, 0.0, 0.0, uNewLeft, uNewRight);
 
    if (uNewLeft) {
       // Remove originals, get stats on what tracks were mixed
 
-      auto trackRange = tracks->Selected< WaveTrack >();
+      auto trackRange = tracks.Selected< WaveTrack >();
       auto selectedCount = (trackRange + &Track::IsLeader).size();
       wxString firstName;
       if (selectedCount > 0)
@@ -60,18 +73,18 @@ void DoMixAndRender
       if (!toNewTrack)  {
          // Beware iterator invalidation!
          for (auto &it = trackRange.first, &end = trackRange.second; it != end;)
-            tracks->Remove( *it++ );
+            tracks.Remove( *it++ );
       }
 
       // Add NEW tracks
 
-      auto pNewLeft = tracks->Add( uNewLeft );
+      auto pNewLeft = tracks.Add( uNewLeft );
       decltype(pNewLeft) pNewRight{};
       if (uNewRight)
-         pNewRight = tracks->Add( uNewRight );
+         pNewRight = tracks.Add( uNewRight );
 
       // Do this only after adding tracks to the list
-      tracks->GroupChannels(*pNewLeft, pNewRight ? 2 : 1);
+      tracks.GroupChannels(*pNewLeft, pNewRight ? 2 : 1);
 
       // If we're just rendering (not mixing), keep the track name the same
       if (selectedCount==1) {
@@ -86,7 +99,7 @@ void DoMixAndRender
          msg.Printf(_("Rendered all audio in track '%s'"), firstName);
          /* i18n-hint: Convert the audio into a more usable form, so apply
           * panning and amplification and write to some external file.*/
-         project.PushState(msg, _("Render"));
+         ProjectHistory::Get( project ).PushState(msg, _("Render"));
       }
       else {
          wxString msg;
@@ -98,22 +111,22 @@ void DoMixAndRender
             msg.Printf(
                _("Mixed and rendered %d tracks into one new mono track"),
                (int)selectedCount);
-         project.PushState(msg, _("Mix and Render"));
+         ProjectHistory::Get( project ).PushState(msg, _("Mix and Render"));
       }
 
-      trackPanel->SetFocus();
-      trackPanel->SetFocusedTrack(pNewLeft);
-      trackPanel->EnsureVisible(pNewLeft);
-      project.RedrawProject();
+      trackPanel.SetFocus();
+      TrackFocus::Get( project ).Set( pNewLeft );
+      pNewLeft->EnsureVisible();
    }
 }
 
 void DoPanTracks(AudacityProject &project, float PanValue)
 {
-   auto tracks = project.GetTracks();
+   auto &tracks = TrackList::Get( project );
+   auto &window = ProjectWindow::Get( project );
 
    // count selected wave tracks
-   const auto range = tracks->Any< WaveTrack >();
+   const auto range = tracks.Any< WaveTrack >();
    const auto selectedRange = range + &Track::IsSelected;
    auto count = selectedRange.size();
 
@@ -121,11 +134,10 @@ void DoPanTracks(AudacityProject &project, float PanValue)
    for (auto left : count == 0 ? range : selectedRange )
       left->SetPan( PanValue );
 
-   project.RedrawProject();
-
    auto flags = UndoPush::AUTOSAVE;
    /*i18n-hint: One or more audio tracks have been panned*/
-   project.PushState(_("Panned audio track(s)"), _("Pan Track"), flags);
+   ProjectHistory::Get( project )
+      .PushState(_("Panned audio track(s)"), _("Pan Track"), flags);
          flags = flags | UndoPush::CONSOLIDATE;
 }
 
@@ -153,16 +165,17 @@ const size_t kAlignLabelsCount = alignLabels.end() - alignLabels.begin();
 void DoAlign
 (AudacityProject &project, int index, bool moveSel)
 {
-   auto tracks = project.GetTracks();
-   auto &selectedRegion = project.GetViewInfo().selectedRegion;
+   auto &tracks = TrackList::Get( project );
+   auto &selectedRegion = ViewInfo::Get( project ).selectedRegion;
+   auto &window = ProjectWindow::Get( project );
 
    wxString action;
    wxString shortAction;
    double delta = 0.0;
    double newPos = -1.0;
 
-   auto channelRange = tracks->Selected< AudioTrack >();
-   auto trackRange = tracks->SelectedLeaders< AudioTrack >();
+   auto channelRange = tracks.Selected< AudioTrack >();
+   auto trackRange = tracks.SelectedLeaders< AudioTrack >();
 
    auto FindOffset = []( const Track *pTrack ) {
       return TrackList::Channels(pTrack).min( &Track::GetOffset ); };
@@ -255,7 +268,7 @@ void DoAlign
 
    if ((unsigned)index >= kAlignLabelsCount) {
       // This is an alignLabelsNoSync command.
-      for (auto t : tracks->SelectedLeaders< AudioTrack >()) {
+      for (auto t : tracks.SelectedLeaders< AudioTrack >()) {
          // This shifts different tracks in different ways, so no sync-lock
          // move.
          // Only align Wave and Note tracks end to end.
@@ -271,23 +284,20 @@ void DoAlign
          if (index == kAlignEndToEnd)
             newPos += (trackEnd - trackStart);
       }
-      if (index == kAlignEndToEnd) {
-         ViewActions::DoZoomFit(project);
-      }
+      if (index == kAlignEndToEnd)
+         window.DoZoomFit();
    }
 
    if (delta != 0.0) {
       // For a fixed-distance shift move sync-lock selected tracks also.
-      for (auto t : tracks->Any() + &Track::IsSelectedOrSyncLockSelected )
+      for (auto t : tracks.Any() + &Track::IsSelectedOrSyncLockSelected )
          t->SetOffset(t->GetOffset() + delta);
    }
 
    if (moveSel)
       selectedRegion.move(delta);
 
-   project.PushState(action, shortAction);
-
-   project.RedrawProject();
+   ProjectHistory::Get( project ).PushState(action, shortAction);
 }
 
 #ifdef EXPERIMENTAL_SCOREALIGN
@@ -440,7 +450,11 @@ long mixer_process(void *mixer, float **buffer, long n)
 
 #endif // EXPERIMENTAL_SCOREALIGN
 
-//sort based on flags.  see Project.h for sort flags
+enum{
+   kAudacitySortByTime = (1 << 1),
+   kAudacitySortByName = (1 << 2),
+};
+
 void DoSortTracks( AudacityProject &project, int flags )
 {
    auto GetTime = [](const Track *t) {
@@ -467,14 +481,14 @@ void DoSortTracks( AudacityProject &project, int flags )
    // This one place outside of TrackList where we must use undisguised
    // std::list iterators!  Avoid this elsewhere!
    std::vector<TrackNodePointer> arr;
-   auto pTracks = project.GetTracks();
-   arr.reserve(pTracks->size());
+   auto &tracks = TrackList::Get( project );
+   arr.reserve(tracks.size());
 
    // First find the permutation.
    // This routine, very unusually, deals with the underlying stl list
    // iterators, not with TrackIter!  Dangerous!
-   for (auto iter = pTracks->ListOfTracks::begin(),
-        end = pTracks->ListOfTracks::end(); iter != end; ++iter) {
+   for (auto iter = tracks.ListOfTracks::begin(),
+        end = tracks.ListOfTracks::end(); iter != end; ++iter) {
       const auto &track = *iter;
       if ( !track->IsLeader() )
          // keep channels contiguous
@@ -511,11 +525,11 @@ void DoSortTracks( AudacityProject &project, int flags )
             ndx += channels.size();
          }
       }
-      arr.insert(arr.begin() + ndx, TrackNodePointer{iter, pTracks});
+      arr.insert(arr.begin() + ndx, TrackNodePointer{iter, &tracks});
    }
 
    // Now apply the permutation
-   pTracks->Permute(arr);
+   tracks.Permute(arr);
 }
 
 void SetTrackGain(AudacityProject &project, WaveTrack * wt, LWSlider * slider)
@@ -526,9 +540,10 @@ void SetTrackGain(AudacityProject &project, WaveTrack * wt, LWSlider * slider)
    for (auto channel : TrackList::Channels(wt))
       channel->SetGain(newValue);
 
-   project.PushState(_("Adjusted gain"), _("Gain"), UndoPush::CONSOLIDATE);
+   ProjectHistory::Get( project )
+      .PushState(_("Adjusted gain"), _("Gain"), UndoPush::CONSOLIDATE);
 
-   project.GetTrackPanel()->RefreshTrack(wt);
+   TrackPanel::Get( project ).RefreshTrack(wt);
 }
 
 void SetTrackPan(AudacityProject &project, WaveTrack * wt, LWSlider * slider)
@@ -539,249 +554,15 @@ void SetTrackPan(AudacityProject &project, WaveTrack * wt, LWSlider * slider)
    for (auto channel : TrackList::Channels(wt))
       channel->SetPan(newValue);
 
-   project.PushState(_("Adjusted Pan"), _("Pan"), UndoPush::CONSOLIDATE);
+   ProjectHistory::Get( project )
+      .PushState(_("Adjusted Pan"), _("Pan"), UndoPush::CONSOLIDATE);
 
-   project.GetTrackPanel()->RefreshTrack(wt);
+   TrackPanel::Get( project ).RefreshTrack(wt);
 }
 
 }
 
 namespace TrackActions {
-
-// exported helper functions
-
-void DoRemoveTracks( AudacityProject &project )
-{
-   auto tracks = project.GetTracks();
-   auto trackPanel = project.GetTrackPanel();
-
-   std::vector<Track*> toRemove;
-   for (auto track : tracks->Selected())
-      toRemove.push_back(track);
-
-   // Capture the track preceding the first removed track
-   Track *f{};
-   if (!toRemove.empty()) {
-      auto found = tracks->Find(toRemove[0]);
-      f = *--found;
-   }
-
-   for (auto track : toRemove)
-      tracks->Remove(track);
-
-   if (!f)
-      // try to use the last track
-      f = *tracks->Any().rbegin();
-   if (f) {
-      // Try to use the first track after the removal
-      auto found = tracks->FindLeader(f);
-      auto t = *++found;
-      if (t)
-         f = t;
-   }
-
-   // If we actually have something left, then make sure it's seen
-   if (f)
-      trackPanel->EnsureVisible(f);
-
-   project.PushState(_("Removed audio track(s)"), _("Remove Track"));
-
-   trackPanel->UpdateViewIfNoTracks();
-   trackPanel->Refresh(false);
-}
-
-void DoTrackMute(AudacityProject &project, Track *t, bool exclusive)
-{
-   auto &tracks = *project.GetTracks();
-   auto &trackPanel = *project.GetTrackPanel();
-
-   // Whatever t is, replace with lead channel
-   t = *tracks.FindLeader(t);
-
-   // "exclusive" mute means mute the chosen track and unmute all others.
-   if (exclusive) {
-      for (auto leader : tracks.Leaders<PlayableTrack>()) {
-         const auto group = TrackList::Channels(leader);
-         bool chosen = (t == leader);
-         for (auto channel : group)
-            channel->SetMute( chosen ),
-            channel->SetSolo( false );
-      }
-   }
-   else {
-      // Normal click toggles this track.
-      auto pt = dynamic_cast<PlayableTrack *>( t );
-      if (!pt)
-         return;
-
-      bool wasMute = pt->GetMute();
-      for (auto channel : TrackList::Channels(pt))
-         channel->SetMute( !wasMute );
-
-      if (project.IsSoloSimple() || project.IsSoloNone())
-      {
-         // We also set a solo indicator if we have just one track / stereo pair playing.
-         // in a group of more than one playable tracks.
-         // otherwise clear solo on everything.
-
-         auto range = tracks.Leaders<PlayableTrack>();
-         auto nPlayableTracks = range.size();
-         auto nPlaying = (range - &PlayableTrack::GetMute).size();
-
-         for (auto track : tracks.Any<PlayableTrack>())
-            // will set both of a stereo pair
-            track->SetSolo( (nPlaying==1) && (nPlayableTracks > 1 ) && !track->GetMute() );
-      }
-   }
-   project.ModifyState(true);
-
-   trackPanel.UpdateAccessibility();
-   trackPanel.Refresh(false);
-}
-
-void DoTrackSolo(AudacityProject &project, Track *t, bool exclusive)
-{
-   auto &tracks = *project.GetTracks();
-   auto &trackPanel = *project.GetTrackPanel();
-   
-   // Whatever t is, replace with lead channel
-   t = *tracks.FindLeader(t);
-
-   const auto pt = dynamic_cast<PlayableTrack *>( t );
-   if (!pt)
-      return;
-   bool bWasSolo = pt->GetSolo();
-
-   bool bSoloMultiple = !project.IsSoloSimple() ^ exclusive;
-
-   // Standard and Simple solo have opposite defaults:
-   //   Standard - Behaves as individual buttons, shift=radio buttons
-   //   Simple   - Behaves as radio buttons, shift=individual
-   // In addition, Simple solo will mute/unmute tracks
-   // when in standard radio button mode.
-   if ( bSoloMultiple )
-   {
-      for (auto channel : TrackList::Channels(pt))
-         channel->SetSolo( !bWasSolo );
-   }
-   else
-   {
-      // Normal click solo this track only, mute everything else.
-      // OR unmute and unsolo everything.
-      for (auto leader : tracks.Leaders<PlayableTrack>()) {
-         const auto group = TrackList::Channels(leader);
-         bool chosen = (t == leader);
-         for (auto channel : group) {
-            if (chosen) {
-               channel->SetSolo( !bWasSolo );
-               if( project.IsSoloSimple() )
-                  channel->SetMute( false );
-            }
-            else {
-               channel->SetSolo( false );
-               if( project.IsSoloSimple() )
-                  channel->SetMute( !bWasSolo );
-            }
-         }
-      }
-   }
-   project.ModifyState(true);
-
-   trackPanel.UpdateAccessibility();
-   trackPanel.Refresh(false);
-}
-
-void DoRemoveTrack(AudacityProject &project, Track * toRemove)
-{
-   auto &tracks = *project.GetTracks();
-   auto &trackPanel = *project.GetTrackPanel();
-
-   // If it was focused, then NEW focus is the next or, if
-   // unavailable, the previous track. (The NEW focus is set
-   // after the track has been removed.)
-   bool toRemoveWasFocused = trackPanel.GetFocusedTrack() == toRemove;
-   Track* newFocus{};
-   if (toRemoveWasFocused) {
-      auto iterNext = tracks.FindLeader(toRemove), iterPrev = iterNext;
-      newFocus = *++iterNext;
-      if (!newFocus) {
-         newFocus = *--iterPrev;
-      }
-   }
-
-   wxString name = toRemove->GetName();
-
-   auto channels = TrackList::Channels(toRemove);
-   // Be careful to post-increment over positions that get erased!
-   auto &iter = channels.first;
-   while (iter != channels.end())
-      tracks.Remove( * iter++ );
-
-   if (toRemoveWasFocused)
-      trackPanel.SetFocusedTrack(newFocus);
-
-   project.PushState(
-      wxString::Format(_("Removed track '%s.'"),
-      name),
-      _("Track Remove"));
-
-   project.FixScrollbars();
-   project.HandleResize();
-   trackPanel.Refresh(false);
-}
-
-void DoMoveTrack
-(AudacityProject &project, Track* target, MoveChoice choice)
-{
-   auto trackPanel = project.GetTrackPanel();
-   auto tracks = project.GetTracks();
-
-   wxString longDesc, shortDesc;
-
-   switch (choice)
-   {
-   case OnMoveTopID:
-      /* i18n-hint: Past tense of 'to move', as in 'moved audio track up'.*/
-      longDesc = _("Moved '%s' to Top");
-      shortDesc = _("Move Track to Top");
-
-      // TODO: write TrackList::Rotate to do this in one step and avoid emitting
-      // an event for each swap
-      while (tracks->CanMoveUp(target))
-         tracks->Move(target, true);
-
-      break;
-   case OnMoveBottomID:
-      /* i18n-hint: Past tense of 'to move', as in 'moved audio track up'.*/
-      longDesc = _("Moved '%s' to Bottom");
-      shortDesc = _("Move Track to Bottom");
-
-      // TODO: write TrackList::Rotate to do this in one step and avoid emitting
-      // an event for each swap
-      while (tracks->CanMoveDown(target))
-         tracks->Move(target, false);
-
-      break;
-   default:
-      bool bUp = (OnMoveUpID == choice);
-
-      tracks->Move(target, bUp);
-      longDesc =
-         /* i18n-hint: Past tense of 'to move', as in 'moved audio track up'.*/
-         bUp? _("Moved '%s' Up")
-         : _("Moved '%s' Down");
-      shortDesc =
-         /* i18n-hint: Past tense of 'to move', as in 'moved audio track up'.*/
-         bUp? _("Move Track Up")
-         : _("Move Track Down");
-
-   }
-
-   longDesc = longDesc.Format(target->GetName());
-
-   project.PushState(longDesc, shortDesc);
-   trackPanel->Refresh(false);
-}
 
 // Menu handler functions
 
@@ -790,97 +571,101 @@ struct Handler : CommandHandlerObject {
 void OnNewWaveTrack(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tracks = project.GetTracks();
-   auto trackFactory = project.GetTrackFactory();
-   auto trackPanel = project.GetTrackPanel();
-   auto defaultFormat = project.GetDefaultFormat();
-   auto rate = project.GetRate();
+   const auto &settings = ProjectSettings::Get( project );
+   auto &tracks = TrackList::Get( project );
+   auto &trackFactory = TrackFactory::Get( project );
+   auto &window = ProjectWindow::Get( project );
 
-   auto t = tracks->Add(trackFactory->NewWaveTrack(defaultFormat, rate));
-   project.SelectNone();
+   auto defaultFormat = settings.GetDefaultFormat();
+   auto rate = settings.GetRate();
+
+   auto t = tracks.Add( trackFactory.NewWaveTrack( defaultFormat, rate ) );
+   SelectUtilities::SelectNone( project );
 
    t->SetSelected(true);
 
-   project.PushState(_("Created new audio track"), _("New Track"));
+   ProjectHistory::Get( project )
+      .PushState(_("Created new audio track"), _("New Track"));
 
-   project.RedrawProject();
-   trackPanel->EnsureVisible(t);
+   t->EnsureVisible();
 }
 
 void OnNewStereoTrack(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tracks = project.GetTracks();
-   auto trackFactory = project.GetTrackFactory();
-   auto trackPanel = project.GetTrackPanel();
-   auto defaultFormat = project.GetDefaultFormat();
-   auto rate = project.GetRate();
+   const auto &settings = ProjectSettings::Get( project );
+   auto &tracks = TrackList::Get( project );
+   auto &trackFactory = TrackFactory::Get( project );
+   auto &window = ProjectWindow::Get( project );
 
-   project.SelectNone();
+   auto defaultFormat = settings.GetDefaultFormat();
+   auto rate = settings.GetRate();
 
-   auto left = tracks->Add(trackFactory->NewWaveTrack(defaultFormat, rate));
+   SelectUtilities::SelectNone( project );
+
+   auto left = tracks.Add( trackFactory.NewWaveTrack( defaultFormat, rate ) );
    left->SetSelected(true);
 
-   auto right = tracks->Add(trackFactory->NewWaveTrack(defaultFormat, rate));
+   auto right = tracks.Add( trackFactory.NewWaveTrack( defaultFormat, rate ) );
    right->SetSelected(true);
 
-   tracks->GroupChannels(*left, 2);
+   tracks.GroupChannels(*left, 2);
 
-   project.PushState(_("Created new stereo audio track"), _("New Track"));
+   ProjectHistory::Get( project )
+      .PushState(_("Created new stereo audio track"), _("New Track"));
 
-   project.RedrawProject();
-   trackPanel->EnsureVisible(left);
+   left->EnsureVisible();
 }
 
 void OnNewLabelTrack(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tracks = project.GetTracks();
-   auto trackFactory = project.GetTrackFactory();
-   auto trackPanel = project.GetTrackPanel();
+   auto &tracks = TrackList::Get( project );
+   auto &trackFactory = TrackFactory::Get( project );
+   auto &window = ProjectWindow::Get( project );
 
-   auto t = tracks->Add(trackFactory->NewLabelTrack());
+   auto t = tracks.Add( trackFactory.NewLabelTrack() );
 
-   project.SelectNone();
+   SelectUtilities::SelectNone( project );
 
    t->SetSelected(true);
 
-   project.PushState(_("Created new label track"), _("New Track"));
+   ProjectHistory::Get( project )
+      .PushState(_("Created new label track"), _("New Track"));
 
-   project.RedrawProject();
-   trackPanel->EnsureVisible(t);
+   t->EnsureVisible();
 }
 
 void OnNewTimeTrack(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tracks = project.GetTracks();
-   auto trackFactory = project.GetTrackFactory();
-   auto trackPanel = project.GetTrackPanel();
+   auto &tracks = TrackList::Get( project );
+   auto &trackFactory = TrackFactory::Get( project );
+   auto &window = ProjectWindow::Get( project );
 
-   if (tracks->GetTimeTrack()) {
+   if ( *tracks.Any<TimeTrack>().begin() ) {
       AudacityMessageBox(_("This version of Audacity only allows one time track for each project window."));
       return;
    }
 
-   auto t = tracks->AddToHead(trackFactory->NewTimeTrack());
+   auto t = tracks.AddToHead( trackFactory.NewTimeTrack() );
 
-   project.SelectNone();
+   SelectUtilities::SelectNone( project );
 
    t->SetSelected(true);
 
-   project.PushState(_("Created new time track"), _("New Track"));
+   ProjectHistory::Get( project )
+      .PushState(_("Created new time track"), _("New Track"));
 
-   project.RedrawProject();
-   trackPanel->EnsureVisible(t);
+   t->EnsureVisible();
 }
 
 void OnStereoToMono(const CommandContext &context)
 {
-   PluginActions::DoEffect(
+   EffectManager::DoEffect(
       EffectManager::Get().GetEffectByIdentifier(wxT("StereoToMono")),
       context,
-      PluginActions::kConfigured);
+      EffectManager::kConfigured);
 }
 
 void OnMixAndRender(const CommandContext &context)
@@ -898,16 +683,17 @@ void OnMixAndRenderToNewTrack(const CommandContext &context)
 void OnResample(const CommandContext &context)
 {
    auto &project = context.project;
-   auto projectRate = project.GetRate();
-   auto tracks = project.GetTracks();
-   auto &undoManager = *project.GetUndoManager();
+   const auto &settings = ProjectSettings::Get( project );
+   auto projectRate = settings.GetRate();
+   auto &tracks = TrackList::Get( project );
+   auto &undoManager = UndoManager::Get( project );
+   auto &window = ProjectWindow::Get( project );
 
    int newRate;
 
    while (true)
    {
-      wxDialogWrapper dlg(&project, wxID_ANY, wxString(_("Resample")));
-      dlg.SetName(dlg.GetTitle());
+      wxDialogWrapper dlg(&window, wxID_ANY, wxString(_("Resample")));
       ShuttleGui S(&dlg, eIsCreating);
       wxString rate;
       wxComboBox *cb;
@@ -965,12 +751,12 @@ void OnResample(const CommandContext &context)
       }
 
       AudacityMessageBox(_("The entered value is invalid"), _("Error"),
-                   wxICON_ERROR, &project);
+                   wxICON_ERROR, &window);
    }
 
    int ndx = 0;
    auto flags = UndoPush::AUTOSAVE;
-   for (auto wt : tracks->Selected< WaveTrack >())
+   for (auto wt : tracks.Selected< WaveTrack >())
    {
       wxString msg;
 
@@ -989,57 +775,60 @@ void OnResample(const CommandContext &context)
       // commit that to the undo stack.  The second and later times,
       // consolidate.
 
-      project.PushState(
+      ProjectHistory::Get( project ).PushState(
          _("Resampled audio track(s)"), _("Resample Track"), flags);
       flags = flags | UndoPush::CONSOLIDATE;
    }
 
    undoManager.StopConsolidating();
-   project.RedrawProject();
 
    // Need to reset
-   project.FinishAutoScroll();
+   window.FinishAutoScroll();
 }
 
 void OnRemoveTracks(const CommandContext &context)
 {
-   DoRemoveTracks( context.project );
+   TrackUtilities::DoRemoveTracks( context.project );
 }
 
 void OnMuteAllTracks(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tracks = project.GetTracks();
-   auto soloSimple = project.IsSoloSimple();
-   auto soloNone = project.IsSoloNone();
+   const auto &settings = ProjectSettings::Get( project );
+   auto &tracks = TrackList::Get( project );
+   auto &window = ProjectWindow::Get( project );
 
-   for (auto pt : tracks->Any<PlayableTrack>())
+   auto soloSimple = settings.IsSoloSimple();
+   auto soloNone = settings.IsSoloNone();
+
+   for (auto pt : tracks.Any<PlayableTrack>())
    {
       pt->SetMute(true);
       if (soloSimple || soloNone)
          pt->SetSolo(false);
    }
 
-   project.ModifyState(true);
-   project.RedrawProject();
+   ProjectHistory::Get( project ).ModifyState(true);
 }
 
 void OnUnmuteAllTracks(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tracks = project.GetTracks();
-   auto soloSimple = project.IsSoloSimple();
-   auto soloNone = project.IsSoloNone();
+   const auto &settings = ProjectSettings::Get( project );
+   auto &tracks = TrackList::Get( project );
+   auto &window = ProjectWindow::Get( project );
 
-   for (auto pt : tracks->Any<PlayableTrack>())
+   auto soloSimple = settings.IsSoloSimple();
+   auto soloNone = settings.IsSoloNone();
+
+   for (auto pt : tracks.Any<PlayableTrack>())
    {
       pt->SetMute(false);
       if (soloSimple || soloNone)
          pt->SetSolo(false);
    }
 
-   project.ModifyState(true);
-   project.RedrawProject();
+   ProjectHistory::Get( project ).ModifyState(true);
 }
 
 void OnPanLeft(const CommandContext &context)
@@ -1165,7 +954,9 @@ void OnScoreAlign(const CommandContext &context)
       Mixer mix(
          waveTracks,              // const WaveTrackConstArray &inputTracks
          false, // mayThrow -- is this right?
-         Mixer::WarpOptions{ tracks->GetTimeTrack() }, // const WarpOptions &warpOptions
+         Mixer::WarpOptions{
+            *tracks->Any<const TimeTrack >().begin()
+         }, // const WarpOptions &warpOptions
          0.0,                     // double startTime
          endTime,                 // double stopTime
          2,                       // int numOutChannels
@@ -1195,12 +986,12 @@ void OnScoreAlign(const CommandContext &context)
 
    if (result == SA_SUCCESS) {
       tracks->Replace(nt, holder);
-      project.RedrawProject();
       AudacityMessageBox(wxString::Format(
          _("Alignment completed: MIDI from %.2f to %.2f secs, Audio from %.2f to %.2f secs."),
          params.mMidiStart, params.mMidiEnd,
          params.mAudioStart, params.mAudioEnd));
-      project.PushState(_("Sync MIDI with Audio"), _("Sync MIDI with Audio"));
+      ProjectHistory::Get( project )
+         .PushState(_("Sync MIDI with Audio"), _("Sync MIDI with Audio"));
    } else if (result == SA_TOOSHORT) {
       AudacityMessageBox(wxString::Format(
          _("Alignment error: input too short: MIDI from %.2f to %.2f secs, Audio from %.2f to %.2f secs."),
@@ -1222,10 +1013,8 @@ void OnSortTime(const CommandContext &context)
    auto &project = context.project;
    DoSortTracks(project, kAudacitySortByTime);
 
-   project.PushState(_("Tracks sorted by time"), _("Sort by Time"));
-
-   auto trackPanel = project.GetTrackPanel();
-   trackPanel->Refresh(false);
+   ProjectHistory::Get( project )
+      .PushState(_("Tracks sorted by time"), _("Sort by Time"));
 }
 
 void OnSortName(const CommandContext &context)
@@ -1233,16 +1022,14 @@ void OnSortName(const CommandContext &context)
    auto &project = context.project;
    DoSortTracks(project, kAudacitySortByName);
 
-   project.PushState(_("Tracks sorted by name"), _("Sort by Name"));
-
-   auto trackPanel = project.GetTrackPanel();
-   trackPanel->Refresh(false);
+   ProjectHistory::Get( project )
+      .PushState(_("Tracks sorted by name"), _("Sort by Name"));
 }
 
 void OnSyncLock(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackPanel = project.GetTrackPanel();
+   auto &trackPanel = TrackPanel::Get( project );
 
    bool bSyncLockTracks;
    gPrefs->Read(wxT("/GUI/SyncLockTracks"), &bSyncLockTracks, false);
@@ -1252,7 +1039,7 @@ void OnSyncLock(const CommandContext &context)
    // Toolbar, project sync-lock handled within
    MenuManager::ModifyAllProjectToolbarMenus();
 
-   trackPanel->Refresh(false);
+   trackPanel.Refresh(false);
 }
 
 ///The following methods operate controls on specified tracks,
@@ -1260,11 +1047,11 @@ void OnSyncLock(const CommandContext &context)
 void OnTrackPan(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackPanel = project.GetTrackPanel();
+   auto &trackPanel = TrackPanel::Get( project );
 
-   Track *const track = trackPanel->GetFocusedTrack();
+   const auto track = TrackFocus::Get( project ).Get();
    if (track) track->TypeSwitch( [&](WaveTrack *wt) {
-      LWSlider *slider = trackPanel->PanSlider(wt);
+      LWSlider *slider = WaveTrackControls::PanSlider( trackPanel, *wt );
       if (slider->ShowDialog())
          SetTrackPan(project, wt, slider);
    });
@@ -1273,11 +1060,11 @@ void OnTrackPan(const CommandContext &context)
 void OnTrackPanLeft(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackPanel = project.GetTrackPanel();
+   auto &trackPanel = TrackPanel::Get( project );
 
-   Track *const track = trackPanel->GetFocusedTrack();
+   const auto track = TrackFocus::Get( project ).Get();
    if (track) track->TypeSwitch( [&](WaveTrack *wt) {
-      LWSlider *slider = trackPanel->PanSlider(wt);
+      LWSlider *slider = WaveTrackControls::PanSlider( trackPanel, *wt );
       slider->Decrease(1);
       SetTrackPan(project, wt, slider);
    });
@@ -1286,11 +1073,11 @@ void OnTrackPanLeft(const CommandContext &context)
 void OnTrackPanRight(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackPanel = project.GetTrackPanel();
+   auto &trackPanel = TrackPanel::Get( project );
 
-   Track *const track = trackPanel->GetFocusedTrack();
+   const auto track = TrackFocus::Get( project ).Get();
    if (track) track->TypeSwitch( [&](WaveTrack *wt) {
-      LWSlider *slider = trackPanel->PanSlider(wt);
+      LWSlider *slider = WaveTrackControls::PanSlider( trackPanel, *wt );
       slider->Increase(1);
       SetTrackPan(project, wt, slider);
    });
@@ -1299,12 +1086,12 @@ void OnTrackPanRight(const CommandContext &context)
 void OnTrackGain(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackPanel = project.GetTrackPanel();
+   auto &trackPanel = TrackPanel::Get( project );
 
    /// This will pop up the track gain dialog for specified track
-   Track *const track = trackPanel->GetFocusedTrack();
+   const auto track = TrackFocus::Get( project ).Get();
    if (track) track->TypeSwitch( [&](WaveTrack *wt) {
-      LWSlider *slider = trackPanel->GainSlider(wt);
+      LWSlider *slider = WaveTrackControls::GainSlider( trackPanel, *wt );
       if (slider->ShowDialog())
          SetTrackGain(project, wt, slider);
    });
@@ -1313,11 +1100,11 @@ void OnTrackGain(const CommandContext &context)
 void OnTrackGainInc(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackPanel = project.GetTrackPanel();
+   auto &trackPanel = TrackPanel::Get( project );
 
-   Track *const track = trackPanel->GetFocusedTrack();
+   const auto track = TrackFocus::Get( project ).Get();
    if (track) track->TypeSwitch( [&](WaveTrack *wt) {
-      LWSlider *slider = trackPanel->GainSlider(wt);
+      LWSlider *slider = WaveTrackControls::GainSlider( trackPanel, *wt );
       slider->Increase(1);
       SetTrackGain(project, wt, slider);
    });
@@ -1326,11 +1113,11 @@ void OnTrackGainInc(const CommandContext &context)
 void OnTrackGainDec(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackPanel = project.GetTrackPanel();
+   auto &trackPanel = TrackPanel::Get( project );
 
-   Track *const track = trackPanel->GetFocusedTrack();
+   const auto track = TrackFocus::Get( project ).Get();
    if (track) track->TypeSwitch( [&](WaveTrack *wt) {
-      LWSlider *slider = trackPanel->GainSlider(wt);
+      LWSlider *slider = WaveTrackControls::GainSlider( trackPanel, *wt );
       slider->Decrease(1);
       SetTrackGain(project, wt, slider);
    });
@@ -1339,107 +1126,105 @@ void OnTrackGainDec(const CommandContext &context)
 void OnTrackMenu(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackPanel = project.GetTrackPanel();
+   auto &trackPanel = TrackPanel::Get( project );
 
-   trackPanel->OnTrackMenu();
+   trackPanel.OnTrackMenu();
 }
 
 void OnTrackMute(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackPanel = project.GetTrackPanel();
 
-   const auto track = trackPanel->GetFocusedTrack();
+   const auto track = TrackFocus::Get( project ).Get();
    if (track) track->TypeSwitch( [&](PlayableTrack *t) {
-      DoTrackMute(project, t, false);
+      TrackUtilities::DoTrackMute(project, t, false);
    });
 }
 
 void OnTrackSolo(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackPanel = project.GetTrackPanel();
 
-   const auto track = trackPanel->GetFocusedTrack();
+   const auto track = TrackFocus::Get( project ).Get();
    if (track) track->TypeSwitch( [&](PlayableTrack *t) {
-      DoTrackSolo(project, t, false);
+      TrackUtilities::DoTrackSolo(project, t, false);
    });
 }
 
 void OnTrackClose(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackPanel = project.GetTrackPanel();
+   auto &trackPanel = TrackPanel::Get( project );
 
-   Track *t = trackPanel->GetFocusedTrack();
+   const auto t = TrackFocus::Get( project ).Get();
    if (!t)
       return;
 
-   auto isAudioActive = project.IsAudioActive();
+   auto isAudioActive = ProjectAudioIO::Get( project ).IsAudioActive();
 
    if (isAudioActive)
    {
-      project.TP_DisplayStatusMessage(
+      ProjectStatus::Get( project ).Set(
          _("Can't delete track with active audio"));
       wxBell();
       return;
    }
 
-   DoRemoveTrack(project, t);
+   TrackUtilities::DoRemoveTrack(project, t);
 
-   trackPanel->UpdateViewIfNoTracks();
-   trackPanel->Refresh(false);
+   trackPanel.UpdateViewIfNoTracks();
+   trackPanel.Refresh(false);
 }
 
 void OnTrackMoveUp(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackPanel = project.GetTrackPanel();
-   auto tracks = project.GetTracks();
+   auto &trackPanel = TrackPanel::Get( project );
+   auto &tracks = TrackList::Get( project );
 
-   Track *const focusedTrack = trackPanel->GetFocusedTrack();
-   if (tracks->CanMoveUp(focusedTrack)) {
-      DoMoveTrack(project, focusedTrack, OnMoveUpID);
-      trackPanel->Refresh(false);
+   const auto focusedTrack = TrackFocus::Get( project ).Get();
+   if (tracks.CanMoveUp(focusedTrack)) {
+      DoMoveTrack(project, focusedTrack, TrackUtilities::OnMoveUpID);
+      trackPanel.Refresh(false);
    }
 }
 
 void OnTrackMoveDown(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackPanel = project.GetTrackPanel();
-   auto tracks = project.GetTracks();
+   auto &trackPanel = TrackPanel::Get( project );
+   auto &tracks = TrackList::Get( project );
 
-   Track *const focusedTrack = trackPanel->GetFocusedTrack();
-   if (tracks->CanMoveDown(focusedTrack)) {
-      DoMoveTrack(project, focusedTrack, OnMoveDownID);
-      trackPanel->Refresh(false);
+   const auto focusedTrack = TrackFocus::Get( project ).Get();
+   if (tracks.CanMoveDown(focusedTrack)) {
+      DoMoveTrack(project, focusedTrack, TrackUtilities::OnMoveDownID);
+      trackPanel.Refresh(false);
    }
 }
 
 void OnTrackMoveTop(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackPanel = project.GetTrackPanel();
-   auto tracks = project.GetTracks();
+   auto &trackPanel = TrackPanel::Get( project );
+   auto &tracks = TrackList::Get( project );
 
-   Track *const focusedTrack = trackPanel->GetFocusedTrack();
-   if (tracks->CanMoveUp(focusedTrack)) {
-      DoMoveTrack(project, focusedTrack, OnMoveTopID);
-      trackPanel->Refresh(false);
+   const auto focusedTrack = TrackFocus::Get( project ).Get();
+   if (tracks.CanMoveUp(focusedTrack)) {
+      DoMoveTrack(project, focusedTrack, TrackUtilities::OnMoveTopID);
+      trackPanel.Refresh(false);
    }
 }
 
 void OnTrackMoveBottom(const CommandContext &context)
 {
    auto &project = context.project;
-   auto trackPanel = project.GetTrackPanel();
-   auto tracks = project.GetTracks();
+   auto &trackPanel = TrackPanel::Get( project );
+   auto &tracks = TrackList::Get( project );
 
-   Track *const focusedTrack = trackPanel->GetFocusedTrack();
-   if (tracks->CanMoveDown(focusedTrack)) {
-      DoMoveTrack(project, focusedTrack, OnMoveBottomID);
-      trackPanel->Refresh(false);
+   const auto focusedTrack = TrackFocus::Get( project ).Get();
+   if (tracks.CanMoveDown(focusedTrack)) {
+      DoMoveTrack(project, focusedTrack, TrackUtilities::OnMoveBottomID);
+      trackPanel.Refresh(false);
    }
 }
 
@@ -1465,7 +1250,7 @@ MenuTable::BaseItemPtr TracksMenu( AudacityProject & )
    // Tracks Menu (formerly Project Menu)
    using namespace MenuTable;
    using Options = CommandManager::Options;
-   
+
    return Menu( _("&Tracks"),
       Menu( _("Add &New"),
          Command( wxT("NewMonoTrack"), XXO("&Mono Track"), FN(OnNewWaveTrack),
@@ -1513,7 +1298,7 @@ MenuTable::BaseItemPtr TracksMenu( AudacityProject & )
       Separator(),
 
       Command( wxT("RemoveTracks"), XXO("Remo&ve Tracks"), FN(OnRemoveTracks),
-         AudioIONotBusyFlag | TracksSelectedFlag ),
+         AudioIONotBusyFlag | AnyTracksSelectedFlag ),
 
       Separator(),
 

@@ -27,6 +27,8 @@ Paul Licameli
 #include "../TrackPanel.h"
 #include "../ShuttleGui.h"
 #include "../WaveTrack.h"
+#include "../tracks/playabletrack/wavetrack/ui/WaveTrackView.h"
+#include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.h"
 
 WaveformPrefs::WaveformPrefs(wxWindow * parent, wxWindowID winid, WaveTrack *wt)
 /* i18n-hint: A waveform is a visual representation of vibration */
@@ -184,13 +186,14 @@ bool WaveformPrefs::Commit()
 
    if (mWt && isOpenPage) {
       for (auto channel : TrackList::Channels(mWt))
-         channel->SetDisplay(WaveTrack::Waveform);
+         WaveTrackView::Get( *channel )
+            .SetDisplay( WaveTrackViewConstants::Waveform );
    }
 
    if (isOpenPage) {
-      TrackPanel *const tp = ::GetActiveProject()->GetTrackPanel();
-      tp->UpdateVRulers();
-      tp->Refresh(false);
+      auto &tp = TrackPanel::Get( *::GetActiveProject() );
+      tp.UpdateVRulers();
+      tp.Refresh(false);
    }
 
    return true;
@@ -247,13 +250,12 @@ EVT_CHOICE(ID_RANGE, WaveformPrefs::OnControl)
 EVT_CHECKBOX(ID_DEFAULTS, WaveformPrefs::OnDefaults)
 END_EVENT_TABLE()
 
-WaveformPrefsFactory::WaveformPrefsFactory(WaveTrack *wt)
-: mWt(wt)
+PrefsPanel::Factory
+WaveformPrefsFactory(WaveTrack *wt)
 {
-}
-
-PrefsPanel *WaveformPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
-{
-   wxASSERT(parent); // to justify safenew
-   return safenew WaveformPrefs(parent, winid, mWt);
+   return [=](wxWindow *parent, wxWindowID winid)
+   {
+      wxASSERT(parent); // to justify safenew
+      return safenew WaveformPrefs(parent, winid, wt);
+   };
 }

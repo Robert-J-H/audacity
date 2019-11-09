@@ -16,14 +16,11 @@
 
 #include <wx/longlong.h>
 
-#include <algorithm>
-
 #ifndef IN_RC
 #include "audacity/Types.h"
 
 class wxArrayString;
 class wxArrayStringEx;
-class wxString;
 
 extern AUDACITY_DLL_API const wxString& GetCustomTranslation(const wxString& str1 );
 extern AUDACITY_DLL_API const wxString& GetCustomSubstitution(const wxString& str1 );
@@ -123,12 +120,6 @@ public:
    static wxString FormatSize(wxLongLong size);
    static wxString FormatSize(double size);
 
-   /** \brief Protect against Unicode to multi-byte conversion failures
-    * on Windows */
-#if defined(__WXMSW__)
-   static char *VerifyFilename(const wxString &s, bool input = true);
-#endif
-
    /** \brief Check a proposed file name string for illegal characters and
     * remove them
     * return true iff name is "visibly" changed (not necessarily equivalent to
@@ -151,31 +142,10 @@ public:
 private:
    static wxChar mDecimalSeparator;
 
-   // stuff for file name sanitisation
    static wxArrayString exclude;
-
-   static wxCharBuffer mFilename;
 };
 
 #define _NoAcc(X) Internat::StripAccelerators(_(X))
-
-// Use this macro to wrap all filenames and pathnames that get
-// passed directly to a system call, like opening a file, creating
-// a directory, checking to see that a file exists, etc...
-#if defined(__WXMSW__)
-// Note, on Windows we don't define an OSFILENAME() to prevent accidental use.
-// See VerifyFilename() for an explanation.
-#define OSINPUT(X) Internat::VerifyFilename(X, true)
-#define OSOUTPUT(X) Internat::VerifyFilename(X, false)
-#elif defined(__WXMAC__)
-#define OSFILENAME(X) ((char *) (const char *)(X).fn_str())
-#define OSINPUT(X) OSFILENAME(X)
-#define OSOUTPUT(X) OSFILENAME(X)
-#else
-#define OSFILENAME(X) ((char *) (const char *)(X).mb_str())
-#define OSINPUT(X) OSFILENAME(X)
-#define OSOUTPUT(X) OSFILENAME(X)
-#endif
 
 // Convert C strings to wxString
 #define UTF8CTOWX(X) wxString((X), wxConvUTF8)

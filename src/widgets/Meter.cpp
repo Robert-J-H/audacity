@@ -51,6 +51,7 @@
 #include <wx/dialog.h>
 #include <wx/dcbuffer.h>
 #include <wx/dcmemory.h>
+#include <wx/frame.h>
 #include <wx/image.h>
 #include <wx/intl.h>
 #include <wx/menu.h>
@@ -67,10 +68,11 @@
 #include "../ImageManipulation.h"
 #include "../prefs/GUISettings.h"
 #include "../Project.h"
+#include "../ProjectAudioManager.h"
+#include "../ProjectStatus.h"
 #include "../Prefs.h"
 #include "../ShuttleGui.h"
 
-#include "../Theme.h"
 #include "../AllThemeResources.h"
 #include "../widgets/valnum.h"
 
@@ -254,9 +256,6 @@ bool MeterUpdateQueue::Get(MeterUpdateMsg &msg)
 // How many pixels between items?
 const static int gap = 2;
 
-// Event used to notify all meters of preference changes
-wxDEFINE_EVENT(EVT_METER_PREFERENCES_CHANGED, wxCommandEvent);
-
 const static wxChar *PrefStyles[] =
 {
    wxT("AutomaticStereo"),
@@ -270,7 +269,7 @@ enum {
    OnPreferencesID
 };
 
-BEGIN_EVENT_TABLE(MeterPanel, wxPanelWrapper)
+BEGIN_EVENT_TABLE(MeterPanel, MeterPanelBase)
    EVT_TIMER(OnMeterUpdateID, MeterPanel::OnMeterUpdate)
    EVT_MOUSE_EVENTS(MeterPanel::OnMouse)
    EVT_CONTEXT_MENU(MeterPanel::OnContext)
@@ -294,7 +293,7 @@ MeterPanel::MeterPanel(AudacityProject *project,
              const wxSize& size /*= wxDefaultSize*/,
              Style style /*= HorizontalStereo*/,
              float fDecayRate /*= 60.0f*/)
-: wxPanelWrapper(parent, id, pos, size, wxTAB_TRAVERSAL | wxNO_BORDER | wxWANTS_CHARS),
+: MeterPanelBase(parent, id, pos, size, wxTAB_TRAVERSAL | wxNO_BORDER | wxWANTS_CHARS),
    mProject(project),
    mQueue(1024),
    mWidth(size.x),
@@ -348,11 +347,6 @@ MeterPanel::MeterPanel(AudacityProject *project,
 
    mPeakPeakPen = wxPen(theTheme.Colour( clrMeterPeak),        1, wxPENSTYLE_SOLID);
    mDisabledPen = wxPen(theTheme.Colour( clrMeterDisabledPen), 1, wxPENSTYLE_SOLID);
-
-   // Register for our preference update event
-   wxTheApp->Bind(EVT_METER_PREFERENCES_CHANGED,
-                     &MeterPanel::OnMeterPrefsUpdated,
-                     this);
 
    if (mIsInput) {
       wxTheApp->Bind(EVT_AUDIOIO_MONITOR,
@@ -458,6 +452,20 @@ void MeterPanel::UpdatePrefs()
    Reset(mRate, false);
 
    mLayoutValid = false;
+
+   Refresh(false);
+}
+
+static int MeterPrefsID()
+{
+   static int value = wxNewId();
+   return value;
+}
+
+void MeterPanel::UpdateSelectedPrefs(int id)
+{
+   if (id == MeterPrefsID())
+      UpdatePrefs();
 }
 
 void MeterPanel::OnErase(wxEraseEvent & WXUNUSED(event))
@@ -750,14 +758,14 @@ void MeterPanel::OnMouse(wxMouseEvent &evt)
 
   #if wxUSE_TOOLTIPS // Not available in wxX11
    if (evt.Leaving()){
-      GetActiveProject()->TP_DisplayStatusMessage(wxT(""));
+      ProjectStatus::Get( *GetActiveProject() ).Set(wxT(""));
    }
    else if (evt.Entering()) {
       // Display the tooltip in the status bar
       wxToolTip * pTip = this->GetToolTip();
       if( pTip ) {
          wxString tipText = pTip->GetTip();
-         GetActiveProject()->TP_DisplayStatusMessage(tipText);
+         ProjectStatus::Get( *GetActiveProject() ).Set(tipText);
       }
    }
   #endif
@@ -1058,6 +1066,8 @@ void MeterPanel::OnMeterUpdate(wxTimerEvent & WXUNUSED(event))
       mQueue.Clear();
       return;
    }
+
+   auto gAudioIO = AudioIO::Get();
 
    // There may have been several update messages since the last
    // time we got to this function.  Catch up to real-time by
@@ -1859,6 +1869,7 @@ void MeterPanel::StartMonitoring()
 {
    bool start = !mMonitoring;
 
+   auto gAudioIO = AudioIO::Get();
    if (gAudioIO->IsMonitoring()){
       gAudioIO->StopStream();
    } 
@@ -1866,7 +1877,7 @@ void MeterPanel::StartMonitoring()
    if (start && !gAudioIO->IsBusy()){
       AudacityProject *p = GetActiveProject();
       if (p){
-         gAudioIO->StartMonitoring(p->GetRate());
+         gAudioIO->StartMonitoring( DefaultPlayOptions( *p ) );
       }
 
       mLayoutValid = false;
@@ -1877,6 +1888,7 @@ void MeterPanel::StartMonitoring()
 
 void MeterPanel::StopMonitoring(){
    mMonitoring = false;
+   auto gAudioIO = AudioIO::Get();
    if (gAudioIO->IsMonitoring()){
       gAudioIO->StopStream();
    } 
@@ -1965,15 +1977,6 @@ void MeterPanel::OnMonitor(wxCommandEvent & WXUNUSED(event))
    StartMonitoring();
 }
 
-void MeterPanel::OnMeterPrefsUpdated(wxCommandEvent & evt)
-{
-   evt.Skip();
-
-   UpdatePrefs();
-
-   Refresh(false);
-}
-
 void MeterPanel::OnPreferences(wxCommandEvent & WXUNUSED(event))
 {
    wxTextCtrl *rate;
@@ -1991,7 +1994,8 @@ void MeterPanel::OnPreferences(wxCommandEvent & WXUNUSED(event))
    // Dialog is a child of the project, rather than of the toolbar.
    // This determines where it pops up.
 
-   wxDialogWrapper dlg(GetActiveProject(), wxID_ANY, title);
+   wxDialogWrapper dlg( FindProjectFrame( GetActiveProject() ),
+      wxID_ANY, title );
    dlg.SetName(dlg.GetTitle());
    ShuttleGui S(&dlg, eIsCreating);
    S.StartVerticalLay();
@@ -2100,9 +2104,8 @@ void MeterPanel::OnPreferences(wxCommandEvent & WXUNUSED(event))
       // Currently, there are 2 playback meters and 2 record meters and any number of 
       // mixerboard meters, so we have to send out an preferences updated message to
       // ensure they all update themselves.
-      wxCommandEvent e(EVT_METER_PREFERENCES_CHANGED);
-      e.SetEventObject(this);
-      GetParent()->GetEventHandler()->ProcessEvent(e);
+      wxTheApp->AddPendingEvent(wxCommandEvent{
+         EVT_PREFS_UPDATE, MeterPrefsID() });
    }
 }
 
@@ -2119,13 +2122,6 @@ wxString MeterPanel::Key(const wxString & key) const
    }
 
    return wxT("/Meter/Output/") + key;
-}
-
-bool MeterPanel::s_AcceptsFocus{ false };
-
-auto MeterPanel::TemporarilyAllowFocus() -> TempAllowFocus {
-   s_AcceptsFocus = true;
-   return TempAllowFocus{ &s_AcceptsFocus };
 }
 
 // This compensates for a but in wxWidgets 3.0.2 for mac:

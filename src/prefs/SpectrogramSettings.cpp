@@ -24,13 +24,12 @@ Paul Licameli
 #include <algorithm>
 
 #include "../FFT.h"
+#include "../Internat.h"
 #include "../Prefs.h"
-#include "../RealFFTf.h"
 
 #include <cmath>
 
-#include "../widgets/ErrorDialog.h"
-#include "../Internat.h"
+#include "../widgets/AudacityMessageBox.h"
 
 SpectrogramSettings::Globals::Globals()
 {

@@ -17,9 +17,6 @@
 #ifndef __COMMAND__
 #define __COMMAND__
 
-#include "../MemoryX.h"
-
-#include "CommandMisc.h"
 #include "CommandSignature.h"
 #include "../commands/AudacityCommand.h"
 
@@ -31,7 +28,9 @@ class CommandOutputTargets;
 class OldStyleCommand /* not final */
 {
 public:
-   OldStyleCommand() {};
+   AudacityProject &mProject;
+
+   OldStyleCommand(AudacityProject &project) : mProject{ project } {};
    virtual ~OldStyleCommand() { }
    virtual ComponentInterfaceSymbol GetSymbol() = 0;
    virtual CommandSignature &GetSignature() = 0;
@@ -50,7 +49,7 @@ protected:
    OldStyleCommandPointer mCommand;
 public:
    DecoratedCommand(const OldStyleCommandPointer &cmd)
-      : mCommand(cmd)
+      : OldStyleCommand{ cmd->mProject }, mCommand(cmd)
    {
       wxASSERT(cmd != NULL);
    }
@@ -65,10 +64,11 @@ public:
 class ApplyAndSendResponse : public DecoratedCommand
 {
 public:
-   ApplyAndSendResponse(const OldStyleCommandPointer &cmd, std::unique_ptr<CommandOutputTargets> &target);
+   ApplyAndSendResponse(
+      const OldStyleCommandPointer &cmd, std::unique_ptr<CommandOutputTargets> &target);
    bool Apply() override;
    bool Apply(const CommandContext &context) override;// Error to use this.
-   std::unique_ptr<CommandContext> mCtx;
+   std::unique_ptr<const CommandContext> mCtx;
 
 };
 
@@ -98,7 +98,7 @@ protected:
 public:
    /// Constructor should not be called directly; only by a factory which
    /// ensures name and params are set appropriately for the command.
-   CommandImplementation(OldStyleCommandType &type);
+   CommandImplementation(AudacityProject &project, OldStyleCommandType &type);
 
    virtual ~CommandImplementation();
 

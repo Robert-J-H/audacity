@@ -28,15 +28,13 @@
 
 #include "../AColor.h"
 #include "../AllThemeResources.h"
-#include "../Internat.h"
 #include "../Prefs.h"
 #include "../Shuttle.h"
 #include "../ShuttleGui.h"
-#include "../Theme.h"
 #include "../widgets/valnum.h"
 
 #include "../WaveTrack.h"
-#include "../widgets/ErrorDialog.h"
+#include "../widgets/AudacityMessageBox.h"
 
 // Define keys, defaults, minimums, and maximums for the effect parameters
 //

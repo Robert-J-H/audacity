@@ -11,6 +11,7 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../../Audacity.h"
 #include "LabelTrackControls.h"
 
+#include "LabelTrackView.h"
 #include "../../../HitTestResult.h"
 #include "../../../LabelTrack.h"
 #include "../../../widgets/PopupMenuTable.h"
@@ -22,7 +23,6 @@ Paul Licameli split from TrackPanel.cpp
 #include <wx/fontenum.h>
 #include <wx/listbox.h>
 #include <wx/spinctrl.h>
-#include "../../../Internat.h"
 
 LabelTrackControls::~LabelTrackControls()
 {
@@ -32,7 +32,7 @@ std::vector<UIHandlePtr> LabelTrackControls::HitTest
 (const TrackPanelMouseState & state,
  const AudacityProject *pProject)
 {
-   return TrackControls::HitTest(state, pProject);
+   return CommonTrackControls::HitTest(state, pProject);
 }
 
 class LabelTrackMenuTable : public PopupMenuTable
@@ -45,7 +45,7 @@ public:
 
    void InitMenu(Menu*, void *pUserData) override
    {
-      mpData = static_cast<TrackControls::InitMenuData*>(pUserData);
+      mpData = static_cast<CommonTrackControls::InitMenuData*>(pUserData);
    }
 
    void DestroyMenu() override
@@ -53,7 +53,7 @@ public:
       mpData = nullptr;
    }
 
-   TrackControls::InitMenuData *mpData;
+   CommonTrackControls::InitMenuData *mpData;
 
    void OnSetFont(wxCommandEvent &);
 };
@@ -104,10 +104,10 @@ void LabelTrackMenuTable::OnSetFont(wxCommandEvent &)
    // Correct for empty facename, or bad preference file:
    // get the name of a really existing font, to highlight by default
    // in the list box
-   facename = LabelTrack::GetFont(facename).GetFaceName();
+   facename = LabelTrackView::GetFont(facename).GetFaceName();
 
    long fontsize = gPrefs->Read(wxT("/GUI/LabelFontSize"),
-                                LabelTrack::DefaultFontSize);
+                                LabelTrackView::DefaultFontSize);
 
    /* i18n-hint: (noun) This is the font for the label track.*/
    wxDialogWrapper dlg(mpData->pParent, wxID_ANY, wxString(_("Label Track Font")));
@@ -161,7 +161,7 @@ void LabelTrackMenuTable::OnSetFont(wxCommandEvent &)
    gPrefs->Write(wxT("/GUI/LabelFontSize"), sc->GetValue());
    gPrefs->Flush();
 
-   LabelTrack::ResetFont();
+   LabelTrackView::ResetFont();
 
    mpData->result = RefreshCode::RefreshAll;
 }
@@ -170,3 +170,23 @@ PopupMenuTable *LabelTrackControls::GetMenuExtension(Track *)
 {
    return &LabelTrackMenuTable::Instance();
 }
+
+using DoGetLabelTrackControls = DoGetControls::Override< LabelTrack >;
+template<> template<> auto DoGetLabelTrackControls::Implementation() -> Function {
+   return [](LabelTrack &track) {
+      return std::make_shared<LabelTrackControls>( track.SharedPointer() );
+   };
+}
+static DoGetLabelTrackControls registerDoGetLabelTrackControls;
+
+using GetDefaultLabelTrackHeight = GetDefaultTrackHeight::Override< LabelTrack >;
+template<> template<>
+auto GetDefaultLabelTrackHeight::Implementation() -> Function {
+   return [](LabelTrack &) {
+      // Label tracks are narrow
+      // Default is to allow two rows so that NEW users get the
+      // idea that labels can 'stack' when they would overlap.
+      return 73;
+   };
+}
+static GetDefaultLabelTrackHeight registerGetDefaultLabelTrackHeight;

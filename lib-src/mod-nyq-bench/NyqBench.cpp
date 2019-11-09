@@ -23,9 +23,9 @@
 #include <wx/textctrl.h>
 #include <wx/toolbar.h>
 
-#include "AudioIO.h"
+#include "AudioIOBase.h"
+#include "CommonCommandFlags.h"
 #include "LabelTrack.h"
-#include "Menus.h"
 #include "ModuleManager.h"
 #include "Prefs.h"
 #include "Project.h"
@@ -34,7 +34,7 @@
 #include "effects/nyquist/Nyquist.h"
 #include "../images/AudacityLogo.xpm"
 #include "../../src/commands/CommandContext.h"
-#include "widgets/ErrorDialog.h"
+#include "widgets/AudacityMessageBox.h"
 
 #include "NyqBench.h"
 
@@ -184,10 +184,10 @@ extern "C"
          case MenusRebuilt:  {
             AudacityProject *p = GetActiveProject();
             wxASSERT(p != NULL);
-            CommandManager *c = p->GetCommandManager();
+            CommandManager *c = &CommandManager::Get( *p );
             wxASSERT(c != NULL);
 
-            wxMenuBar * pBar = p->GetMenuBar();
+            wxMenuBar * pBar = GetProjectFrame( *p ).GetMenuBar();
             wxASSERT(pBar != NULL );
             wxMenu * pMenu = pBar->GetMenu( 9 );  // Menu 9 is the Tools Menu.
             wxASSERT( pMenu != NULL );
@@ -1404,7 +1404,7 @@ void NyqBench::OnGo(wxCommandEvent & e)
       mRunning = true;
       UpdateWindowUI();
 
-      PluginActions::DoEffect(ID, CommandContext(*p), 0);
+      EffectManager::DoEffect(ID, CommandContext(*p), 0);
 
       mRunning = false;
       UpdateWindowUI();
@@ -1590,6 +1590,7 @@ void NyqBench::OnRunUpdate(wxUpdateUIEvent & e)
    wxToolBar *tbar = GetToolBar();
    wxMenuBar *mbar = GetMenuBar();
 
+   auto gAudioIO = AudioIOBase::Get();
    if (p && gAudioIO->IsBusy()) {
       mbar->Enable(ID_GO, false);
       mbar->Enable(ID_STOP, false);

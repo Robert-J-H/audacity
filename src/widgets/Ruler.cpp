@@ -57,16 +57,15 @@ array of Ruler::Label.
 #include "../Audacity.h"
 #include "Ruler.h"
 
+#include "../Experimental.h"
+
 #include <wx/dcclient.h>
 #include <wx/dcscreen.h>
 
-#include "../Experimental.h"
-
 #include "../AColor.h"
 #include "../AllThemeResources.h"
+#include "../Envelope.h"
 #include "../NumberScale.h"
-#include "../Theme.h"
-#include "../TimeTrack.h"
 #include "../ViewInfo.h"
 
 using std::min;
@@ -955,7 +954,19 @@ void Ruler::Update()
   Update(NULL);
 }
 
-void Ruler::Update(const TimeTrack* timetrack)// Envelope *speedEnv, long minSpeed, long maxSpeed )
+namespace {
+double ComputeWarpedLength(const Envelope &env, double t0, double t1)
+{
+   return env.IntegralOfInverse(t0, t1);
+}
+
+double SolveWarpedLength(const Envelope &env, double t0, double length)
+{
+   return env.SolveIntegralOfInverse(t0, length);
+}
+}
+
+void Ruler::Update(const Envelope* envelope)// Envelope *speedEnv, long minSpeed, long maxSpeed )
 {
    const ZoomInfo *zoomInfo = NULL;
    if (!mLog && mOrientation == wxHORIZONTAL)
@@ -1116,8 +1127,8 @@ void Ruler::Update(const TimeTrack* timetrack)// Envelope *speedEnv, long minSpe
          }
          else
             d = mMin - UPP / 2;
-         if (timetrack)
-            warpedD = timetrack->ComputeWarpedLength(0.0, d);
+         if (envelope)
+            warpedD = ComputeWarpedLength(*envelope, 0.0, d);
          else
             warpedD = d;
          // using ints doesn't work, as
@@ -1134,8 +1145,8 @@ void Ruler::Update(const TimeTrack* timetrack)// Envelope *speedEnv, long minSpe
             }
             else
                nextD = d + UPP;
-            if (timetrack)
-               warpedD += timetrack->ComputeWarpedLength(d, nextD);
+            if (envelope)
+               warpedD += ComputeWarpedLength(*envelope, d, nextD);
             else
                warpedD = nextD;
             d = nextD;
@@ -1291,14 +1302,14 @@ void Ruler::Draw(wxDC& dc)
    Draw( dc, NULL);
 }
 
-void Ruler::Draw(wxDC& dc, const TimeTrack* timetrack)
+void Ruler::Draw(wxDC& dc, const Envelope* envelope)
 {
    mDC = &dc;
    if( mLength <=0 )
       return;
 
    if (!mValid)
-      Update(timetrack);
+      Update(envelope);
 
    mDC->SetTextForeground( mTickColour );
 #ifdef EXPERIMENTAL_THEMING

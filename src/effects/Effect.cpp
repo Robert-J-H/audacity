@@ -48,37 +48,38 @@ greater use in future.
 #include "audacity/ConfigInterface.h"
 
 #include "EffectManager.h"
-#include "../AudacityException.h"
+#include "RealtimeEffectManager.h"
 #include "../AudioIO.h"
+#include "../CommonCommandFlags.h"
 #include "../LabelTrack.h"
 #include "../Menus.h"
 #include "../Mix.h"
 #include "../PluginManager.h"
 #include "../Prefs.h"
 #include "../Project.h"
-#include "../PluginManager.h"
+#include "../ProjectAudioManager.h"
+#include "../ProjectSettings.h"
 #include "../ShuttleGui.h"
 #include "../Shuttle.h"
+#include "../ViewInfo.h"
 #include "../WaveTrack.h"
-#include "../toolbars/ControlToolBar.h"
+#include "../commands/Command.h"
 #include "../widgets/AButton.h"
 #include "../widgets/ProgressDialog.h"
 #include "../ondemand/ODManager.h"
 #include "TimeWarper.h"
-#include "nyquist/Nyquist.h"
+#include "../tracks/playabletrack/wavetrack/ui/WaveTrackView.h"
+#include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.h"
 #include "../widgets/HelpSystem.h"
-#include "../widgets/LinkingHtmlWindow.h"
 #include "../widgets/NumericTextCtrl.h"
+#include "../widgets/AudacityMessageBox.h"
 #include "../widgets/ErrorDialog.h"
 #include "../FileNames.h"
-#include "../commands/AudacityCommand.h"
 #include "../commands/CommandContext.h"
 
 #if defined(__WXMAC__)
 #include <Cocoa/Cocoa.h>
 #endif
-
-#include "../commands/ScreenshotCommand.h"
 
 #include <unordered_map>
 
@@ -111,6 +112,25 @@ const wxString Effect::kFactoryDefaultsIdent = wxT("<Factory Defaults>");
 
 using t2bHash = std::unordered_map< void*, bool >;
 
+namespace {
+
+Effect::VetoDialogHook &GetVetoDialogHook()
+{
+   static Effect::VetoDialogHook sHook = nullptr;
+   return sHook;
+}
+
+}
+
+auto Effect::SetVetoDialogHook( VetoDialogHook hook )
+   -> VetoDialogHook
+{
+   auto &theHook = GetVetoDialogHook();
+   auto result = theHook;
+   theHook = hook;
+   return result;
+}
+
 Effect::Effect()
 {
    mClient = NULL;
@@ -127,10 +147,6 @@ Effect::Effect()
    mNumGroups = 0;
    mProgress = NULL;
 
-   mRealtimeSuspendLock.Enter();
-   mRealtimeSuspendCount = 1;    // Effects are initially suspended
-   mRealtimeSuspendLock.Leave();
-
    mUIParent = NULL;
    mUIDialog = NULL;
 
@@ -144,8 +160,7 @@ Effect::Effect()
    mUIDebug = false;
 
    AudacityProject *p = GetActiveProject();
-   mProjectRate = p ? p->GetRate() : 44100;
-
+   mProjectRate = p ? ProjectSettings::Get( *p ).GetRate() : 44100;
    mIsBatch = false;
 }
 
@@ -251,7 +266,7 @@ bool Effect::IsDefault()
    return true;
 }
 
-bool Effect::IsLegacy() 
+bool Effect::IsLegacy()
 {
    if (mClient)
    {
@@ -355,6 +370,16 @@ size_t Effect::SetBlockSize(size_t maxBlockSize)
    return mBlockSize;
 }
 
+size_t Effect::GetBlockSize() const
+{
+   if (mClient)
+   {
+      return mClient->GetBlockSize();
+   }
+
+   return mBlockSize;
+}
+
 sampleCount Effect::GetLatency()
 {
    if (mClient)
@@ -451,21 +476,7 @@ bool Effect::RealtimeFinalize()
 bool Effect::RealtimeSuspend()
 {
    if (mClient)
-   {
-      if (mClient->RealtimeSuspend())
-      {
-         mRealtimeSuspendLock.Enter();
-         mRealtimeSuspendCount++;
-         mRealtimeSuspendLock.Leave();
-         return true;
-      }
-
-      return false;
-   }
-
-   mRealtimeSuspendLock.Enter();
-   mRealtimeSuspendCount++;
-   mRealtimeSuspendLock.Leave();
+      return mClient->RealtimeSuspend();
 
    return true;
 }
@@ -473,21 +484,7 @@ bool Effect::RealtimeSuspend()
 bool Effect::RealtimeResume()
 {
    if (mClient)
-   {
-      if (mClient->RealtimeResume())
-      {
-         mRealtimeSuspendLock.Enter();
-         mRealtimeSuspendCount--;
-         mRealtimeSuspendLock.Leave();
-         return true;
-      }
-
-      return false;
-   }
-
-   mRealtimeSuspendLock.Enter();
-   mRealtimeSuspendCount--;
-   mRealtimeSuspendLock.Leave();
+      return mClient->RealtimeResume();
 
    return true;
 }
@@ -546,7 +543,7 @@ bool Effect::ShowInterface(wxWindow *parent, bool forceModal)
 
    // mUIDialog is null
    auto cleanup = valueRestorer( mUIDialog );
-   
+
    mUIDialog = CreateUI(parent, this);
    if (!mUIDialog)
    {
@@ -558,7 +555,8 @@ bool Effect::ShowInterface(wxWindow *parent, bool forceModal)
    mUIDialog->Fit();
    mUIDialog->SetMinSize(mUIDialog->GetSize());
 
-   if( ScreenshotCommand::MayCapture( mUIDialog ) )
+   auto hook = GetVetoDialogHook();
+   if( hook && hook( mUIDialog ) )
       return false;
 
    if( SupportsRealtime() && !forceModal )
@@ -750,7 +748,7 @@ NumericFormatSymbol Effect::GetDurationFormat()
 
 NumericFormatSymbol Effect::GetSelectionFormat()
 {
-   return GetActiveProject()->GetSelectionFormat();
+   return ProjectSettings( *GetActiveProject() ).GetSelectionFormat();
 }
 
 void Effect::SetDuration(double seconds)
@@ -779,8 +777,8 @@ bool Effect::Apply()
    // This is absolute hackage...but easy and I can't think of another way just now.
    //
    // It should callback to the EffectManager to kick off the processing
-   return PluginActions::DoEffect(GetID(), context,
-      PluginActions::kConfigured);
+   return EffectManager::DoEffect(GetID(), context,
+      EffectManager::kConfigured);
 }
 
 void Effect::Preview()
@@ -1105,7 +1103,7 @@ bool Effect::SetAutomationParameters(const wxString & parms)
 RegistryPaths Effect::GetUserPresets()
 {
    RegistryPaths presets;
-   
+
    GetPrivateConfigSubgroups(GetUserPresetsGroup(wxEmptyString), presets);
 
    std::sort( presets.begin(), presets.end() );
@@ -1173,14 +1171,14 @@ bool Effect::DoEffect(wxWindow *parent,
                       double projectRate,
                       TrackList *list,
                       TrackFactory *factory,
-                      SelectedRegion *selectedRegion,
+                      NotifyingSelectedRegion &selectedRegion,
                       bool shouldPrompt /* = true */)
 {
-   wxASSERT(selectedRegion->duration() >= 0.0);
+   wxASSERT(selectedRegion.duration() >= 0.0);
 
    mOutputTracks.reset();
 
-   mpSelectedRegion = selectedRegion;
+   mpSelectedRegion = &selectedRegion;
    mFactory = factory;
    mProjectRate = projectRate;
    mTracks = list;
@@ -1220,8 +1218,8 @@ bool Effect::DoEffect(wxWindow *parent,
       newTrack->SetSelected(true);
    }
 
-   mT0 = selectedRegion->t0();
-   mT1 = selectedRegion->t1();
+   mT0 = selectedRegion.t0();
+   mT1 = selectedRegion.t1();
    if (mT1 > mT0)
    {
       // there is a selection: let's fit in there...
@@ -1239,8 +1237,8 @@ bool Effect::DoEffect(wxWindow *parent,
       : NumericConverter::DefaultSelectionFormat();
 
 #ifdef EXPERIMENTAL_SPECTRAL_EDITING
-   mF0 = selectedRegion->f0();
-   mF1 = selectedRegion->f1();
+   mF0 = selectedRegion.f0();
+   mF1 = selectedRegion.f1();
    wxArrayString Names;
    if( mF0 != SelectedRegion::UndefinedFrequency )
       Names.push_back(wxT("control-f0"));
@@ -1257,7 +1255,7 @@ bool Effect::DoEffect(wxWindow *parent,
       return false;
    }
 
-   // Prompting will be bypassed when applying an effect that has already 
+   // Prompting will be bypassed when applying an effect that has already
    // been configured, e.g. repeating the last effect on a different selection.
    // Prompting may call Effect::Preview
    if (shouldPrompt && IsInteractive() && !PromptUser(parent))
@@ -1282,7 +1280,7 @@ bool Effect::DoEffect(wxWindow *parent,
 
    if (returnVal && (mT1 >= mT0 ))
    {
-      selectedRegion->setTimes(mT0, mT1);
+      selectedRegion.setTimes(mT0, mT1);
    }
 
    success = returnVal;
@@ -1291,10 +1289,11 @@ bool Effect::DoEffect(wxWindow *parent,
 
 bool Effect::Delegate( Effect &delegate, wxWindow *parent, bool shouldPrompt)
 {
-   SelectedRegion region{ mT0, mT1 };
+   NotifyingSelectedRegion region;
+   region.setTimes( mT0, mT1 );
 
    return delegate.DoEffect( parent, mProjectRate, mTracks, mFactory,
-      &region, shouldPrompt );
+      region, shouldPrompt );
 }
 
 // All legacy effects should have this overridden
@@ -1345,7 +1344,7 @@ bool Effect::Process()
       }
    }
 
-   ReplaceProcessedTracks(bGoodResult); 
+   ReplaceProcessedTracks(bGoodResult);
 
    return bGoodResult;
 }
@@ -1547,7 +1546,7 @@ bool Effect::ProcessTrack(int count,
    //
    // At the same time the total number of delayed samples are gathered and when
    // there is no further input data to process, the loop continues to call the
-   // effect with an empty input buffer until the effect has had a chance to 
+   // effect with an empty input buffer until the effect has had a chance to
    // return all of the remaining delayed samples.
    auto inLeftPos = leftStart;
    auto inRightPos = rightStart;
@@ -1586,13 +1585,9 @@ bool Effect::ProcessTrack(int count,
 
       // Create temporary tracks
       genLeft = mFactory->NewWaveTrack(left->GetSampleFormat(), left->GetRate());
-      genLeft->SetWaveColorIndex( left->GetWaveColorIndex() );
 
       if (right)
-      {
          genRight = mFactory->NewWaveTrack(right->GetSampleFormat(), right->GetRate());
-         genRight->SetWaveColorIndex( right->GetWaveColorIndex() );
-      }
    }
 
    // Call the effect until we run out of input or delayed samples
@@ -1626,7 +1621,7 @@ bool Effect::ProcessTrack(int count,
          curBlockSize = mBlockSize;
          if (curBlockSize > inputRemaining)
          {
-            // We've reached the last block...set current block size to what's left 
+            // We've reached the last block...set current block size to what's left
             // inputRemaining is positive and bounded by a size_t
             curBlockSize = inputRemaining.as_size_t();
             inputRemaining = 0;
@@ -1874,7 +1869,7 @@ bool Effect::ProcessTrack(int count,
       // Transfer the data from the temporary tracks to the actual ones
       genLeft->Flush();
       // mT1 gives us the NEW selection. We want to replace up to GetSel1().
-      auto &selectedRegion = p->GetViewInfo().selectedRegion;
+      auto &selectedRegion = ViewInfo::Get( *p ).selectedRegion;
       left->ClearAndPaste(mT0,
          selectedRegion.t1(), genLeft.get(), true, true,
          nullptr /* &warper */);
@@ -2240,7 +2235,7 @@ void Effect::ReplaceProcessedTracks(const bool bGoodResult)
          // Swap the wavecache track the ondemand task uses, since now the NEW
          // one will be kept in the project
          if (ODManager::IsInstanceCreated()) {
-            ODManager::Instance()->ReplaceWaveTrack( t, o.get() );
+            ODManager::Instance()->ReplaceWaveTrack( t, o );
          }
       }
    }
@@ -2278,194 +2273,6 @@ double Effect::CalcPreviewInputLength(double previewLength)
    return previewLength;
 }
 
-// RealtimeAddProcessor and RealtimeProcess use the same method of
-// determining the current processor index, so updates to one should
-// be reflected in the other.
-bool Effect::RealtimeAddProcessor(int group, unsigned chans, float rate)
-{
-   auto ichans = chans;
-   auto ochans = chans;
-   auto gchans = chans;
-
-   // Reset processor index
-   if (group == 0)
-   {
-      mCurrentProcessor = 0;
-      mGroupProcessor.clear();
-   }
-
-   // Remember the processor starting index
-   mGroupProcessor.push_back(mCurrentProcessor);
-
-   // Call the client until we run out of input or output channels
-   while (ichans > 0 && ochans > 0)
-   {
-      // If we don't have enough input channels to accomodate the client's
-      // requirements, then we replicate the input channels until the
-      // client's needs are met.
-      if (ichans < mNumAudioIn)
-      {
-         // All input channels have been consumed
-         ichans = 0;
-      }
-      // Otherwise fullfil the client's needs with as many input channels as possible.
-      // After calling the client with this set, we will loop back up to process more
-      // of the input/output channels.
-      else if (ichans >= mNumAudioIn)
-      {
-         gchans = mNumAudioIn;
-         ichans -= gchans;
-      }
-
-      // If we don't have enough output channels to accomodate the client's
-      // requirements, then we provide all of the output channels and fulfill
-      // the client's needs with dummy buffers.  These will just get tossed.
-      if (ochans < mNumAudioOut)
-      {
-         // All output channels have been consumed
-         ochans = 0;
-      }
-      // Otherwise fullfil the client's needs with as many output channels as possible.
-      // After calling the client with this set, we will loop back up to process more
-      // of the input/output channels.
-      else if (ochans >= mNumAudioOut)
-      {
-         ochans -= mNumAudioOut;
-      }
-
-      // Add a NEW processor
-      RealtimeAddProcessor(gchans, rate);
-
-      // Bump to next processor
-      mCurrentProcessor++;
-   }
-
-   return true;
-}
-
-// RealtimeAddProcessor and RealtimeProcess use the same method of
-// determining the current processor group, so updates to one should
-// be reflected in the other.
-size_t Effect::RealtimeProcess(int group,
-                                    unsigned chans,
-                                    float **inbuf,
-                                    float **outbuf,
-                                    size_t numSamples)
-{
-   //
-   // The caller passes the number of channels to process and specifies
-   // the number of input and output buffers.  There will always be the
-   // same number of output buffers as there are input buffers.
-   //
-   // Effects always require a certain number of input and output buffers,
-   // so if the number of channels we're curently processing are different
-   // than what the effect expects, then we use a few methods of satisfying
-   // the effects requirements.
-   float **clientIn = (float **) alloca(mNumAudioIn * sizeof(float *));
-   float **clientOut = (float **) alloca(mNumAudioOut * sizeof(float *));
-   float *dummybuf = (float *) alloca(numSamples * sizeof(float));
-   decltype(numSamples) len = 0;
-   auto ichans = chans;
-   auto ochans = chans;
-   auto gchans = chans;
-   unsigned indx = 0;
-   unsigned ondx = 0;
-
-   int processor = mGroupProcessor[group];
-
-   // Call the client until we run out of input or output channels
-   while (ichans > 0 && ochans > 0)
-   {
-      // If we don't have enough input channels to accomodate the client's
-      // requirements, then we replicate the input channels until the
-      // client's needs are met.
-      if (ichans < mNumAudioIn)
-      {
-         for (size_t i = 0; i < mNumAudioIn; i++)
-         {
-            if (indx == ichans)
-            {
-               indx = 0;
-            }
-            clientIn[i] = inbuf[indx++];
-         }
-
-         // All input channels have been consumed
-         ichans = 0;
-      }
-      // Otherwise fullfil the client's needs with as many input channels as possible.
-      // After calling the client with this set, we will loop back up to process more
-      // of the input/output channels.
-      else if (ichans >= mNumAudioIn)
-      {
-         gchans = 0;
-         for (size_t i = 0; i < mNumAudioIn; i++, ichans--, gchans++)
-         {
-            clientIn[i] = inbuf[indx++];
-         }
-      }
-
-      // If we don't have enough output channels to accomodate the client's
-      // requirements, then we provide all of the output channels and fulfill
-      // the client's needs with dummy buffers.  These will just get tossed.
-      if (ochans < mNumAudioOut)
-      {
-         for (size_t i = 0; i < mNumAudioOut; i++)
-         {
-            if (i < ochans)
-            {
-               clientOut[i] = outbuf[i];
-            }
-            else
-            {
-               clientOut[i] = dummybuf;
-            }
-         }
-
-         // All output channels have been consumed
-         ochans = 0;
-      }
-      // Otherwise fullfil the client's needs with as many output channels as possible.
-      // After calling the client with this set, we will loop back up to process more
-      // of the input/output channels.
-      else if (ochans >= mNumAudioOut)
-      {
-         for (size_t i = 0; i < mNumAudioOut; i++, ochans--)
-         {
-            clientOut[i] = outbuf[ondx++];
-         }
-      }
-
-      // Finally call the plugin to process the block
-      len = 0;
-      for (decltype(numSamples) block = 0; block < numSamples; block += mBlockSize)
-      {
-         auto cnt = std::min(numSamples - block, mBlockSize);
-         len += RealtimeProcess(processor, clientIn, clientOut, cnt);
-
-         for (size_t i = 0 ; i < mNumAudioIn; i++)
-         {
-            clientIn[i] += cnt;
-         }
-
-         for (size_t i = 0 ; i < mNumAudioOut; i++)
-         {
-            clientOut[i] += cnt;
-         }
-      }
-
-      // Bump to next processor
-      processor++;
-   }
-
-   return len;
-}
-
-bool Effect::IsRealtimeActive()
-{
-   return mRealtimeSuspendCount == 0;
-}
-
 bool Effect::IsHidden()
 {
    return false;
@@ -2477,6 +2284,7 @@ void Effect::Preview(bool dryOnly)
       return;
    }
 
+   auto gAudioIO = AudioIO::Get();
    if (gAudioIO->IsBusy()) {
       return;
    }
@@ -2502,7 +2310,7 @@ void Effect::Preview(bool dryOnly)
 
    double t1 = mT0 + previewDuration;
 
-   if ((t1 > mT1) && !(isNyquist && isGenerator)) {
+   if ((t1 > mT1) && !isGenerator) {
       t1 = mT1;
    }
 
@@ -2555,7 +2363,8 @@ void Effect::Preview(bool dryOnly)
 
       mixLeft->Offset(-mixLeft->GetStartTime());
       mixLeft->SetSelected(true);
-      mixLeft->SetDisplay(WaveTrack::NoDisplay);
+      WaveTrackView::Get( *mixLeft )
+         .SetDisplay(WaveTrackViewConstants::NoDisplay);
       auto pLeft = mTracks->Add( mixLeft );
       Track *pRight{};
       if (mixRight) {
@@ -2570,7 +2379,8 @@ void Effect::Preview(bool dryOnly)
          if (src->GetSelected() || mPreviewWithNotSelected) {
             auto dest = src->Copy(mT0, t1);
             dest->SetSelected(src->GetSelected());
-            static_cast<WaveTrack*>(dest.get())->SetDisplay(WaveTrack::NoDisplay);
+            WaveTrackView::Get( *static_cast<WaveTrack*>(dest.get()) )
+               .SetDisplay(WaveTrackViewConstants::NoDisplay);
             mTracks->Add( dest );
          }
       }
@@ -2601,14 +2411,14 @@ void Effect::Preview(bool dryOnly)
 
    if (success)
    {
-      auto tracks = GetAllPlaybackTracks(*mTracks, true);
+      auto tracks = ProjectAudioManager::GetAllPlaybackTracks(*mTracks, true);
 
       // Some effects (Paulstretch) may need to generate more
       // than previewLen, so take the min.
       t1 = std::min(mT0 + previewLen, mT1);
 
       // Start audio playing
-      AudioIOStartStreamOptions options { rate };
+      AudioIOStartStreamOptions options { ::GetActiveProject(), rate };
       int token =
          gAudioIO->StartStream(tracks, mT0, t1, options);
 
@@ -2903,7 +2713,7 @@ EffectUIHost::~EffectUIHost()
    {
       if (mNeedsResume)
          Resume();
-      
+
       mClient->CloseUI();
       mClient = NULL;
    }
@@ -2924,9 +2734,9 @@ bool EffectUIHost::TransferDataToWindow()
 
 bool EffectUIHost::TransferDataFromWindow()
 {
-   if( mEffect) 
+   if( mEffect)
       return mEffect->TransferDataFromWindow();
-   if( mCommand) 
+   if( mCommand)
       return mCommand->TransferDataFromWindow();
    return false;
 }
@@ -2977,6 +2787,7 @@ bool EffectUIHost::Initialize()
          w->SetMinSize(wxSize(wxMax(600, mParent->GetSize().GetWidth() * 2 / 3),
             mParent->GetSize().GetHeight() / 2));
 
+         auto gAudioIO = AudioIO::Get();
          mDisableTransport = !gAudioIO->IsAvailable(mProject);
          mPlaying = gAudioIO->IsStreamActive(); // not exactly right, but will suffice
          mCapturing = gAudioIO->IsStreamActive() && gAudioIO->GetNumCaptureChannels() > 0;
@@ -3011,7 +2822,7 @@ bool EffectUIHost::Initialize()
 
 #if defined(__WXMAC__)
          margin = 3; // I'm sure it's needed because of the order things are created...
-#endif   
+#endif
 
          if (!mIsGUI)
          {
@@ -3046,10 +2857,10 @@ bool EffectUIHost::Initialize()
                   mPlayToggleBtn->SetToolTip(_("Start and stop playback"));
                   bs->Add(mPlayToggleBtn, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, margin);
                }
-               else if (mEffect && 
-                  (mEffect->GetType() != EffectTypeAnalyze) && 
+               else if (mEffect &&
+                  (mEffect->GetType() != EffectTypeAnalyze) &&
                   (mEffect->GetType() != EffectTypeTool)
-                  ) 
+                  )
                {
                   wxASSERT(bar); // To justify safenew
                   mPlayToggleBtn = safenew wxButton(bar, kPlayID, _("&Preview"));
@@ -3176,7 +2987,7 @@ bool EffectUIHost::Initialize()
 
    w->SetAccept(!mIsGUI);
    (!mIsGUI ? w : FindWindow(wxID_APPLY))->SetFocus();
- 
+
    LoadUserPresets();
 
    InitializeRealtime();
@@ -3249,19 +3060,17 @@ void EffectUIHost::OnApply(wxCommandEvent & evt)
    }
 
    // Honor the "select all if none" preference...a little hackish, but whatcha gonna do...
-   if (!mIsBatch && 
-      mEffect && 
-      mEffect->GetType() != EffectTypeGenerate && 
-      mEffect->GetType() != EffectTypeTool && 
-      mProject->mViewInfo.selectedRegion.isPoint())
+   if (!mIsBatch &&
+      mEffect &&
+      mEffect->GetType() != EffectTypeGenerate &&
+      mEffect->GetType() != EffectTypeTool &&
+      ViewInfo::Get( *mProject ).selectedRegion.isPoint())
    {
       auto flags = AlwaysEnabledFlag;
       bool allowed =
-         GetMenuManager(*mProject).ReportIfActionNotAllowed(
-         *mProject,
+         MenuManager::Get(*mProject).ReportIfActionNotAllowed(
          mEffect->GetTranslatedName(),
          flags,
-         WaveTracksSelectedFlag | TimeSelectedFlag,
          WaveTracksSelectedFlag | TimeSelectedFlag);
       if (!allowed)
          return;
@@ -3305,7 +3114,9 @@ void EffectUIHost::OnApply(wxCommandEvent & evt)
    if( mEffect )
       mEffect->Apply();
    if( mCommand )
-      mCommand->Apply();
+      // PRL:  I don't like the global and would rather pass *mProject!
+      // But I am preserving old behavior
+      mCommand->Apply( CommandContext{ *GetActiveProject() } );
 }
 
 void EffectUIHost::DoCancel()
@@ -3485,22 +3296,25 @@ void EffectUIHost::OnPlay(wxCommandEvent & WXUNUSED(evt))
 
    if (mPlaying)
    {
+      auto gAudioIO = AudioIO::Get();
       mPlayPos = gAudioIO->GetStreamTime();
-      mProject->GetControlToolBar()->StopPlaying();
+      auto &projectAudioManager = ProjectAudioManager::Get( *mProject );
+      projectAudioManager.Stop();
    }
    else
    {
-      if (mProject->IsPlayRegionLocked())
+      auto &viewInfo = ViewInfo::Get( *mProject );
+      const auto &selectedRegion = viewInfo.selectedRegion;
+      const auto &playRegion = viewInfo.playRegion;
+      if ( playRegion.Locked() )
       {
-         double t0, t1;
-         mProject->GetPlayRegion(&t0, &t1);
-         mRegion.setTimes(t0, t1);
+         mRegion.setTimes(playRegion.GetStart(), playRegion.GetEnd());
          mPlayPos = mRegion.t0();
       }
-      else if (mProject->mViewInfo.selectedRegion.t0() != mRegion.t0() ||
-               mProject->mViewInfo.selectedRegion.t1() != mRegion.t1())
+      else if (selectedRegion.t0() != mRegion.t0() ||
+               selectedRegion.t1() != mRegion.t1())
       {
-         mRegion = mProject->mViewInfo.selectedRegion;
+         mRegion = selectedRegion;
          mPlayPos = mRegion.t0();
       }
 
@@ -3509,9 +3323,11 @@ void EffectUIHost::OnPlay(wxCommandEvent & WXUNUSED(evt))
          mPlayPos = mRegion.t1();
       }
 
-      mProject->GetControlToolBar()->PlayPlayRegion
-         (SelectedRegion(mPlayPos, mRegion.t1()),
-          mProject->GetDefaultPlayOptions(), PlayMode::normalPlay);
+      auto &projectAudioManager = ProjectAudioManager::Get( *mProject );
+      projectAudioManager.PlayPlayRegion(
+         SelectedRegion(mPlayPos, mRegion.t1()),
+         DefaultPlayOptions( *mProject ),
+         PlayMode::normalPlay );
    }
 }
 
@@ -3519,6 +3335,7 @@ void EffectUIHost::OnRewind(wxCommandEvent & WXUNUSED(evt))
 {
    if (mPlaying)
    {
+      auto gAudioIO = AudioIO::Get();
       double seek;
       gPrefs->Read(wxT("/AudioIO/SeekShortPeriod"), &seek, 1.0);
 
@@ -3543,6 +3360,7 @@ void EffectUIHost::OnFFwd(wxCommandEvent & WXUNUSED(evt))
       double seek;
       gPrefs->Read(wxT("/AudioIO/SeekShortPeriod"), &seek, 1.0);
 
+      auto gAudioIO = AudioIO::Get();
       double pos = gAudioIO->GetStreamTime();
       if (mRegion.t0() < mRegion.t1() && pos + seek > mRegion.t1())
       {
@@ -3581,7 +3399,7 @@ void EffectUIHost::OnPlayback(wxCommandEvent & evt)
 
    if (mPlaying)
    {
-      mRegion = mProject->mViewInfo.selectedRegion;
+      mRegion = ViewInfo::Get( *mProject ).selectedRegion;
       mPlayPos = mRegion.t0();
    }
 
@@ -3880,7 +3698,7 @@ void EffectUIHost::InitializeRealtime()
 {
    if (mSupportsRealtime && !mInitialized)
    {
-      EffectManager::Get().RealtimeAddEffect(mEffect);
+      RealtimeEffectManager::Get().RealtimeAddEffect(mEffect);
 
       wxTheApp->Bind(EVT_AUDIOIO_PLAYBACK,
                         &EffectUIHost::OnPlayback,
@@ -3898,7 +3716,7 @@ void EffectUIHost::CleanupRealtime()
 {
    if (mSupportsRealtime && mInitialized)
    {
-      EffectManager::Get().RealtimeRemoveEffect(mEffect);
+      RealtimeEffectManager::Get().RealtimeRemoveEffect(mEffect);
 
       mInitialized = false;
    }

@@ -24,10 +24,16 @@ capture the more lengthy output from some commands.
 #include "../Audacity.h"
 #include "CommandTargets.h"
 
+#include <wx/app.h>
+#include <wx/statusbr.h>
 #include <wx/string.h>
+#include <wx/textctrl.h>
 #include "../ShuttleGui.h"
-#include "../Project.h"
-#include "../widgets/ErrorDialog.h"
+#include "../widgets/AudacityMessageBox.h"
+#include "../widgets/wxPanelWrapper.h"
+
+#include <locale>
+#include <sstream>
 
 void CommandMessageTarget::StartArray()
 {
@@ -75,11 +81,18 @@ void CommandMessageTarget::AddBool(const bool value,      const wxString &name){
       Update( wxString::Format( "%s\"%s\":\"%s\"", (mCounts.back()>0)?", ":"", name,value?"true":"false"));
    mCounts.back() += 1;
 }
+
 void CommandMessageTarget::AddItem(const double value,    const wxString &name){
+   std::stringstream str;
+   std::locale nolocale("C");
+   str.imbue(nolocale);
+
    if( name.empty() )
-      Update( wxString::Format( "%s%g", (mCounts.back()>0)?", ":"", value));
+      str << ((mCounts.back()>0)? ", " : "") << value;
    else
-      Update( wxString::Format( "%s\"%s\":%g", (mCounts.back()>0)?", ":"", name,value));
+      str << ((mCounts.back()>0)? ", " : "") << "\"" << name << "\"" << ":" << value;
+
+   Update( str.str() );
    mCounts.back() += 1;
 }
 
@@ -375,7 +388,8 @@ void LongMessageDialog::OnCancel(wxCommandEvent & WXUNUSED(evt)){
 void LongMessageDialog::AcceptText( const wxString & Text )
 {
    if( pDlg == NULL ){
-      pDlg = new LongMessageDialog( GetActiveProject(), _( "Long Message" ) );
+      pDlg = new LongMessageDialog(
+         wxTheApp->GetTopWindow(), _( "Long Message" ) );
       pDlg->Init();
       pDlg->Show();
    }
@@ -443,4 +457,10 @@ InteractiveOutputTargets::InteractiveOutputTargets() :
 void StatusBarTarget::Update(const wxString &message)
 {
    mStatus.SetStatusText(message, 0);
+}
+
+ResponseQueue &ResponseQueueTarget::sResponseQueue()
+{
+   static ResponseQueue queue;
+   return queue;
 }

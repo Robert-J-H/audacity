@@ -29,8 +29,8 @@ Functions that find and load all LV2 plugins on the system.
 #include <wx/log.h>
 #include <wx/string.h>
 
-#include "../../Internat.h"
 #include "../EffectManager.h"
+#include "../../Internat.h"
 
 #include "LV2Effect.h"
 #include "lv2/lv2plug.in/ns/ext/event/event.h"
@@ -205,6 +205,12 @@ void LV2EffectsModule::Terminate()
    gWorld = NULL;
 
    return;
+}
+
+const FileExtensions &LV2EffectsModule::GetFileExtensions()
+{
+   static FileExtensions empty;
+   return empty;
 }
 
 bool LV2EffectsModule::AutoRegisterPlugins(PluginManagerInterface & WXUNUSED(pm))

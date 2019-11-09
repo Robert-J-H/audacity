@@ -36,13 +36,11 @@ function.
 #include <wx/combobox.h>
 
 #include "../FileFormats.h"
-#include "../Internat.h"
 #include "../Mix.h"
-#include "../Prefs.h"
-#include "../Project.h"
+#include "../ProjectSettings.h"
 #include "../Tags.h"
 #include "../Track.h"
-#include "../widgets/ErrorDialog.h"
+#include "../widgets/AudacityMessageBox.h"
 #include "../widgets/ProgressDialog.h"
 
 #include "Export.h"
@@ -342,7 +340,7 @@ bool ExportFFmpeg::Init(const char *shortname, AudacityProject *project, const T
       return false;
 
    if (metadata == NULL)
-      metadata = project->GetTags();
+      metadata = &Tags::Get( *project );
 
    // Add metadata BEFORE writing the header.
    // At the moment that works with ffmpeg-git and ffmpeg-0.5 for MP4.
@@ -384,6 +382,7 @@ static int set_dict_int(AVDictionary **dict, const char *key, int val)
 
 bool ExportFFmpeg::InitCodecs(AudacityProject *project)
 {
+   const auto &settings = ProjectSettings::Get( *project );
    AVCodec *codec = NULL;
    AVDictionary *options = NULL;
    AVDictionaryCleanup cleanup{ &options };
@@ -393,18 +392,21 @@ bool ExportFFmpeg::InitCodecs(AudacityProject *project)
    mEncAudioCodecCtx->codec_id = ExportFFmpegOptions::fmts[mSubFormat].codecid;
    mEncAudioCodecCtx->codec_type = AVMEDIA_TYPE_AUDIO;
    mEncAudioCodecCtx->codec_tag = av_codec_get_tag(mEncFormatCtx->oformat->codec_tag,mEncAudioCodecCtx->codec_id);
-   mSampleRate = (int)project->GetRate();
+   mSampleRate = (int)settings.GetRate();
    mEncAudioCodecCtx->global_quality = -99999; //quality mode is off by default;
 
    // Each export type has its own settings
    switch (mSubFormat)
    {
    case FMT_M4A:
-      mEncAudioCodecCtx->bit_rate = 98000;
-      mEncAudioCodecCtx->bit_rate *= mChannels;
+   {
+      int q = gPrefs->Read(wxT("/FileFormats/AACQuality"),-99999);
+      mEncAudioCodecCtx->global_quality = q;
+      q = wxClip( q, 98 * mChannels, 160 * mChannels);
+      // Set bit rate to between 98 kbps and 320 kbps (if two channels)
+      mEncAudioCodecCtx->bit_rate = q * 1000;
       mEncAudioCodecCtx->profile = FF_PROFILE_AAC_LOW;
       mEncAudioCodecCtx->cutoff = 0;
-      mEncAudioCodecCtx->global_quality = gPrefs->Read(wxT("/FileFormats/AACQuality"),-99999);
       if (!CheckSampleRate(mSampleRate,
                ExportFFmpegOptions::iAACSampleRates[0],
                ExportFFmpegOptions::iAACSampleRates[11],
@@ -416,6 +418,7 @@ bool ExportFFmpeg::InitCodecs(AudacityProject *project)
                &ExportFFmpegOptions::iAACSampleRates[0]);
       }
       break;
+   }
    case FMT_AC3:
       mEncAudioCodecCtx->bit_rate = gPrefs->Read(wxT("/FileFormats/AC3BitRate"), 192000);
       if (!CheckSampleRate(mSampleRate,ExportFFmpegAC3Options::iAC3SampleRates[0], ExportFFmpegAC3Options::iAC3SampleRates[2], &ExportFFmpegAC3Options::iAC3SampleRates[0]))
@@ -874,7 +877,7 @@ ProgressResult ExportFFmpeg::Export(AudacityProject *project,
       return ProgressResult::Cancelled;
    }
    mName = fName;
-   const TrackList *tracks = project->GetTracks();
+   const auto &tracks = TrackList::Get( *project );
    bool ret = true;
 
    if (mSubFormat >= FMT_LAST) {
@@ -897,10 +900,7 @@ ProgressResult ExportFFmpeg::Export(AudacityProject *project,
 
    size_t pcmBufferSize = 1024;
 
-   const WaveTrackConstArray waveTracks =
-      tracks->GetWaveTrackConstArray(selectionOnly, false);
-   auto mixer = CreateMixer(waveTracks,
-      tracks->GetTimeTrack(),
+   auto mixer = CreateMixer(tracks, selectionOnly,
       t0, t1,
       channels, pcmBufferSize, true,
       mSampleRate, int16Sample, true, mixerSpec);

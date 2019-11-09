@@ -19,6 +19,7 @@
 
 #include "../Experimental.h"
 
+#include <wx/app.h>
 #include <wx/setup.h> // for wxUSE_* macros
 #include <wx/defs.h>
 #include <wx/button.h>
@@ -33,13 +34,11 @@
 #include <wx/listbook.h>
 
 #include <wx/treebook.h>
+#include <wx/treectrl.h>
 
-#include "../AudioIO.h"
-#include "../Project.h"
+#include "../AudioIOBase.h"
 #include "../Prefs.h"
 #include "../ShuttleGui.h"
-
-#include "PrefsPanel.h"
 
 #include "BatchPrefs.h"
 #include "DevicePrefs.h"
@@ -70,7 +69,6 @@
 #include "MidiIOPrefs.h"
 #endif
 
-#include "../Theme.h"
 #include "../widgets/HelpSystem.h"
 
 #if wxUSE_ACCESSIBILITY
@@ -487,72 +485,45 @@ PrefsDialog::Factories
 {
    // To do, perhaps:  create this table by registration, without including each PrefsPanel
    // class... and thus allowing a plug-in protocol
-   static DevicePrefsFactory devicePrefsFactory;
-   static PlaybackPrefsFactory playbackPrefsFactory;
-   static RecordingPrefsFactory recordingPrefsFactory;
-#ifdef EXPERIMENTAL_MIDI_OUT
-   static MidiIOPrefsFactory midiIOPrefsFactory;
-#endif
-   static QualityPrefsFactory qualityPrefsFactory;
-   static GUIPrefsFactory guiPrefsFactory;
-   static TracksPrefsFactory tracksPrefsFactory;
-   static ImportExportPrefsFactory importExportPrefsFactory;
-   static ExtImportPrefsFactory extImportPrefsFactory;
-   static ProjectsPrefsFactory projectsPrefsFactory;
-#if !defined(DISABLE_DYNAMIC_LOADING_FFMPEG) || !defined(DISABLE_DYNAMIC_LOADING_LAME)
-   static LibraryPrefsFactory libraryPrefsFactory;
-#endif
-   // static WaveformPrefsFactory waveformPrefsFactory;
-   static TracksBehaviorsPrefsFactory tracksBehaviorsPrefsFactory;
-   static SpectrumPrefsFactory spectrumPrefsFactory;
-   static DirectoriesPrefsFactory directoriesPrefsFactory;
-   static WarningsPrefsFactory warningsPrefsFactory;
-   static EffectsPrefsFactory effectsPrefsFactory;
-#ifdef EXPERIMENTAL_THEME_PREFS
-   static ThemePrefsFactory themePrefsFactory;
-#endif
-   // static BatchPrefsFactory batchPrefsFactory;
-   static KeyConfigPrefsFactory keyConfigPrefsFactory;
-   static MousePrefsFactory mousePrefsFactory;
-#ifdef EXPERIMENTAL_MODULE_PREFS
-   static ModulePrefsFactory modulePrefsFactory;
-#endif
 
    static PrefsNode nodes[] = {
-      &devicePrefsFactory,
-      &playbackPrefsFactory,
-      &recordingPrefsFactory,
+      DevicePrefsFactory,
+      PlaybackPrefsFactory,
+      RecordingPrefsFactory,
 #ifdef EXPERIMENTAL_MIDI_OUT
-      &midiIOPrefsFactory,
+      MidiIOPrefsFactory,
 #endif
-      &qualityPrefsFactory,
-      &guiPrefsFactory,
+      QualityPrefsFactory,
+      GUIPrefsFactory,
 
       // Group other page(s)
-      PrefsNode(&tracksPrefsFactory, 2),
-      // &waveformPrefsFactory,
-      &tracksBehaviorsPrefsFactory,
-      &spectrumPrefsFactory,
+      PrefsNode(TracksPrefsFactory, 2),
+      // WaveformPrefsFactory(),
+      TracksBehaviorsPrefsFactory,
+      SpectrumPrefsFactory(),
 
       // Group one other page
-      PrefsNode(&importExportPrefsFactory, 1),
-      &extImportPrefsFactory,
+      PrefsNode(ImportExportPrefsFactory, 1),
+      ExtImportPrefsFactory,
 
-      &projectsPrefsFactory,
-#if !defined(DISABLE_DYNAMIC_LOADING_FFMPEG) || !defined(DISABLE_DYNAMIC_LOADING_LAME)
-      &libraryPrefsFactory,
+#ifdef EXPERIMENTAL_OD_DATA
+      ProjectsPrefsFactory,
 #endif
-      &directoriesPrefsFactory,
-      &warningsPrefsFactory,
-      &effectsPrefsFactory,
+
+#if !defined(DISABLE_DYNAMIC_LOADING_FFMPEG) || !defined(DISABLE_DYNAMIC_LOADING_LAME)
+      LibraryPrefsFactory,
+#endif
+      DirectoriesPrefsFactory(),
+      WarningsPrefsFactory,
+      EffectsPrefsFactory,
 #ifdef EXPERIMENTAL_THEME_PREFS
-      &themePrefsFactory,
+      ThemePrefsFactory,
 #endif
       // &batchPrefsFactory,
-      &keyConfigPrefsFactory,
-      &mousePrefsFactory,
+      KeyConfigPrefsFactory(),
+      MousePrefsFactory,
 #ifdef EXPERIMENTAL_MODULE_PREFS
-      &modulePrefsFactory,
+      ModulePrefsFactory,
 #endif
    };
 
@@ -601,7 +572,7 @@ PrefsDialog::PrefsDialog
                   it != end; ++it, ++iPage)
                {
                   const PrefsNode &node = *it;
-                  PrefsPanelFactory &factory = *node.pFactory;
+                  const PrefsPanel::Factory &factory = node.factory;
                   wxWindow *const w = factory(mCategories, wxID_ANY);
                   if (stack.empty())
                      // Parameters are: AddPage(page, name, IsSelected, imageId).
@@ -629,7 +600,7 @@ PrefsDialog::PrefsDialog
 
          // Unique page, don't show the factory
          const PrefsNode &node = factories[0];
-         PrefsPanelFactory &factory = *node.pFactory;
+         const PrefsPanel::Factory &factory = node.factory;
          mUniquePage = factory(this, wxID_ANY);
          wxWindow * uniquePageWindow = S.Prop(1).AddWindow(mUniquePage, wxEXPAND);
          // We're not in the wxTreebook, so add the accelerator here
@@ -845,13 +816,10 @@ void PrefsDialog::OnOK(wxCommandEvent & WXUNUSED(event))
    }
    gPrefs->Flush();
 
-   // Reads preference /GUI/Theme
-   theTheme.LoadPreferredTheme();
-   theTheme.ApplyUpdatedImages();
-
    SavePreferredPage();
 
 #if USE_PORTMIXER
+   auto gAudioIO = AudioIOBase::Get();
    if (gAudioIO) {
       // We cannot have opened this dialog if gAudioIO->IsAudioTokenActive(),
       // per the setting of AudioIONotBusyFlag and AudioIOBusyFlag in
@@ -876,12 +844,14 @@ void PrefsDialog::OnOK(wxCommandEvent & WXUNUSED(event))
    }
 #endif
 
+   // PRL:  Is the following concern still valid, now that prefs update is
+   //      handled instead by delayed event processing?
+
    // LL:  wxMac can't handle recreating the menus when this dialog is still active,
    //      so AudacityProject::UpdatePrefs() or any of the routines it calls must
    //      not cause MenuCreator::RebuildMenuBar() to be executed.
-   for (size_t i = 0; i < gAudacityProjects.size(); i++) {
-      gAudacityProjects[i]->UpdatePrefs();
-   }
+
+   wxTheApp->AddPendingEvent(wxCommandEvent{ EVT_PREFS_UPDATE });
 
    WaveformSettings::defaults().LoadPrefs();
    SpectrogramSettings::defaults().LoadPrefs();
@@ -965,4 +935,41 @@ bool PrefsPanel::ShowsPreviewButton()
 wxString PrefsPanel::HelpPageName()
 {
    return wxEmptyString;
+}
+
+#include <wx/frame.h>
+#include "../Menus.h"
+#include "../Project.h"
+
+void DoReloadPreferences( AudacityProject &project )
+{
+   {
+      SpectrogramSettings::defaults().LoadPrefs();
+      WaveformSettings::defaults().LoadPrefs();
+
+      GlobalPrefsDialog dialog(&GetProjectFrame( project ) /* parent */ );
+      wxCommandEvent Evt;
+      //dialog.Show();
+      dialog.OnOK(Evt);
+   }
+
+   // LL:  Moved from PrefsDialog since wxWidgets on OSX can't deal with
+   //      rebuilding the menus while the PrefsDialog is still in the modal
+   //      state.
+   for (auto p : AllProjects{}) {
+      MenuManager::Get(*p).RebuildMenuBar(*p);
+// TODO: The comment below suggests this workaround is obsolete.
+#if defined(__WXGTK__)
+      // Workaround for:
+      //
+      //   http://bugzilla.audacityteam.org/show_bug.cgi?id=458
+      //
+      // This workaround should be removed when Audacity updates to wxWidgets
+      // 3.x which has a fix.
+      auto &window = GetProjectFrame( *p );
+      wxRect r = window.GetRect();
+      window.SetSize(wxSize(1,1));
+      window.SetSize(r.GetSize());
+#endif
+   }
 }

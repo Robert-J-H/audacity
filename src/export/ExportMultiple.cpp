@@ -38,19 +38,20 @@
 #include <wx/textctrl.h>
 #include <wx/textdlg.h>
 
-#include "Export.h"
-
 #include "../DirManager.h"
-#include "../Internat.h"
 #include "../FileFormats.h"
 #include "../FileNames.h"
 #include "../LabelTrack.h"
 #include "../Project.h"
+#include "../ProjectSettings.h"
+#include "../ProjectWindow.h"
 #include "../Prefs.h"
+#include "../SelectionState.h"
 #include "../ShuttleGui.h"
 #include "../Tags.h"
 #include "../WaveTrack.h"
 #include "../widgets/HelpSystem.h"
+#include "../widgets/AudacityMessageBox.h"
 #include "../widgets/ErrorDialog.h"
 #include "../widgets/ProgressDialog.h"
 
@@ -128,13 +129,14 @@ BEGIN_EVENT_TABLE(MouseEvtHandler, wxEvtHandler)
 END_EVENT_TABLE()
 
 ExportMultiple::ExportMultiple(AudacityProject *project)
-: wxDialogWrapper(project, wxID_ANY, wxString(_("Export Multiple")))
-, mSelectionState{ project->GetSelectionState() }
+: wxDialogWrapper( &GetProjectFrame( *project ),
+   wxID_ANY, wxString(_("Export Multiple")) )
+, mSelectionState{ SelectionState::Get( *project ) }
 {
    SetName(GetTitle());
 
    mProject = project;
-   mTracks = project->GetTracks();
+   mTracks = &TrackList::Get( *project );
    // Construct an array of non-owning pointers
    for (const auto &plugin : mExporter.GetPlugins())
       mPlugins.push_back(plugin.get());
@@ -166,8 +168,11 @@ ExportMultiple::~ExportMultiple()
 
 void ExportMultiple::CountTracksAndLabels()
 {
+   bool anySolo = !(( mTracks->Any<const WaveTrack>() + &WaveTrack::GetSolo ).empty());
+
    mNumWaveTracks =
-      (mTracks->Leaders< const WaveTrack >() - &WaveTrack::GetMute).size();
+      (mTracks->Leaders< const WaveTrack >() - 
+      (anySolo ? &WaveTrack::GetNotSolo : &WaveTrack::GetMute)).size();
 
    // only the first label track
    mLabels = *mTracks->Any< const LabelTrack >().begin();
@@ -644,6 +649,60 @@ bool ExportMultiple::DirOk()
    return fn.Mkdir(0777, wxPATH_MKDIR_FULL);
 }
 
+static unsigned GetNumExportChannels( const TrackList &tracks )
+{
+   /* counters for tracks panned different places */
+   int numLeft = 0;
+   int numRight = 0;
+   //int numMono = 0;
+   /* track iteration kit */
+
+   bool anySolo = !(( tracks.Any<const WaveTrack>() + &WaveTrack::GetSolo ).empty());
+
+   // Want only unmuted wave tracks.
+   for (auto tr :
+         tracks.Any< const WaveTrack >() - 
+      (anySolo ? &WaveTrack::GetNotSolo : &WaveTrack::GetMute)
+   ) {
+      // Found a left channel
+      if (tr->GetChannel() == Track::LeftChannel) {
+         numLeft++;
+      }
+
+      // Found a right channel
+      else if (tr->GetChannel() == Track::RightChannel) {
+         numRight++;
+      }
+
+      // Found a mono channel, but it may be panned
+      else if (tr->GetChannel() == Track::MonoChannel) {
+         float pan = tr->GetPan();
+
+         // Figure out what kind of channel it should be
+         if (pan == -1.0) {   // panned hard left
+            numLeft++;
+         }
+         else if (pan == 1.0) {  // panned hard right
+            numRight++;
+         }
+         else if (pan == 0) { // panned dead center
+            // numMono++;
+         }
+         else {   // panned somewhere else
+            numLeft++;
+            numRight++;
+         }
+      }
+   }
+
+   // if there is stereo content, report 2, else report 1
+   if (numRight > 0 || numLeft > 0) {
+      return 2;
+   }
+
+   return 1;
+}
+
 // TODO: JKC July2016: Merge labels/tracks duplicated export code.
 // TODO: JKC Apr2019: Doubly so merge these!  Too much duplication.
 ProgressResult ExportMultiple::ExportMultipleByLabel(bool byName,
@@ -662,7 +721,7 @@ ProgressResult ExportMultiple::ExportMultipleByLabel(bool byName,
    }
 
    // Figure out how many channels we should export.
-   auto channels = mTracks->GetNumExportChannels(false);
+   auto channels = GetNumExportChannels( *mTracks );
 
    FilePaths otherNames;  // keep track of file names we will use, so we
    // don't duplicate them
@@ -734,16 +793,22 @@ ProgressResult ExportMultiple::ExportMultipleByLabel(bool byName,
 
          /* do the metadata for this file */
          // copy project metadata to start with
-         setting.filetags = *(mProject->GetTags());
+         setting.filetags = Tags::Get( *mProject );
          // over-ride with values
          setting.filetags.SetTag(TAG_TITLE, title);
          setting.filetags.SetTag(TAG_TRACK, l+1);
          // let the user have a crack at editing it, exit if cancelled
-         bool bShowTagsDialog = mProject->GetShowId3Dialog();
+         auto &settings = ProjectSettings::Get( *mProject );
+         bool bShowTagsDialog = settings.GetShowId3Dialog();
+
+         bShowTagsDialog = bShowTagsDialog && mPlugins[mPluginIndex]->GetCanMetaData(mSubFormatIndex);
+
          if( bShowTagsDialog ){
-            bool bCancelled = !setting.filetags.ShowEditDialog(mProject,_("Edit Metadata Tags"), bShowTagsDialog);
+            bool bCancelled = !setting.filetags.ShowEditDialog(
+               ProjectWindow::Find( mProject ),
+               _("Edit Metadata Tags"), bShowTagsDialog);
             gPrefs->Read(wxT("/AudioFiles/ShowId3Dialog"), &bShowTagsDialog, true);
-            mProject->SetShowId3Dialog( bShowTagsDialog );
+            settings.SetShowId3Dialog( bShowTagsDialog );
             if( bCancelled )
                return ProgressResult::Cancelled;
          }
@@ -801,8 +866,11 @@ ProgressResult ExportMultiple::ExportMultipleByTrack(bool byName,
    for (auto tr : mTracks->Selected<WaveTrack>())
       tr->SetSelected(false);
 
+   bool anySolo = !(( mTracks->Any<const WaveTrack>() + &WaveTrack::GetSolo ).empty());
+
    /* Examine all tracks in turn, collecting export information */
-   for (auto tr : mTracks->Leaders<WaveTrack>() - &WaveTrack::GetMute) {
+   for (auto tr : mTracks->Leaders<WaveTrack>() - 
+      (anySolo ? &WaveTrack::GetNotSolo : &WaveTrack::GetMute)) {
 
       // Get the times for the track
       auto channels = TrackList::Channels(tr);
@@ -851,16 +919,22 @@ ProgressResult ExportMultiple::ExportMultipleByTrack(bool byName,
 
          /* do the metadata for this file */
          // copy project metadata to start with
-         setting.filetags = *(mProject->GetTags());
+         setting.filetags = Tags::Get( *mProject );
          // over-ride with values
          setting.filetags.SetTag(TAG_TITLE, title);
          setting.filetags.SetTag(TAG_TRACK, l+1);
          // let the user have a crack at editing it, exit if cancelled
-         bool bShowTagsDialog = mProject->GetShowId3Dialog();
+         auto &settings = ProjectSettings::Get( *mProject );
+         bool bShowTagsDialog = settings.GetShowId3Dialog();
+
+         bShowTagsDialog = bShowTagsDialog && mPlugins[mPluginIndex]->GetCanMetaData(mSubFormatIndex);
+
          if( bShowTagsDialog ){
-            bool bCancelled = !setting.filetags.ShowEditDialog(mProject,_("Edit Metadata Tags"), bShowTagsDialog);
+            bool bCancelled = !setting.filetags.ShowEditDialog(
+               ProjectWindow::Find( mProject ),
+               _("Edit Metadata Tags"), bShowTagsDialog);
             gPrefs->Read(wxT("/AudioFiles/ShowId3Dialog"), &bShowTagsDialog, true);
-            mProject->SetShowId3Dialog( bShowTagsDialog );
+            settings.SetShowId3Dialog( bShowTagsDialog );
             if( bCancelled )
                return ProgressResult::Cancelled;
          }
@@ -875,7 +949,10 @@ ProgressResult ExportMultiple::ExportMultipleByTrack(bool byName,
    int count = 0; // count the number of sucessful runs
    ExportKit activeSetting;  // pointer to the settings in use for this export
    std::unique_ptr<ProgressDialog> pDialog;
-   for (auto tr : mTracks->Leaders<WaveTrack>() - &WaveTrack::GetMute) {
+
+   for (auto tr : mTracks->Leaders<WaveTrack>() - 
+      (anySolo ? &WaveTrack::GetNotSolo : &WaveTrack::GetMute)) {
+
       wxLogDebug( "Get setting %i", count );
       /* get the settings to use for the export from the array */
       activeSetting = exportSettings[count];
@@ -927,7 +1004,7 @@ ProgressResult ExportMultiple::DoExport(std::unique_ptr<ProgressDialog> &pDialog
    wxFileName backup;
    if (mOverwrite->GetValue()) {
       // Make sure we don't overwrite (corrupt) alias files
-      if (!mProject->GetDirManager()->EnsureSafeFilename(inName)) {
+      if (!DirManager::Get( *mProject ).EnsureSafeFilename(inName)) {
          return ProgressResult::Cancelled;
       }
       name = inName;

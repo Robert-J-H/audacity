@@ -17,8 +17,9 @@
 #include "../Audacity.h"
 #include "OpenSaveCommands.h"
 
-#include "../Menus.h"
 #include "../Project.h"
+#include "../ProjectFileManager.h"
+#include "../ProjectManager.h"
 #include "../export/Export.h"
 #include "../Shuttle.h"
 #include "../ShuttleGui.h"
@@ -45,17 +46,18 @@ void OpenProjectCommand::PopulateOrExchange(ShuttleGui & S)
 
 bool OpenProjectCommand::Apply(const CommandContext & context){
 
-   auto oldFileName = context.GetProject()->GetFileName();
+   auto oldFileName = context.project.GetFileName();
    if(mFileName.empty())
    {
-      auto project = context.GetProject();
-      AudacityProject::OpenFiles(project);
+      auto project = &context.project;
+      ProjectManager::OpenFiles(project);
    }
    else
    {
-      context.GetProject()->OpenFile(mFileName, mbAddToHistory);
+      ProjectFileManager::Get( context.project )
+         .OpenFile(mFileName, mbAddToHistory);
    }
-   const auto &newFileName = context.GetProject()->GetFileName();
+   const auto &newFileName = context.project.GetFileName();
 
    // Because Open does not return a success or failure, we have to guess
    // at this point, based on whether the project file name has
@@ -85,8 +87,10 @@ void SaveProjectCommand::PopulateOrExchange(ShuttleGui & S)
 
 bool SaveProjectCommand::Apply(const CommandContext &context)
 {
-   if(mFileName.empty())
-      return context.GetProject()->SaveAs(mbCompress);
+   auto &projectFileManager = ProjectFileManager::Get( context.project );
+   if ( mFileName.empty() )
+      return projectFileManager.SaveAs(mbCompress);
    else
-      return context.GetProject()->SaveAs(mFileName,mbCompress,mbAddToHistory);
+      return projectFileManager.SaveAs(
+         mFileName, mbCompress, mbAddToHistory);
 }

@@ -30,22 +30,7 @@ It is also a place to document colour usage policy in Audacity
 #include <wx/settings.h>
 #include <wx/utils.h>
 
-#include "Theme.h"
 #include "AllThemeResources.h"
-
-void DCUnchanger::operator () (wxDC *pDC) const
-{
-   if (pDC) {
-      pDC->SetPen(pen);
-      pDC->SetBrush(brush);
-      pDC->SetLogicalFunction(wxRasterOperationMode(logicalOperation));
-   }
-}
-
-ADCChanger::ADCChanger(wxDC *pDC)
-   : Base{ pDC, ::DCUnchanger{ pDC->GetBrush(), pDC->GetPen(),
-      long(pDC->GetLogicalFunction()) } }
-{}
 
 bool AColor::inited = false;
 wxBrush AColor::lightBrush[2];
@@ -247,10 +232,10 @@ void AColor::Bevel2
    int h = wxMin( r.height, Bmp.GetHeight() );
 
 
-   dc.Blit( r.x,r.y,r.width/2, h, &memDC, 0, 0 );
+   dc.Blit( r.x,r.y,r.width/2, h, &memDC, 0, 0, wxCOPY, true );
    int r2 = r.width - r.width/2;
    dc.Blit( r.x+r.width/2,r.y,r2, h, &memDC, 
-      Bmp.GetWidth() - r2, 0 );
+      Bmp.GetWidth() - r2, 0, wxCOPY, true );
 }
 
 wxColour AColor::Blend( const wxColour & c1, const wxColour & c2 )

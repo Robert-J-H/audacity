@@ -12,7 +12,6 @@
 #define __AUDACITY_WAVETRACK__
 
 #include "Track.h"
-#include "SampleFormat.h"
 
 #include <vector>
 #include <wx/longlong.h>
@@ -24,10 +23,6 @@ class ProgressDialog;
 class SpectrogramSettings;
 class WaveformSettings;
 class TimeWarper;
-
-class CutlineHandle;
-class SampleHandle;
-class EnvelopeHandle;
 
 class Sequence;
 class WaveClip;
@@ -85,7 +80,7 @@ public:
 private:
    void Init(const WaveTrack &orig);
 
-   Track::Holder Duplicate() const override;
+   Track::Holder Clone() const override;
 
    friend class TrackFactory;
 
@@ -95,11 +90,6 @@ private:
    using Holder = std::shared_ptr<WaveTrack>;
 
    virtual ~WaveTrack();
-
-   std::vector<UIHandlePtr> DetailedHitTest
-      (const TrackPanelMouseState &state,
-       const AudacityProject *pProject, int currentTool, bool bMultiTool)
-      override;
 
    double GetOffset() const override;
    void SetOffset(double o) override;
@@ -146,8 +136,6 @@ private:
    // the gain.
    float GetOldChannelGain(int channel) const;
    void SetOldChannelGain(int channel, float gain);
-
-   void DoSetMinimized(bool isMinimized) override;
 
    int GetWaveColorIndex() const { return mWaveColorIndex; };
    void SetWaveColorIndex(int colorIndex);
@@ -230,19 +218,6 @@ private:
                XMLWriter* blockFileLog=NULL);
    /// Flush must be called after last Append
    void Flush();
-
-   void AppendAlias(const FilePath &fName, sampleCount start,
-                    size_t len, int channel,bool useOD);
-
-   ///for use with On-Demand decoding of compressed files.
-   ///decodeType should be an enum from ODDecodeTask that specifies what
-   ///Type of encoded file this is, such as eODFLAC
-   //vvv Why not use the ODTypeEnum typedef to enforce that for the parameter?
-   void AppendCoded(const FilePath &fName, sampleCount start,
-                            size_t len, int channel, int decodeType);
-
-   ///gets an int with OD flags so that we can determine which ODTasks should be run on this track after save/open, etc.
-   unsigned int GetODFlags() const;
 
    ///Invalidates all clips' wavecaches.  Careful, This may not be threadsafe.
    void ClearWaveCaches();
@@ -374,7 +349,7 @@ private:
    const WaveClipConstHolders &GetClips() const
       { return reinterpret_cast< const WaveClipConstHolders& >( mClips ); }
 
-   // Get access to all clips (in some unspecified sequence),
+   // Get mutative access to all clips (in some unspecified sequence),
    // including those hidden in cutlines.
    class AllClipsIterator
       : public ValueIterator< WaveClip * >
@@ -400,12 +375,12 @@ private:
       AllClipsIterator &operator ++ ();
 
       // Define == well enough to serve for loop termination test
-      friend bool operator ==
-         (const AllClipsIterator &a, const AllClipsIterator &b)
+      friend bool operator == (
+         const AllClipsIterator &a, const AllClipsIterator &b)
       { return a.mStack.empty() == b.mStack.empty(); }
 
-      friend bool operator !=
-         (const AllClipsIterator &a, const AllClipsIterator &b)
+      friend bool operator != (
+         const AllClipsIterator &a, const AllClipsIterator &b)
       { return !( a == b ); }
 
    private:
@@ -419,11 +394,49 @@ private:
       Stack mStack;
    };
 
+   // Get const access to all clips (in some unspecified sequence),
+   // including those hidden in cutlines.
+   class AllClipsConstIterator
+      : public ValueIterator< const WaveClip * >
+   {
+   public:
+      // Constructs an "end" iterator
+      AllClipsConstIterator () {}
+
+      // Construct a "begin" iterator
+      explicit AllClipsConstIterator( const WaveTrack &track )
+         : mIter{ const_cast< WaveTrack& >( track ) }
+      {}
+
+      const WaveClip *operator * () const
+      { return *mIter; }
+
+      AllClipsConstIterator &operator ++ ()
+      { ++mIter; return *this; }
+
+      // Define == well enough to serve for loop termination test
+      friend bool operator == (
+         const AllClipsConstIterator &a, const AllClipsConstIterator &b)
+      { return a.mIter == b.mIter; }
+
+      friend bool operator != (
+         const AllClipsConstIterator &a, const AllClipsConstIterator &b)
+      { return !( a == b ); }
+
+   private:
+      AllClipsIterator mIter;
+   };
+
    IteratorRange< AllClipsIterator > GetAllClips()
    {
       return { AllClipsIterator{ *this }, AllClipsIterator{ } };
    }
-
+   
+   IteratorRange< AllClipsConstIterator > GetAllClips() const
+   {
+      return { AllClipsConstIterator{ *this }, AllClipsConstIterator{ } };
+   }
+   
    // Create NEW clip and add it to this track. Returns a pointer
    // to the newly created clip.
    WaveClip* CreateClip();
@@ -505,80 +518,15 @@ private:
    // AutoSave related
    //
    // Retrieve the unique autosave ID
-   int GetAutoSaveIdent();
+   int GetAutoSaveIdent() const;
    // Set the unique autosave ID
    void SetAutoSaveIdent(int id);
-
-   //
-   // The following code will eventually become part of a GUIWaveTrack
-   // and will be taken out of the WaveTrack class:
-   //
-
-
-   typedef int WaveTrackDisplay;
-   enum WaveTrackDisplayValues : int {
-
-      // DO NOT REORDER OLD VALUES!  Replace obsoletes with placeholders.
-
-      Waveform = 0,
-      MinDisplay = Waveform,
-
-      obsoleteWaveformDBDisplay,
-
-      Spectrum,
-
-      obsolete1, // was SpectrumLogDisplay
-      obsolete2, // was SpectralSelectionDisplay
-      obsolete3, // was SpectralSelectionLogDisplay
-      obsolete4, // was PitchDisplay
-
-      // Add values here, and update MaxDisplay.
-
-      MaxDisplay = Spectrum,
-
-      NoDisplay,            // Preview track has no display
-   };
-
-   // Only two types of sample display for now, but
-   // others (eg sinc interpolation) may be added later.
-   enum SampleDisplay {
-      LinearInterpolate = 0,
-      StemPlot
-   };
-
-   // Various preset zooming levels.
-   enum ZoomPresets {
-      kZoomToFit = 0,
-      kZoomToSelection,
-      kZoomDefault,
-      kZoomMinutes,
-      kZoomSeconds,
-      kZoom5ths,
-      kZoom10ths,
-      kZoom20ths,
-      kZoom50ths,
-      kZoom100ths,
-      kZoom500ths,
-      kZoomMilliSeconds,
-      kZoomSamples,
-      kZoom4To1,
-      kMaxZoom,
-   };
-
-   // Handle remapping of enum values from 2.1.0 and earlier
-   static WaveTrackDisplay ConvertLegacyDisplayValue(int oldValue);
-
-   // Handle restriction of range of values of the enum from future versions
-   static WaveTrackDisplay ValidateWaveTrackDisplay(WaveTrackDisplay display);
 
    int GetLastScaleType() const { return mLastScaleType; }
    void SetLastScaleType() const;
 
    int GetLastdBRange() const { return mLastdBRange; }
    void SetLastdBRange() const;
-
-   WaveTrackDisplay GetDisplay() const { return mDisplay; }
-   void SetDisplay(WaveTrackDisplay display) { mDisplay = display; }
 
    void GetDisplayBounds(float *min, float *max) const;
    void SetDisplayBounds(float min, float max) const;
@@ -614,7 +562,6 @@ private:
    mutable float         mSpectrumMin;
    mutable float         mSpectrumMax;
 
-   WaveTrackDisplay mDisplay;
    mutable int   mLastScaleType; // last scale type choice
    mutable int           mLastdBRange;
    mutable std::vector <Location> mDisplayLocationsCache;
@@ -638,14 +585,6 @@ private:
 
    std::unique_ptr<SpectrogramSettings> mpSpectrumSettings;
    std::unique_ptr<WaveformSettings> mpWaveformSettings;
-
-   std::weak_ptr<CutlineHandle> mCutlineHandle;
-   std::weak_ptr<SampleHandle> mSampleHandle;
-   std::weak_ptr<EnvelopeHandle> mEnvelopeHandle;
-
-protected:
-   std::shared_ptr<TrackControls> DoGetControls() override;
-   std::shared_ptr<TrackVRulerControls> DoGetVRulerControls() override;
 };
 
 // This is meant to be a short-lived object, during whose lifetime,

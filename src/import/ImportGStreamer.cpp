@@ -31,8 +31,6 @@ Licensed under the GNU General Public License v2 or later
 #include <wx/window.h>
 #include <wx/log.h>
 
-#include "../MemoryX.h"
-
 #define DESC _("GStreamer-compatible files")
 
 
@@ -48,13 +46,8 @@ Licensed under the GNU General Public License v2 or later
 #endif
 
 // all the includes live here by default
-#include "../AudacityException.h"
-#include "../SampleFormat.h"
 #include "../Tags.h"
-#include "../Internat.h"
 #include "../WaveTrack.h"
-#include "Import.h"
-#include "ImportPlugin.h"
 
 extern "C"
 {
@@ -255,6 +248,8 @@ public:
 
    ///! Probes the file and opens it if appropriate
    std::unique_ptr<ImportFileHandle> Open(const wxString &Filename) override;
+
+   unsigned SequenceNumber() const override;
 };
 
 // ============================================================================
@@ -263,10 +258,9 @@ public:
 
 // ----------------------------------------------------------------------------
 // Instantiate GStreamerImportPlugin and add to the list of known importers
-void
-GetGStreamerImportPlugin(ImportPluginList &importPluginList,
-                         UnusableImportPluginList & WXUNUSED(unusableImportPluginList))
-{
+
+static
+Importer::RegisteredImportPlugin{ []() -> std::unique_ptr< ImportPlugin > {
    wxLogMessage(_TS("Audacity is built against GStreamer version %d.%d.%d-%d"),
                 GST_VERSION_MAJOR,
                 GST_VERSION_MINOR,
@@ -288,7 +282,7 @@ GetGStreamerImportPlugin(ImportPluginList &importPluginList,
       wxLogMessage(wxT("Failed to initialize GStreamer. Error %d: %s"),
                    error.get()->code,
                    wxString::FromUTF8(error.get()->message));
-      return;
+      return {};
    }
 
    guint major, minor, micro, nano;
@@ -304,11 +298,11 @@ GetGStreamerImportPlugin(ImportPluginList &importPluginList,
 
    // No supported extensions...no gstreamer plugins installed
    if (plug->GetSupportedExtensions().size() == 0)
-      return;
+      return {};
 
    // Add to list of importers
-   importPluginList.push_back( std::move(plug) );
-}
+   return std::move(plug);
+}() } registered;
 
 // ============================================================================
 // GStreamerImportPlugin Class
@@ -1150,6 +1144,11 @@ GStreamerImportFileHandle::Import(TrackFactory *trackFactory,
    *tags = mTags;
 
    return updateResult;
+}
+
+unsigned GStreamerImportPlugin::SequenceNumber() const
+{
+   return 80;
 }
 
 // ----------------------------------------------------------------------------

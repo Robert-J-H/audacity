@@ -33,14 +33,18 @@ class wxDC;
 class wxSizeEvent;
 class wxStaticText;
 
+class AudacityProject;
 class SelectionBarListener;
 class NumericTextCtrl;
 
 class SelectionBar final : public ToolBar {
 
  public:
-   SelectionBar();
+   SelectionBar( AudacityProject &project );
    virtual ~SelectionBar();
+
+   static SelectionBar &Get( AudacityProject &project );
+   static const SelectionBar &Get( const AudacityProject &project );
 
    void Create(wxWindow *parent) override;
 
@@ -75,6 +79,7 @@ class SelectionBar final : public ToolBar {
    void OnFocus(wxFocusEvent &event);
    void OnCaptureKey(wxCommandEvent &event);
    void OnSize(wxSizeEvent &evt);
+   void OnIdle( wxIdleEvent &evt );
 
    void ModifySelection(int newDriver, bool done = false);
    void UpdateRates();
@@ -89,7 +94,8 @@ class SelectionBar final : public ToolBar {
    int mDrive1;
    int mDrive2;
 
-   int mSelectionMode;
+   int mSelectionMode{ 0 };
+   int mLastSelectionMode{ 0 };
 
    NumericTextCtrl   *mStartTime;
    NumericTextCtrl   *mCenterTime;

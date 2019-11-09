@@ -11,9 +11,10 @@ Paul Licameli split from TrackPanel.cpp
 #include "../../../../Audacity.h"
 #include "WaveTrackSliderHandles.h"
 
-#include "../../../../HitTestResult.h"
-#include "../../../../Project.h"
+#include "WaveTrackControls.h"
+#include "../../../../ProjectHistory.h"
 #include "../../../../RefreshCode.h"
+#include "../../../../TrackInfo.h"
 #include "../../../../TrackPanel.h"
 #include "../../../../UndoManager.h"
 #include "../../../../WaveTrack.h"
@@ -58,7 +59,8 @@ UIHandle::Result GainSliderHandle::SetValue
 UIHandle::Result GainSliderHandle::CommitChanges
 (const wxMouseEvent &, AudacityProject *pProject)
 {
-   pProject->PushState(_("Moved gain slider"), _("Gain"), UndoPush::CONSOLIDATE);
+   ProjectHistory::Get( *pProject )
+      .PushState(_("Moved gain slider"), _("Gain"), UndoPush::CONSOLIDATE);
    return RefreshCode::RefreshCell;
 }
 
@@ -71,17 +73,17 @@ UIHandlePtr GainSliderHandle::HitTest
       return {};
 
    wxRect sliderRect;
-   TrackInfo::GetGainRect(rect.GetTopLeft(), sliderRect);
+   WaveTrackControls::GetGainRect(rect.GetTopLeft(), sliderRect);
    if ( TrackInfo::HideTopItem( rect, sliderRect))
       return {};
    if (sliderRect.Contains(state.m_x, state.m_y)) {
       wxRect sliderRect2;
-      TrackInfo::GetGainRect(rect.GetTopLeft(), sliderRect2);
+      WaveTrackControls::GetGainRect(rect.GetTopLeft(), sliderRect2);
       auto sliderFn =
       []( AudacityProject *pProject, const wxRect &sliderRect, Track *pTrack ) {
-         return TrackInfo::GainSlider
+         return WaveTrackControls::GainSlider
             (sliderRect, static_cast<WaveTrack*>( pTrack ), true,
-             const_cast<TrackPanel*>(pProject->GetTrackPanel()));
+             &TrackPanel::Get( *pProject ));
       };
       auto result =
          std::make_shared<GainSliderHandle>( sliderFn, sliderRect2, pTrack );
@@ -136,7 +138,8 @@ UIHandle::Result PanSliderHandle::SetValue(AudacityProject *pProject, float newV
 UIHandle::Result PanSliderHandle::CommitChanges
 (const wxMouseEvent &, AudacityProject *pProject)
 {
-   pProject->PushState(_("Moved pan slider"), _("Pan"), UndoPush::CONSOLIDATE);
+   ProjectHistory::Get( *pProject )
+      .PushState(_("Moved pan slider"), _("Pan"), UndoPush::CONSOLIDATE);
    return RefreshCode::RefreshCell;
 }
 
@@ -149,15 +152,15 @@ UIHandlePtr PanSliderHandle::HitTest
       return {};
 
    wxRect sliderRect;
-   TrackInfo::GetPanRect(rect.GetTopLeft(), sliderRect);
+   WaveTrackControls::GetPanRect(rect.GetTopLeft(), sliderRect);
    if ( TrackInfo::HideTopItem( rect, sliderRect))
       return {};
    if (sliderRect.Contains(state.m_x, state.m_y)) {
       auto sliderFn =
       []( AudacityProject *pProject, const wxRect &sliderRect, Track *pTrack ) {
-         return TrackInfo::PanSlider
+         return WaveTrackControls::PanSlider
             (sliderRect, static_cast<WaveTrack*>( pTrack ), true,
-             const_cast<TrackPanel*>(pProject->GetTrackPanel()));
+             &TrackPanel::Get( *pProject ));
       };
       auto result = std::make_shared<PanSliderHandle>(
          sliderFn, sliderRect, pTrack );

@@ -28,9 +28,7 @@ i.e. an alternative to the usual interface, for Audacity.
 #include <wx/string.h>
 #include <wx/filename.h>
 
-#include "AudacityApp.h"
 #include "FileNames.h"
-#include "Internat.h"
 #include "PluginManager.h"
 
 #include "commands/ScriptCommandRelay.h"
@@ -45,7 +43,7 @@ i.e. an alternative to the usual interface, for Audacity.
 
 #include "widgets/MultiDialog.h"
 
-#include "widgets/ErrorDialog.h"
+#include "widgets/AudacityMessageBox.h"
 
 #define initFnName      "ExtensionModuleInit"
 #define versionFnName   "GetVersionString"
@@ -213,7 +211,7 @@ ModuleManager::~ModuleManager()
 // static 
 void ModuleManager::Initialize(CommandHandler &cmdHandler)
 {
-   const auto &audacityPathList = wxGetApp().audacityPathList;
+   const auto &audacityPathList = FileNames::AudacityPathList();
    FilePaths pathList;
    FilePaths files;
    wxString pathVar;
@@ -222,18 +220,18 @@ void ModuleManager::Initialize(CommandHandler &cmdHandler)
    // Code from LoadLadspa that might be useful in load modules.
    pathVar = wxGetenv(wxT("AUDACITY_MODULES_PATH"));
    if (!pathVar.empty())
-      wxGetApp().AddMultiPathsToPathList(pathVar, pathList);
+      FileNames::AddMultiPathsToPathList(pathVar, pathList);
 
    for (i = 0; i < audacityPathList.size(); i++) {
       wxString prefix = audacityPathList[i] + wxFILE_SEP_PATH;
-      wxGetApp().AddUniquePathToPathList(prefix + wxT("modules"),
+      FileNames::AddUniquePathToPathList(prefix + wxT("modules"),
                                          pathList);
    }
 
    #if defined(__WXMSW__)
-   wxGetApp().FindFilesInPathList(wxT("*.dll"), pathList, files);
+   FileNames::FindFilesInPathList(wxT("*.dll"), pathList, files);
    #else
-   wxGetApp().FindFilesInPathList(wxT("*.so"), pathList, files);
+   FileNames::FindFilesInPathList(wxT("*.so"), pathList, files);
    #endif
 
    wxString saveOldCWD = ::wxGetCwd();
@@ -358,19 +356,19 @@ bool ModuleManager::DiscoverProviders()
 
    if (!pathVar.empty())
    {
-      wxGetApp().AddMultiPathsToPathList(pathVar, pathList);
+      FileNames::AddMultiPathsToPathList(pathVar, pathList);
    }
    else
    {
-      wxGetApp().AddUniquePathToPathList(FileNames::ModulesDir(), pathList);
+      FileNames::AddUniquePathToPathList(FileNames::ModulesDir(), pathList);
    }
 
 #if defined(__WXMSW__)
-   wxGetApp().FindFilesInPathList(wxT("*.dll"), pathList, provList);
+   FileNames::FindFilesInPathList(wxT("*.dll"), pathList, provList);
 #elif defined(__WXMAC__)
-   wxGetApp().FindFilesInPathList(wxT("*.dylib"), pathList, provList);
+   FileNames::FindFilesInPathList(wxT("*.dylib"), pathList, provList);
 #else
-   wxGetApp().FindFilesInPathList(wxT("*.so"), pathList, provList);
+   FileNames::FindFilesInPathList(wxT("*.so"), pathList, provList);
 #endif
 
    PluginManager & pm = PluginManager::Get();
@@ -509,8 +507,7 @@ void ModuleManager::FindAllPlugins(PluginIDs & providers, PluginPaths & paths)
    {
       PluginID providerID = modIDs[i];
 
-      ModuleInterface *module =
-         static_cast<ModuleInterface *>(CreateProviderInstance(providerID, modPaths[i]));
+      auto module = CreateProviderInstance(providerID, modPaths[i]);
 
       if (!module)
          continue;
@@ -553,7 +550,7 @@ bool ModuleManager::RegisterEffectPlugin(const PluginID & providerID, const Plug
    return nFound > 0;
 }
 
-ComponentInterface *ModuleManager::CreateProviderInstance(const PluginID & providerID,
+ModuleInterface *ModuleManager::CreateProviderInstance(const PluginID & providerID,
                                                       const PluginPath & path)
 {
    if (path.empty() && mDynModules.find(providerID) != mDynModules.end())

@@ -26,6 +26,7 @@ most commonly asked questions about Audacity.
 #include "Experimental.h"
 
 #include <wx/dialog.h>
+#include <wx/frame.h>
 #include <wx/html/htmlwin.h>
 #include <wx/button.h>
 #include <wx/dcclient.h>
@@ -35,12 +36,11 @@ most commonly asked questions about Audacity.
 #include <wx/image.h>
 
 #include "FileNames.h"
-#include "Internat.h"
+#include "Project.h"
 #include "ShuttleGui.h"
-#include "widgets/ErrorDialog.h"
-#include "widgets/LinkingHtmlWindow.h"
+#include "widgets/AudacityMessageBox.h"
+#include "widgets/HelpSystem.h"
 
-#include "Theme.h"
 #include "AllThemeResources.h"
 #include "Prefs.h"
 #include "HelpText.h"
@@ -65,6 +65,11 @@ BEGIN_EVENT_TABLE(SplashDialog, wxDialogWrapper)
 END_EVENT_TABLE()
 
 IMPLEMENT_CLASS(SplashDialog, wxDialogWrapper)
+
+void SplashDialog::DoHelpWelcome( AudacityProject &project )
+{
+   Show2( &GetProjectFrame( project ) );
+}
 
 SplashDialog::SplashDialog(wxWindow * parent)
    :  wxDialogWrapper(parent, -1, _("Welcome to Audacity!"),

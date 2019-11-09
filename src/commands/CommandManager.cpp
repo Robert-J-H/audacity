@@ -79,31 +79,24 @@ CommandManager.  It holds the callback for one command.
 
 #include "../Experimental.h"
 
-#include "../AudacityHeaders.h"
 #include "CommandManager.h"
 
-#include "CommandManagerWindowClasses.h"
 #include "CommandContext.h"
+#include "CommandManagerWindowClasses.h"
 
 #include <wx/defs.h>
-#include <wx/eventfilter.h>
 #include <wx/evtloop.h>
+#include <wx/frame.h>
 #include <wx/hash.h>
 #include <wx/intl.h>
 #include <wx/log.h>
 #include <wx/menu.h>
 #include <wx/tokenzr.h>
 
-#include "../AudacityException.h"
 #include "../Menus.h"
-#include "../Prefs.h"
-#include "../Project.h"
 
-#include "Keyboard.h"
-#include "../PluginManager.h"
-#include "../effects/EffectManager.h"
-#include "../widgets/LinkingHtmlWindow.h"
-#include "../widgets/ErrorDialog.h"
+#include "../Project.h"
+#include "../widgets/AudacityMessageBox.h"
 #include "../widgets/HelpSystem.h"
 
 
@@ -121,12 +114,6 @@ CommandManager.  It holds the callback for one command.
 
 #define COMMAND _("Command")
 
-#if defined(__WXMAC__)
-#include <AppKit/AppKit.h>
-#include <wx/osx/private.h>
-#elif defined(__WXGTK__)
-#include <gtk/gtk.h>
-#endif
 
 NonKeystrokeInterceptingWindow::~NonKeystrokeInterceptingWindow()
 {
@@ -161,300 +148,36 @@ SubMenuListEntry::~SubMenuListEntry()
 {
 }
 
-// Shared by all projects
-static class CommandManagerEventMonitor final : public wxEventFilter
+///
+static const AudacityProject::AttachedObjects::RegisteredFactory key{
+   [](AudacityProject&) {
+      return std::make_unique<CommandManager>();
+   }
+};
+
+CommandManager &CommandManager::Get( AudacityProject &project )
 {
-public:
-   CommandManagerEventMonitor()
-   :  wxEventFilter()
-   {
-#if defined(__WXMAC__)
-      // In wx3, the menu accelerators take precendence over key event processing
-      // so we won't get wxEVT_CHAR_HOOK events for combinations assigned to menus.
-      // Since we only support OS X 10.6 or greater, we can use an event monitor
-      // to capture the key event before it gets to the normal wx3 processing.
+   return project.AttachedObjects::Get< CommandManager >( key );
+}
 
-      // The documentation for addLocalMonitorForEventsMatchingMask implies that
-      // NSKeyUpMask can't be used in 10.6, but testing shows that it can.
-      NSEventMask mask = NSKeyDownMask | NSKeyUpMask;
+const CommandManager &CommandManager::Get( const AudacityProject &project )
+{
+   return Get( const_cast< AudacityProject & >( project ) );
+}
 
-      mHandler =
-      [
-         NSEvent addLocalMonitorForEventsMatchingMask:mask handler:^NSEvent *(NSEvent *event)
-         {
-            WXWidget widget = (WXWidget) [ [event window] firstResponder];
-            if (widget)
-            {
-               wxWidgetCocoaImpl *impl = (wxWidgetCocoaImpl *)
-                  wxWidgetImpl::FindFromWXWidget(widget);
-               if (impl)
-               {
-                  mEvent = event;
+static CommandManager::MenuHook &sMenuHook()
+{
+   static CommandManager::MenuHook theHook;
+   return theHook;
+}
 
-                  wxKeyEvent wxevent([event type] == NSKeyDown ? wxEVT_KEY_DOWN : wxEVT_KEY_UP);
-                  impl->SetupKeyEvent(wxevent, event);
-
-                  NSEvent *result;
-                  if ([event type] == NSKeyDown)
-                  {
-                     wxKeyEvent eventHook(wxEVT_CHAR_HOOK, wxevent);
-                     result = FilterEvent(eventHook) == Event_Processed ? nil : event;
-                  }
-                  else
-                  {
-                     result = FilterEvent(wxevent) == Event_Processed ? nil : event;
-                  }
-
-                  mEvent = nullptr;
-                  return result;
-               }
-            }
-
-            return event;
-         }
-      ];
-
-      // Bug1252: must also install this filter with wxWidgets, else
-      // we don't intercept command keys when focus is in a combo box.
-      wxEvtHandler::AddFilter(this);
-#else
-
-      wxEvtHandler::AddFilter(this);
-
-#endif
-   }
-
-   virtual ~CommandManagerEventMonitor()
-   {
-#if defined(__WXMAC__)
-      [NSEvent removeMonitor:mHandler];
-#else
-      wxEvtHandler::RemoveFilter(this);
-#endif
-   }
-
-   int FilterEvent(wxEvent& event) override
-   {
-      // Unguarded exception propagation may crash the program, at least
-      // on Mac while in the objective-C closure above
-      return GuardedCall< int > ( [&] {
-         // Quickly bail if this isn't something we want.
-         wxEventType type = event.GetEventType();
-         if (type != wxEVT_CHAR_HOOK && type != wxEVT_KEY_UP)
-         {
-            return Event_Skip;
-         }
-
-         // We must have a project since we will be working with the Command Manager
-         // and capture handler, both of which are (currently) tied to individual projects.
-         //
-         // Shouldn't they be tied to the application instead???
-         AudacityProject *project = GetActiveProject();
-         if (!project || !project->IsEnabled())
-         {
-            return Event_Skip;
-         }
-
-         // Make a copy of the event and (possibly) make it look like a key down
-         // event.
-         wxKeyEvent key = (wxKeyEvent &) event;
-         if (type == wxEVT_CHAR_HOOK)
-         {
-            key.SetEventType(wxEVT_KEY_DOWN);
-         }
-
-         // Give the capture handler first dibs at the event.
-         wxWindow *handler = project->GetKeyboardCaptureHandler();
-         if (handler && HandleCapture(handler, key))
-         {
-            return Event_Processed;
-         }
-
-         // Capture handler didn't want it, so ask the Command Manager.
-         CommandManager *manager = project->GetCommandManager();
-         if (manager && manager->FilterKeyEvent(project, key))
-         {
-            return Event_Processed;
-         }
-
-         // Give it back to WX for normal processing.
-         return Event_Skip;
-      }, MakeSimpleGuard( Event_Skip ) );
-   }
-
-private:
-
-   // Returns true if the event was captured and processed
-   bool HandleCapture(wxWindow *target, const wxKeyEvent & event)
-   {
-      if (wxGetTopLevelParent(target) != wxGetTopLevelParent(wxWindow::FindFocus()))
-      {
-         return false;
-      }
-      wxEvtHandler *handler = target->GetEventHandler();
-
-      // We make a copy of the event because the capture handler may modify it.
-      wxKeyEvent temp = event;
-
-#if defined(__WXGTK__)
-      // wxGTK uses the control and alt modifiers to represent ALTGR,
-      // so remove it as it might confuse the capture handlers.
-      if (temp.GetModifiers() == (wxMOD_CONTROL | wxMOD_ALT))
-      {
-         temp.SetControlDown(false);
-         temp.SetAltDown(false);
-      }
-#endif
-
-      // Ask the capture handler if the key down/up event is something they it
-      // might be interested in handling.
-      wxCommandEvent e(EVT_CAPTURE_KEY);
-      e.SetEventObject(&temp);
-      e.StopPropagation();
-      if (!handler->ProcessEvent(e))
-      {
-         return false;
-      }
-
-      // Now, let the handler process the normal key event.
-      bool keyDown = temp.GetEventType() == wxEVT_KEY_DOWN;
-      temp.WasProcessed();
-      temp.StopPropagation();
-      wxEventProcessInHandlerOnly onlyDown(temp, handler);
-      bool processed = handler->ProcessEvent(temp);
-
-      // Don't go any further if the capture handler didn't process
-      // the key down event.
-      if (!processed && keyDown)
-      {
-         return false;
-      }
-
-      // At this point the capture handler has either processed a key down event
-      // or we're dealing with a key up event.
-      //
-      // So, only generate the char events for key down events.
-      if (keyDown)
-      {
-         wxString chars = GetUnicodeString(temp);
-         for (size_t i = 0, cnt = chars.length(); i < cnt; i++)
-         {
-            temp = event;
-            temp.SetEventType(wxEVT_CHAR);
-            temp.WasProcessed();
-            temp.StopPropagation();
-            temp.m_uniChar = chars[i];
-            wxEventProcessInHandlerOnly onlyChar(temp, handler);
-            handler->ProcessEvent(temp);
-         }
-      }
-
-      // We get here for processed key down events or for key up events, whether
-      // processed or not.
-      return true;
-   }
-
-   // Convert the key down event to a unicode string.
-   wxString GetUnicodeString(const wxKeyEvent & event)
-   {
-      wxString chars;
-
-#if defined(__WXMSW__)
-
-      BYTE ks[256];
-      GetKeyboardState(ks);
-      WCHAR ucode[256];
-      int res = ToUnicode(event.GetRawKeyCode(), 0, ks, ucode, 256, 0);
-      if (res >= 1)
-      {
-         chars.Append(ucode, res);
-      }
-
-#elif defined(__WXGTK__)
-
-      chars.Append((wxChar) gdk_keyval_to_unicode(event.GetRawKeyCode()));
-
-#elif defined(__WXMAC__)
-
-      if (!mEvent) {
-         // TODO:  we got here without getting the NSEvent pointer,
-         // as in the combo box case of bug 1252.  We can't compute it!
-         // This makes a difference only when there is a capture handler.
-         // It's never the case yet that there is one.
-         wxASSERT(false);
-         return chars;
-      }
-
-      NSString *c = [mEvent charactersIgnoringModifiers];
-      if ([c length] == 1)
-      {
-         unichar codepoint = [c characterAtIndex:0];
-         if ((codepoint >= 0xF700 && codepoint <= 0xF8FF) || codepoint == 0x7F)
-         {
-            return chars;
-         }
-      }
-
-      c = [mEvent characters];
-      chars = [c UTF8String];
-
-      TISInputSourceRef currentKeyboard = TISCopyCurrentKeyboardInputSource();
-      CFDataRef uchr = (CFDataRef)TISGetInputSourceProperty(currentKeyboard, kTISPropertyUnicodeKeyLayoutData);
-      CFRelease(currentKeyboard);
-      if (uchr == NULL)
-      {
-         return chars;
-      }
-
-      const UCKeyboardLayout *keyboardLayout = (const UCKeyboardLayout*)CFDataGetBytePtr(uchr);
-      if (keyboardLayout == NULL)
-      {
-         return chars;
-      }
-
-      const UniCharCount maxStringLength = 255;
-      UniCharCount actualStringLength = 0;
-      UniChar unicodeString[maxStringLength];
-      UInt32 nsflags = [mEvent modifierFlags];
-      UInt16 modifiers = (nsflags & NSAlphaShiftKeyMask ? alphaLock : 0) |
-                         (nsflags & NSShiftKeyMask ? shiftKey : 0) |
-                         (nsflags & NSControlKeyMask ? controlKey : 0) |
-                         (nsflags & NSAlternateKeyMask ? optionKey : 0) |
-                         (nsflags & NSCommandKeyMask ? cmdKey : 0);
-
-      OSStatus status = UCKeyTranslate(keyboardLayout,
-                                       [mEvent keyCode],
-                                       kUCKeyActionDown,
-                                       (modifiers >> 8) & 0xff,
-                                       LMGetKbdType(),
-                                       0,
-                                       &mDeadKeyState,
-                                       maxStringLength,
-                                       &actualStringLength,
-                                       unicodeString);
-
-      if (status != noErr)
-      {
-         return chars;
-      }
-
-      chars = [ [NSString stringWithCharacters:unicodeString
-                                       length:(NSInteger)actualStringLength] UTF8String];
-
-#endif
-
-      return chars;
-   }
-
-private:
-
-#if defined(__WXMAC__)
-   id mHandler;
-   NSEvent *mEvent {};
-   UInt32 mDeadKeyState;
-#endif
-
-}monitor;
+auto CommandManager::SetMenuHook( const MenuHook &hook ) -> MenuHook
+{
+   auto &theHook = sMenuHook();
+   auto result = theHook;
+   theHook = hook;
+   return result;
+}
 
 ///
 ///  Standard Constructor
@@ -497,7 +220,7 @@ const std::vector<NormalizedKeyString> &CommandManager::ExcludedList()
          "Alt+J",
          "Shift+Alt+J",
          "Ctrl+Shift+A",
-         "Q",
+         //"Q",
          //"Shift+J",
          //"Shift+K",
          //"Shift+Home",
@@ -535,7 +258,8 @@ const std::vector<NormalizedKeyString> &CommandManager::ExcludedList()
       };
 
       std::vector<NormalizedKeyString> result(
-         strings, strings + sizeof(strings)/sizeof(*strings) );
+         std::begin(strings), std::end(strings)
+      );
       std::sort( result.begin(), result.end() );
       return result;
    }();
@@ -576,7 +300,7 @@ void CommandManager::PurgeData()
 
    mCommandNameHash.clear();
    mCommandKeyHash.clear();
-   mCommandIDHash.clear();
+   mCommandNumericIDHash.clear();
 
    mCurrentMenuName = COMMAND;
    mCurrentID = 17000;
@@ -796,10 +520,6 @@ void CommandManager::AddItem(const CommandID &name,
 
    wxASSERT( flags != NoFlagsSpecified );
 
-   auto mask = options.mask;
-   if (mask == NoFlagsSpecified)
-      mask = flags;
-
    CommandParameter cookedParameter;
    const auto &parameter = options.parameter;
    if( parameter.empty() )
@@ -813,10 +533,11 @@ void CommandManager::AddItem(const CommandID &name,
          hasDialog,
          options.accel, CurrentMenu(), finder, callback,
          {}, 0, 0, options.bIsEffect, cookedParameter);
+   entry->useStrictFlags = options.useStrictFlags;
    int ID = entry->id;
    wxString label = GetLabelWithDisabledAccel(entry);
 
-   SetCommandFlags(name, flags, mask);
+   SetCommandFlags(name, flags);
 
 
    auto checkmark = options.check;
@@ -859,7 +580,7 @@ void CommandManager::AddItemList(const CommandID & name,
                                               i,
                                               cnt,
                                               bIsEffect);
-      entry->mask = entry->flags = flags;
+      entry->flags = flags;
       CurrentMenu()->Append(entry->id, GetLabel(entry));
       mbSeparatorAllowed = true;
    }
@@ -888,7 +609,7 @@ void CommandManager::AddCommand(const CommandID &name,
 
    NewIdentifier(name, label_in, label_in, false, accel, NULL, finder, callback, {}, 0, 0, false, {});
 
-   SetCommandFlags(name, flags, flags);
+   SetCommandFlags(name, flags);
 }
 
 void CommandManager::AddGlobalCommand(const CommandID &name,
@@ -905,7 +626,6 @@ void CommandManager::AddGlobalCommand(const CommandID &name,
    entry->enabled = false;
    entry->isGlobal = true;
    entry->flags = AlwaysEnabledFlag;
-   entry->mask = AlwaysEnabledFlag;
 }
 
 void CommandManager::AddSeparator()
@@ -995,7 +715,7 @@ CommandListEntry *CommandManager::NewIdentifier(const CommandID & nameIn,
       // the name in prefs is the category name plus the effect name.
       // This feature is not used for built-in effects.
       if (multi)
-         name = wxString::Format(wxT("%s_%s"), name, nameSuffix);
+         name = CommandID{ { name, nameSuffix }, wxT('_') };
 
       // wxMac 2.5 and higher will do special things with the
       // Preferences, Exit (Quit), and About menu items,
@@ -1034,7 +754,7 @@ CommandListEntry *CommandManager::NewIdentifier(const CommandID & nameIn,
       entry->multi = multi;
       entry->index = index;
       entry->count = count;
-      entry->flags = entry->mask = AlwaysEnabledFlag;
+      entry->flags = AlwaysEnabledFlag;
       entry->enabled = true;
       entry->skipKeydown = (accel.Find(wxT("\tskipKeydown")) != wxNOT_FOUND);
       entry->wantKeyup = (accel.Find(wxT("\twantKeyup")) != wxNOT_FOUND) || entry->skipKeydown;
@@ -1051,9 +771,11 @@ CommandListEntry *CommandManager::NewIdentifier(const CommandID & nameIn,
 
       // Key from preferences overrides the default key given
       gPrefs->SetPath(wxT("/NewKeys"));
-      if (gPrefs->HasEntry(entry->name)) {
+      // using GET to interpret CommandID as a config path component
+      const auto &path = entry->name.GET();
+      if (gPrefs->HasEntry(path)) {
          entry->key =
-            NormalizedKeyString{ gPrefs->Read(entry->name, entry->key.Raw()) };
+            NormalizedKeyString{ gPrefs->ReadObject(path, entry->key) };
       }
       gPrefs->SetPath(wxT("/"));
 
@@ -1063,7 +785,7 @@ CommandListEntry *CommandManager::NewIdentifier(const CommandID & nameIn,
 
    // New variable
    CommandListEntry *entry = &*mCommandList.back();
-   mCommandIDHash[entry->id] = entry;
+   mCommandNumericIDHash[entry->id] = entry;
 
 #if defined(__WXDEBUG__)
    prev = mCommandNameHash[entry->name];
@@ -1074,11 +796,14 @@ CommandListEntry *CommandManager::NewIdentifier(const CommandID & nameIn,
       if( prev->label != entry->label )
       {
          wxLogDebug(wxT("Command '%s' defined by '%s' and '%s'"),
-                    entry->name,
+                    // using GET in a log message for devs' eyes only
+                    entry->name.GET(),
                     prev->label.BeforeFirst(wxT('\t')),
                     entry->label.BeforeFirst(wxT('\t')));
          wxFAIL_MSG(wxString::Format(wxT("Command '%s' defined by '%s' and '%s'"),
-                    entry->name,
+                    // using GET in an assertion violation message for devs'
+                    // eyes only
+                    entry->name.GET(),
                     prev->label.BeforeFirst(wxT('\t')),
                     entry->label.BeforeFirst(wxT('\t'))));
       }
@@ -1098,7 +823,8 @@ wxString CommandManager::GetLabel(const CommandListEntry *entry) const
    wxString label = entry->label;
    if (!entry->key.empty())
    {
-      label += wxT("\t") + entry->key.Raw();
+      // using GET to compose menu item name for wxWidgets
+      label += wxT("\t") + entry->key.GET();
    }
 
    return label;
@@ -1120,7 +846,8 @@ wxString CommandManager::GetLabelWithDisabledAccel(const CommandListEntry *entry
          // Dummy accelerator that looks Ok in menus but is non functional.
          // Note the space before the key.
 #ifdef __WXMSW__
-         auto key = entry->key.Raw();
+         // using GET to compose menu item name for wxWidgets
+         auto key = entry->key.GET();
          Accel = wxString("\t ") + key;
          if( key.StartsWith("Left" )) break;
          if( key.StartsWith("Right")) break;
@@ -1149,7 +876,8 @@ wxString CommandManager::GetLabelWithDisabledAccel(const CommandListEntry *entry
 #endif
          //wxLogDebug("Added Accel:[%s][%s]", entry->label, entry->key );
          // Normal accelerator.
-         Accel = wxString("\t") + entry->key.Raw();
+         // using GET to compose menu item name for wxWidgets
+         Accel = wxString("\t") + entry->key.GET();
       }
    } while (false );
    label += Accel;
@@ -1188,15 +916,16 @@ void CommandManager::Enable(CommandListEntry *entry, bool enabled)
 
          // This menu item is not necessarily in the same menu, because
          // multi-items can be spread across multiple sub menus
-         CommandListEntry *multiEntry = mCommandIDHash[ID];
+         CommandListEntry *multiEntry = mCommandNumericIDHash[ID];
          if (multiEntry) {
             wxMenuItem *item = multiEntry->menu->FindItem(ID);
 
          if (item) {
             item->Enable(enabled);
          } else {
+            // using GET in a log message for devs' eyes only
             wxLogDebug(wxT("Warning: Menu entry with id %i in %s not found"),
-                ID, (const wxChar*)entry->name);
+                ID, entry->name.GET());
          }
          } else {
             wxLogDebug(wxT("Warning: Menu entry with id %i not in hash"), ID);
@@ -1217,18 +946,25 @@ void CommandManager::Enable(const wxString &name, bool enabled)
    Enable(entry, enabled);
 }
 
-void CommandManager::EnableUsingFlags(CommandFlag flags, CommandMask mask)
+void CommandManager::EnableUsingFlags(
+   CommandFlag flags, CommandFlag strictFlags)
 {
+   // strictFlags are a subset of flags.  strictFlags represent the real
+   // conditions now, but flags are the conditions that could be made true.
+   // Some commands use strict flags only, refusing the chance to fix
+   // conditions
+   wxASSERT( (strictFlags & ~flags).none() );
+
    for(const auto &entry : mCommandList) {
       if (entry->multi && entry->index != 0)
          continue;
       if( entry->isOccult )
          continue;
 
-      auto combinedMask = (mask & entry->mask);
-      if (combinedMask) {
-         bool enable = ((flags & combinedMask) ==
-                        (entry->flags & combinedMask));
+      auto useFlags = entry->useStrictFlags ? strictFlags : flags;
+
+      if (entry->flags.any()) {
+         bool enable = ((useFlags & entry->flags) == entry->flags);
          Enable(entry.get(), enable);
       }
    }
@@ -1238,8 +974,9 @@ bool CommandManager::GetEnabled(const CommandID &name)
 {
    CommandListEntry *entry = mCommandNameHash[name];
    if (!entry || !entry->menu) {
+      // using GET in a log message for devs' eyes only
       wxLogDebug(wxT("Warning: command doesn't exist: '%s'"),
-                 (const wxChar*)name);
+                 name.GET());
       return false;
    }
    return entry->enabled;
@@ -1277,69 +1014,6 @@ void CommandManager::SetKeyFromIndex(int i, const NormalizedKeyString &key)
 {
    const auto &entry = mCommandList[i];
    entry->key = key;
-}
-
-void CommandManager::TellUserWhyDisallowed( const wxString & Name, CommandFlag flagsGot, CommandMask flagsRequired )
-{
-   // The default string for 'reason' is a catch all.  I hope it won't ever be seen
-   // and that we will get something more specific.
-   wxString reason = _("There was a problem with your last action. If you think\nthis is a bug, please tell us exactly where it occurred.");
-   // The default title string is 'Disallowed'.
-   wxString title = _("Disallowed");
-   wxString helpPage;
-
-   auto missingFlags = flagsRequired & (~flagsGot );
-   if( missingFlags & AudioIONotBusyFlag )
-      // This reason will not be shown, because options that require it will be greyed our.
-      reason = _("You can only do this when playing and recording are\nstopped. (Pausing is not sufficient.)");
-   else if( missingFlags & StereoRequiredFlag )
-      // This reason will not be shown, because the stereo-to-mono is greyed out if not allowed.
-      reason = _("You must first select some stereo audio to perform this\naction. (You cannot use this with mono.)");
-   // In reporting the issue with cut or copy, we don't tell the user they could also select some text in a label.
-   else if(( missingFlags & TimeSelectedFlag ) || (missingFlags &CutCopyAvailableFlag )){
-      title = _("No Audio Selected");
-#ifdef EXPERIMENTAL_DA
-      // i18n-hint: %s will be replaced by the name of an action, such as Normalize, Cut, Fade.
-      reason = wxString::Format( _("You must first select some audio for '%s' to act on.\n\nCtrl + A selects all audio."), Name );
-#else
-#ifdef __WXMAC__
-      // i18n-hint: %s will be replaced by the name of an action, such as Normalize, Cut, Fade.
-      reason = wxString::Format( _("Select the audio for %s to use (for example, Cmd + A to Select All) then try again."
-      // No need to explain what a help button is for.
-      // "\n\nClick the Help button to learn more about selection methods."
-      ), Name );
-
-#else
-      // i18n-hint: %s will be replaced by the name of an action, such as Normalize, Cut, Fade.
-      reason = wxString::Format( _("Select the audio for %s to use (for example, Ctrl + A to Select All) then try again."
-      // No need to explain what a help button is for.
-      // "\n\nClick the Help button to learn more about selection methods."
-      ), Name );
-#endif
-#endif
-      helpPage = "Selecting_Audio_-_the_basics";
-   }
-   else if( missingFlags & WaveTracksSelectedFlag)
-      reason = _("You must first select some audio to perform this action.\n(Selecting other kinds of track won't work.)");
-   else if ( missingFlags & TracksSelectedFlag )
-      // i18n-hint: %s will be replaced by the name of an action, such as "Remove Tracks".
-      reason = wxString::Format(_("\"%s\" requires one or more tracks to be selected."), Name);
-   // If the only thing wrong was no tracks, we do nothing and don't report a problem
-   else if( missingFlags == TracksExistFlag )
-      return;
-   // Likewise return if it was just no tracks, and track panel did not have focus.  (e.g. up-arrow to move track)
-   else if( missingFlags == (TracksExistFlag | TrackPanelHasFocus) )
-      return;
-   // Likewise as above too...
-   else if( missingFlags == TrackPanelHasFocus )
-      return;
-
-   // Does not have the warning icon...
-   ShowErrorDialog(
-      NULL,
-      title,
-      reason,
-      helpPage);
 }
 
 wxString CommandManager::DescribeCommandsAndShortcuts
@@ -1396,6 +1070,7 @@ wxString CommandManager::DescribeCommandsAndShortcuts
 ///
 bool CommandManager::FilterKeyEvent(AudacityProject *project, const wxKeyEvent & evt, bool permit)
 {
+   auto pWindow = FindProjectFrame( project );
    CommandListEntry *entry = mCommandKeyHash[KeyEventToKeyString(evt)];
    if (entry == NULL)
    {
@@ -1413,15 +1088,15 @@ bool CommandManager::FilterKeyEvent(AudacityProject *project, const wxKeyEvent &
       // LL:  Why do they need to be disabled???
       entry->enabled = false;
       auto cleanup = valueRestorer( entry->enabled, true );
-      return HandleCommandEntry(entry, NoFlagsSpecified, NoFlagsSpecified, &evt);
+      return HandleCommandEntry(entry, NoFlagsSpecified, false, &evt);
    }
 
    wxWindow * pFocus = wxWindow::FindFocus();
    wxWindow * pParent = wxGetTopLevelParent( pFocus );
-   bool validTarget = pParent == project;
+   bool validTarget = pParent == pWindow;
    // Bug 1557.  MixerBoard should count as 'destined for project'
    // MixerBoard IS a TopLevelWindow, and its parent is the project.
-   if( pParent && pParent->GetParent() == project){
+   if( pParent && pParent->GetParent() == pWindow ){
       if( dynamic_cast< TopLevelKeystrokeHandlingWindow* >( pParent ) != NULL )
          validTarget = true;
    }
@@ -1433,7 +1108,7 @@ bool CommandManager::FilterKeyEvent(AudacityProject *project, const wxKeyEvent &
       return false;
    }
 
-   auto flags = GetMenuManager(*project).GetUpdateFlags(*project);
+   auto flags = MenuManager::Get(*project).GetUpdateFlags();
 
    wxKeyEvent temp = evt;
 
@@ -1487,12 +1162,12 @@ bool CommandManager::FilterKeyEvent(AudacityProject *project, const wxKeyEvent &
       {
          return true;
       }
-      return HandleCommandEntry(entry, flags, NoFlagsSpecified, &temp);
+      return HandleCommandEntry(entry, flags, false, &temp);
    }
 
    if (type == wxEVT_KEY_UP && entry->wantKeyup)
    {
-      return HandleCommandEntry(entry, flags, NoFlagsSpecified, &temp);
+      return HandleCommandEntry(entry, flags, false, &temp);
    }
 
    return false;
@@ -1503,7 +1178,7 @@ bool CommandManager::FilterKeyEvent(AudacityProject *project, const wxKeyEvent &
 ///the command won't be executed unless the flags are compatible
 ///with the command's flags.
 bool CommandManager::HandleCommandEntry(const CommandListEntry * entry,
-                                        CommandFlag flags, CommandMask mask, const wxEvent * evt)
+   CommandFlag flags, bool alwaysEnabled, const wxEvent * evt)
 {
    if (!entry )
       return false;
@@ -1513,8 +1188,7 @@ bool CommandManager::HandleCommandEntry(const CommandListEntry * entry,
 
    auto proj = GetActiveProject();
 
-   auto combinedMask = (mask & entry->mask);
-   if (combinedMask) {
+   if (!alwaysEnabled && entry->flags.any()) {
 
       wxASSERT( proj );
       if( !proj )
@@ -1525,8 +1199,8 @@ bool CommandManager::HandleCommandEntry(const CommandListEntry * entry,
       NiceName.Replace(".","");// remove ...
       // NB: The call may have the side effect of changing flags.
       bool allowed =
-         GetMenuManager(*proj).ReportIfActionNotAllowed( *proj,
-            NiceName, flags, entry->flags, combinedMask );
+         MenuManager::Get(*proj).ReportIfActionNotAllowed(
+            NiceName, flags, entry->flags );
       // If the function was disallowed, it STILL should count as having been
       // handled (by doing nothing or by telling the user of the problem).
       // Otherwise we may get other handlers having a go at obeying the command.
@@ -1546,79 +1220,53 @@ bool CommandManager::HandleCommandEntry(const CommandListEntry * entry,
 ///CommandManagerListener function.  If you pass any flags,
 ///the command won't be executed unless the flags are compatible
 ///with the command's flags.
-#include "../prefs/PrefsDialog.h"
-#include "../prefs/KeyConfigPrefs.h"
-bool CommandManager::HandleMenuID(int id, CommandFlag flags, CommandMask mask)
+bool CommandManager::HandleMenuID(int id, CommandFlag flags, bool alwaysEnabled)
 {
-   CommandListEntry *entry = mCommandIDHash[id];
+   CommandListEntry *entry = mCommandNumericIDHash[id];
 
-#ifdef EXPERIMENTAL_EASY_CHANGE_KEY_BINDINGS
-   if (::wxGetMouseState().ShiftDown()) {
-      // Only want one page of the preferences
-      KeyConfigPrefsFactory keyConfigPrefsFactory{ entry->name };
-      PrefsDialog::Factories factories;
-      factories.push_back(&keyConfigPrefsFactory);
-      GlobalPrefsDialog dialog(GetActiveProject(), factories);
-      dialog.ShowModal();
-      MenuCreator::RebuildAllMenuBars();
+   auto hook = sMenuHook();
+   if (hook && hook(entry->name))
       return true;
-   }
-#endif
 
-   return HandleCommandEntry( entry, flags, mask );
+   return HandleCommandEntry( entry, flags, alwaysEnabled );
 }
 
 /// HandleTextualCommand() allows us a limitted version of script/batch
 /// behavior, since we can get from a string command name to the actual
 /// code to run.
-bool CommandManager::HandleTextualCommand(const CommandID & Str, const CommandContext & context, CommandFlag flags, CommandMask mask)
+CommandManager::TextualCommandResult
+CommandManager::HandleTextualCommand(const CommandID & Str,
+   const CommandContext & context, CommandFlag flags, bool alwaysEnabled)
 {
    if( Str.empty() )
-      return false;
+      return CommandFailure;
    // Linear search for now...
    for (const auto &entry : mCommandList)
    {
       if (!entry->multi)
       {
          // Testing against labelPrefix too allows us to call Nyquist functions by name.
-         if( Str.IsSameAs( entry->name, false ) || Str.IsSameAs( entry->labelPrefix, false ))
+         if( Str == entry->name ||
+            // PRL:  uh oh, mixing internal string (Str) with user-visible
+            // (labelPrefix, which was initialized from a user-visible
+            // sub-menu name)
+            Str == entry->labelPrefix )
          {
-            return HandleCommandEntry( entry.get(), flags, mask);
+            return HandleCommandEntry( entry.get(), flags, alwaysEnabled)
+               ? CommandSuccess : CommandFailure;
          }
       }
       else
       {
          // Handle multis too...
-         if( Str.IsSameAs( entry->name, false ) )
+         if( Str == entry->name )
          {
-            return HandleCommandEntry( entry.get(), flags, mask);
+            return HandleCommandEntry( entry.get(), flags, alwaysEnabled)
+               ? CommandSuccess : CommandFailure;
          }
       }
    }
-   // Not one of the singleton commands.
-   // We could/should try all the list-style commands.
-   // instead we only try the effects.
-   AudacityProject * proj = GetActiveProject();
-   if( !proj )
-   {
-      return false;
-   }
-
-   PluginManager & pm = PluginManager::Get();
-   EffectManager & em = EffectManager::Get();
-   const PluginDescriptor *plug = pm.GetFirstPlugin(PluginTypeEffect);
-   while (plug)
-   {
-      if (em.GetCommandIdentifier(plug->GetID()).IsSameAs(Str, false))
-      {
-         return PluginActions::DoEffect(
-            plug->GetID(), context,
-            PluginActions::kConfigured);
-      }
-      plug = pm.GetNextPlugin(PluginTypeEffect);
-   }
-
-   return false;
+   return CommandNotFound;
 }
 
 void CommandManager::GetCategories(wxArrayString &cats)
@@ -1725,9 +1373,9 @@ void CommandManager::GetAllCommandData(
    }
 }
 
-CommandID CommandManager::GetNameFromID(int id)
+CommandID CommandManager::GetNameFromNumericID(int id)
 {
-   CommandListEntry *entry = mCommandIDHash[id];
+   CommandListEntry *entry = mCommandNumericIDHash[id];
    if (!entry)
       return {};
    return entry->name;
@@ -1848,7 +1496,7 @@ void CommandManager::WriteXML(XMLWriter &xmlFile) const
       xmlFile.StartTag(wxT("command"));
       xmlFile.WriteAttr(wxT("name"), entry->name);
       xmlFile.WriteAttr(wxT("label"), label);
-      xmlFile.WriteAttr(wxT("key"), entry->key.Raw());
+      xmlFile.WriteAttr(wxT("key"), entry->key);
       xmlFile.EndTag(wxT("command"));
    }
 
@@ -1876,13 +1524,11 @@ void CommandManager::EndOccultCommands()
 }
 
 void CommandManager::SetCommandFlags(const CommandID &name,
-                                     CommandFlag flags, CommandMask mask)
+                                     CommandFlag flags)
 {
    CommandListEntry *entry = mCommandNameHash[name];
-   if (entry) {
+   if (entry)
       entry->flags = flags;
-      entry->mask = mask;
-   }
 }
 
 #if defined(__WXDEBUG__)
@@ -1906,7 +1552,8 @@ void CommandManager::CheckDups()
          if (mCommandList[i]->key == mCommandList[j]->key) {
             wxString msg;
             msg.Printf(wxT("key combo '%s' assigned to '%s' and '%s'"),
-                       mCommandList[i]->key.Raw(),
+                       // using GET to form debug message
+                       mCommandList[i]->key.GET(),
                        mCommandList[i]->label.BeforeFirst(wxT('\t')),
                        mCommandList[j]->label.BeforeFirst(wxT('\t')));
             wxASSERT_MSG(mCommandList[i]->key != mCommandList[j]->key, msg);
@@ -1916,3 +1563,25 @@ void CommandManager::CheckDups()
 }
 
 #endif
+
+#include "../KeyboardCapture.h"
+
+static struct InstallHandlers
+{
+   InstallHandlers()
+   {
+      KeyboardCapture::SetPreFilter( []( wxKeyEvent & ) {
+         // We must have a project since we will be working with the
+         // CommandManager, which is tied to individual projects.
+         AudacityProject *project = GetActiveProject();
+         return project && GetProjectFrame( *project ).IsEnabled();
+      } );
+      KeyboardCapture::SetPostFilter( []( wxKeyEvent &key ) {
+         // Capture handler window didn't want it, so ask the CommandManager.
+         AudacityProject *project = GetActiveProject();
+         auto &manager = CommandManager::Get( *project );
+         return manager.FilterKeyEvent(project, key);
+      } );
+   }
+} installHandlers;
+

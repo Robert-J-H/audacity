@@ -82,16 +82,15 @@
 
 #include "../FileNames.h"
 #include "../float_cast.h"
-#include "../Internat.h"
 #include "../Mix.h"
 #include "../Prefs.h"
-#include "../Project.h"
+#include "../ProjectSettings.h"
+#include "../ProjectWindow.h"
 #include "../ShuttleGui.h"
 #include "../Tags.h"
 #include "../Track.h"
 #include "../widgets/HelpSystem.h"
-#include "../widgets/LinkingHtmlWindow.h"
-#include "../widgets/ErrorDialog.h"
+#include "../widgets/AudacityMessageBox.h"
 #include "../widgets/ProgressDialog.h"
 
 #include "Export.h"
@@ -1754,11 +1753,11 @@ ProgressResult ExportMP3::Export(AudacityProject *project,
                        const Tags *metadata,
                        int WXUNUSED(subformat))
 {
-   int rate = lrint(project->GetRate());
+   int rate = lrint( ProjectSettings::Get( *project ).GetRate());
 #ifndef DISABLE_DYNAMIC_LOADING_LAME
-   wxWindow *parent = project;
+   wxWindow *parent = ProjectWindow::Find( project );
 #endif // DISABLE_DYNAMIC_LOADING_LAME
-   const TrackList *tracks = project->GetTracks();
+   const auto &tracks = TrackList::Get( *project );
    MP3Exporter exporter;
 
 #ifdef DISABLE_DYNAMIC_LOADING_LAME
@@ -1869,7 +1868,7 @@ ProgressResult ExportMP3::Export(AudacityProject *project,
 
    // Put ID3 tags at beginning of file
    if (metadata == NULL)
-      metadata = project->GetTags();
+      metadata = &Tags::Get( *project );
 
    // Open file for writing
    wxFFile outFile(fName, wxT("w+b"));
@@ -1903,11 +1902,8 @@ ProgressResult ExportMP3::Export(AudacityProject *project,
    ArrayOf<unsigned char> buffer{ bufferSize };
    wxASSERT(buffer);
 
-   const WaveTrackConstArray waveTracks =
-      tracks->GetWaveTrackConstArray(selectionOnly, false);
    {
-      auto mixer = CreateMixer(waveTracks,
-         tracks->GetTimeTrack(),
+      auto mixer = CreateMixer(tracks, selectionOnly,
          t0, t1,
          channels, inSamples, true,
          rate, int16Sample, true, mixerSpec);

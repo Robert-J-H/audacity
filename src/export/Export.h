@@ -11,7 +11,6 @@
 #ifndef __AUDACITY_EXPORT__
 #define __AUDACITY_EXPORT__
 
-#include "../MemoryX.h"
 #include <vector>
 #include <wx/filename.h> // member variable
 #include "../SampleFormat.h"
@@ -30,7 +29,6 @@ class Tags;
 class TrackList;
 class MixerSpec;
 class ProgressDialog;
-class TimeTrack;
 class Mixer;
 using WaveTrackConstArray = std::vector < std::shared_ptr < const WaveTrack > >;
 enum class ProgressResult : unsigned;
@@ -131,8 +129,8 @@ public:
                        int subformat = 0) = 0;
 
 protected:
-   std::unique_ptr<Mixer> CreateMixer(const WaveTrackConstArray &inputTracks,
-         const TimeTrack *timeTrack,
+   std::unique_ptr<Mixer> CreateMixer(const TrackList &tracks,
+         bool selectionOnly,
          double startTime, double stopTime,
          unsigned numOutChannels, size_t outBufferSize, bool outInterleaved,
          double outRate, sampleFormat outFormat,
@@ -158,6 +156,9 @@ wxDECLARE_EVENT(AUDACITY_FILE_SUFFIX_EVENT, wxCommandEvent);
 class  AUDACITY_DLL_API Exporter final : public wxEvtHandler
 {
 public:
+
+   static bool DoEditMetadata(AudacityProject &project,
+      const wxString &title, const wxString &shortUndoDescription, bool force);
 
    Exporter();
    virtual ~Exporter();

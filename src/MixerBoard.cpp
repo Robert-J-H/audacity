@@ -14,8 +14,6 @@
 
 #include "Experimental.h"
 
-#include "Menus.h"
-
 #include <cfloat>
 #include <math.h>
 
@@ -27,20 +25,25 @@
 #include <wx/icon.h>
 #include <wx/settings.h> // for wxSystemSettings::GetColour and wxSystemSettings::GetMetric
 
-#include "Theme.h"
 #include "AColor.h"
 #include "AllThemeResources.h"
 #include "AudioIO.h"
-
-#include "Menus.h"
 
 #ifdef USE_MIDI
 #include "NoteTrack.h"
 #endif
 
+#include "KeyboardCapture.h"
 #include "Prefs.h" // for RTL_WORKAROUND
 #include "Project.h"
+#include "ProjectAudioIO.h"
+#include "ProjectAudioManager.h"
+#include "ProjectHistory.h"
+#include "ProjectSettings.h"
+#include "ProjectWindow.h"
+#include "SelectUtilities.h"
 #include "TrackPanel.h" // for EVT_TRACK_PANEL_TIMER
+#include "TrackUtilities.h"
 #include "UndoManager.h"
 #include "WaveTrack.h"
 
@@ -96,16 +99,7 @@ void MixerTrackSlider::OnMouseEvent(wxMouseEvent &event)
 
 void MixerTrackSlider::OnFocus(wxFocusEvent &event)
 {
-   if (event.GetEventType() == wxEVT_KILL_FOCUS) {
-      AudacityProject::ReleaseKeyboard(this);
-   }
-   else {
-      AudacityProject::CaptureKeyboard(this);
-   }
-
-   Refresh(false);
-
-   event.Skip();
+   KeyboardCapture::OnFocus( *this, event );
 }
 
 void MixerTrackSlider::OnCaptureKey(wxCommandEvent &event)
@@ -293,7 +287,7 @@ MixerTrackCluster::MixerTrackCluster(wxWindow* parent,
                   *(mMixerBoard->mImageSoloDisabled),
                   true); // toggle button
    mToggleButton_Solo->SetName(_("Solo"));
-   bool bSoloNone = mProject->IsSoloNone();
+   bool bSoloNone = ProjectSettings::Get( *mProject ).IsSoloNone();
    mToggleButton_Solo->Show(!bSoloNone);
 
 
@@ -306,7 +300,7 @@ MixerTrackCluster::MixerTrackCluster(wxWindow* parent,
       (MUTE_SOLO_HEIGHT + (bSoloNone ? 0 : MUTE_SOLO_HEIGHT) + kDoubleInset);
    ctrlSize.Set(kRightSideStackWidth, nMeterHeight);
 
-   mMeter = NULL;
+   mMeter.Release();
    if (GetWave()) {
       mMeter =
          safenew MeterPanel(GetActiveProject(), // AudacityProject* project,
@@ -366,8 +360,6 @@ void MixerTrackCluster::UpdatePrefs()
 {
    this->SetBackgroundColour( theTheme.Colour( clrMedium ) );
    mStaticText_TrackName->SetForegroundColour(theTheme.Colour(clrTrackPanelText));
-   if (mMeter)
-      mMeter->UpdatePrefs(); // in case meter range has changed
    HandleResize(); // in case prefs "/GUI/Solo" changed
 }
 #endif
@@ -394,7 +386,7 @@ void MixerTrackCluster::HandleResize() // For wxSizeEvents, update gain slider a
    mSlider_Velocity->SetSize(-1, nGainSliderHeight);
 #endif
 
-   bool bSoloNone = mProject->IsSoloNone();
+   bool bSoloNone = ProjectSettings::Get( *mProject ).IsSoloNone();
 
    mToggleButton_Solo->Show(!bSoloNone);
 
@@ -420,9 +412,10 @@ void MixerTrackCluster::HandleSliderGain(const bool bWantPushState /*= false*/)
       GetRight()->SetGain(fValue);
 
    // Update the TrackPanel correspondingly.
-   mProject->GetTrackPanel()->RefreshTrack(mTrack.get());
+   TrackPanel::Get( *mProject ).RefreshTrack(mTrack.get());
    if (bWantPushState)
-      mProject->PushState(_("Moved gain slider"), _("Gain"), UndoPush::CONSOLIDATE );
+      ProjectHistory::Get( *mProject )
+         .PushState(_("Moved gain slider"), _("Gain"), UndoPush::CONSOLIDATE );
 }
 
 #ifdef EXPERIMENTAL_MIDI_OUT
@@ -433,9 +426,11 @@ void MixerTrackCluster::HandleSliderVelocity(const bool bWantPushState /*= false
       GetNote()->SetVelocity(fValue);
 
    // Update the TrackPanel correspondingly.
-   mProject->GetTrackPanel()->RefreshTrack(mTrack.get());
+   TrackPanel::Get( *mProject ).RefreshTrack(mTrack.get());
    if (bWantPushState)
-      mProject->PushState(_("Moved velocity slider"), _("Velocity"), UndoPush::CONSOLIDATE);
+      ProjectHistory::Get( *mProject )
+         .PushState(_("Moved velocity slider"), _("Velocity"),
+            UndoPush::CONSOLIDATE);
 }
 #endif
 
@@ -448,10 +443,12 @@ void MixerTrackCluster::HandleSliderPan(const bool bWantPushState /*= false*/)
       GetRight()->SetPan(fValue);
 
    // Update the TrackPanel correspondingly.
-   mProject->GetTrackPanel()->RefreshTrack(mTrack.get());
+   TrackPanel::Get( *mProject ).RefreshTrack(mTrack.get());
 
    if (bWantPushState)
-      mProject->PushState(_("Moved pan slider"), _("Pan"), UndoPush::CONSOLIDATE );
+      ProjectHistory::Get( *mProject )
+         .PushState(_("Moved pan slider"), _("Pan"),
+            UndoPush::CONSOLIDATE );
 }
 
 void MixerTrackCluster::ResetMeter(const bool bResetClipping)
@@ -639,16 +636,14 @@ void MixerTrackCluster::UpdateMeter(const double t0, const double t1)
    {
       //vvv Need to apply envelope, too? See Mixer::MixSameRate.
       float gain = pTrack->GetChannelGain(0);
-      if (gain < 1.0)
-         for (unsigned int index = 0; index < nFrames; index++)
-            meterFloatsArray[2 * index] *= gain;
+      for (unsigned int index = 0; index < nFrames; index++)
+         meterFloatsArray[2 * index] *= gain;
       if (GetRight())
          gain = GetRight()->GetChannelGain(1);
       else
          gain = pTrack->GetChannelGain(1);
-      if (gain < 1.0)
-         for (unsigned int index = 0; index < nFrames; index++)
-            meterFloatsArray[(2 * index) + 1] *= gain;
+      for (unsigned int index = 0; index < nFrames; index++)
+         meterFloatsArray[(2 * index) + 1] *= gain;
       // Clip to [-1.0, 1.0] range.
       for (unsigned int index = 0; index < 2 * nFrames; index++)
          if (meterFloatsArray[index] < -1.0)
@@ -675,7 +670,7 @@ wxColour MixerTrackCluster::GetTrackColor()
 
 void MixerTrackCluster::HandleSelect(bool bShiftDown, bool bControlDown)
 {
-   SelectActions::DoListSelection(*mProject,
+   SelectUtilities::DoListSelection(*mProject,
       mTrack.get(), bShiftDown, bControlDown, true);
 }
 
@@ -754,30 +749,28 @@ void MixerTrackCluster::OnSlider_Pan(wxCommandEvent& WXUNUSED(event))
 
 void MixerTrackCluster::OnButton_Mute(wxCommandEvent& WXUNUSED(event))
 {
-   TrackActions::DoTrackMute(
+   TrackUtilities::DoTrackMute(
       *mProject, mTrack.get(), mToggleButton_Mute->WasShiftDown());
    mToggleButton_Mute->SetAlternateIdx(mTrack->GetSolo() ? 1 : 0);
 
    // Update the TrackPanel correspondingly.
-   if (mProject->IsSoloSimple())
-   {
-      mProject->RedrawProject();
-   }
+   if (ProjectSettings::Get(*mProject).IsSoloSimple())
+      ProjectWindow::Get( *mProject ).RedrawProject();
    else
       // Update only the changed track.
-      mProject->GetTrackPanel()->RefreshTrack(mTrack.get());
+      TrackPanel::Get( *mProject ).RefreshTrack(mTrack.get());
 }
 
 void MixerTrackCluster::OnButton_Solo(wxCommandEvent& WXUNUSED(event))
 {
-   TrackActions::DoTrackSolo(
+   TrackUtilities::DoTrackSolo(
       *mProject, mTrack.get(), mToggleButton_Solo->WasShiftDown());
    bool bIsSolo = mTrack->GetSolo();
    mToggleButton_Mute->SetAlternateIdx(bIsSolo ? 1 : 0);
 
    // Update the TrackPanel correspondingly.
    // Bug 509: Must repaint all, as many tracks can change with one Solo change.
-   mProject->RedrawProject();
+   ProjectWindow::Get( *mProject ).RedrawProject();
 }
 
 
@@ -839,7 +832,7 @@ void MixerBoardScrolledWindow::OnMouseEvent(wxMouseEvent& event)
       //v Even when I implement MixerBoard::OnMouseEvent and call event.Skip()
       // here, MixerBoard::OnMouseEvent never gets called.
       // So, added mProject to MixerBoardScrolledWindow and just directly do what's needed here.
-      mProject->SelectNone();
+      SelectUtilities::SelectNone( *mProject );
    }
    else
       event.Skip();
@@ -916,30 +909,30 @@ MixerBoard::MixerBoard(AudacityProject* pProject,
       */
 
    mPrevT1 = 0.0;
-   mTracks = mProject->GetTracks();
+   mTracks = &TrackList::Get( *mProject );
 
    // Events from the project don't propagate directly to this other frame, so...
    mProject->Bind(EVT_TRACK_PANEL_TIMER,
       &MixerBoard::OnTimer,
       this);
 
-   mProject->GetTracks()->Bind(EVT_TRACKLIST_SELECTION_CHANGE,
+   mTracks->Bind(EVT_TRACKLIST_SELECTION_CHANGE,
       &MixerBoard::OnTrackChanged,
       this);
 
-   mProject->GetTracks()->Bind(EVT_TRACKLIST_PERMUTED,
+   mTracks->Bind(EVT_TRACKLIST_PERMUTED,
       &MixerBoard::OnTrackSetChanged,
       this);
 
-   mProject->GetTracks()->Bind(EVT_TRACKLIST_ADDITION,
+   mTracks->Bind(EVT_TRACKLIST_ADDITION,
       &MixerBoard::OnTrackSetChanged,
       this);
 
-   mProject->GetTracks()->Bind(EVT_TRACKLIST_DELETION,
+   mTracks->Bind(EVT_TRACKLIST_DELETION,
       &MixerBoard::OnTrackSetChanged,
       this);
 
-   mProject->GetTracks()->Bind(EVT_TRACKLIST_TRACK_DATA_CHANGE,
+   mTracks->Bind(EVT_TRACKLIST_TRACK_DATA_CHANGE,
       &MixerBoard::OnTrackChanged,
       this);
 
@@ -1353,10 +1346,14 @@ void MixerBoard::OnTimer(wxCommandEvent &event)
    // Vaughan, 2010-01-30:
    //    Since all we're doing here is updating the meters, I moved it to
    //    audacityAudioCallback where it calls gAudioIO->mOutputMeter->UpdateDisplay().
-   if (mProject->IsAudioActive())
+   if (ProjectAudioIO::Get( *mProject ).IsAudioActive())
    {
-      UpdateMeters(gAudioIO->GetStreamTime(),
-                   (mProject->mLastPlayMode == PlayMode::loopedPlay));
+      auto gAudioIO = AudioIOBase::Get();
+      UpdateMeters(
+         gAudioIO->GetStreamTime(),
+         (ProjectAudioManager::Get( *mProject ).GetLastPlayMode()
+            == PlayMode::loopedPlay)
+      );
    }
 
    // Let other listeners get the notification
@@ -1406,7 +1403,7 @@ const wxSize kDefaultSize =
    wxSize(MIXER_BOARD_MIN_WIDTH, MIXER_BOARD_MIN_HEIGHT);
 
 MixerBoardFrame::MixerBoardFrame(AudacityProject* parent)
-: wxFrame(parent, -1,
+: wxFrame( &GetProjectFrame( *parent ), -1,
           wxString::Format(_("Audacity Mixer Board%s"),
                            ((parent->GetProjectName().empty()) ?
                               wxT("") :
@@ -1466,7 +1463,8 @@ void MixerBoardFrame::OnSize(wxSizeEvent & WXUNUSED(event))
 void MixerBoardFrame::OnKeyEvent(wxKeyEvent & event)
 {
    AudacityProject *project = GetActiveProject();
-   project->GetCommandManager()->FilterKeyEvent(project, event, true);
+   auto &commandManager = CommandManager::Get( *project );
+   commandManager.FilterKeyEvent(project, event, true);
 }
 
 void MixerBoardFrame::Recreate( AudacityProject *pProject )

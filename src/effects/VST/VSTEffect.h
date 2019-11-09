@@ -17,12 +17,13 @@
 #include "audacity/PluginInterface.h"
 
 #include "../../SampleFormat.h"
-#include "../../widgets/NumericTextCtrl.h"
 #include "../../xml/XMLTagHandler.h"
 
 class wxSizerItem;
 class wxSlider;
 class wxStaticText;
+
+class NumericTextCtrl;
 
 class VSTControl;
 #include "VSTControl.h"
@@ -131,6 +132,7 @@ class VSTEffect final : public wxEvtHandler,
 
    void SetSampleRate(double rate) override;
    size_t SetBlockSize(size_t maxBlockSize) override;
+   size_t GetBlockSize() const override;
 
    bool IsReady() override;
    bool ProcessInitialize(sampleCount totalLen, ChannelNames chanMap = NULL) override;
@@ -416,7 +418,7 @@ public:
    bool Initialize() override;
    void Terminate() override;
 
-   FileExtensions GetFileExtensions() override;
+   const FileExtensions &GetFileExtensions() override;
    FilePath InstallPath() override;
 
    bool AutoRegisterPlugins(PluginManagerInterface & pm) override;

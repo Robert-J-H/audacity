@@ -24,8 +24,6 @@
 
 #include "../ShuttleGui.h"
 
-#include "../Internat.h"
-
 ////////////////////////////////////////////////////////////////////////////////
 
 WarningsPrefs::WarningsPrefs(wxWindow * parent, wxWindowID winid)
@@ -89,9 +87,11 @@ void WarningsPrefs::PopulateOrExchange(ShuttleGui & S)
       S.TieCheckBox(_("Mixing down on export (&Custom FFmpeg or external program)"),
                     wxT("/Warnings/MixUnknownChannels"),
                     true);
+#ifdef EXPERIMENTAL_OD_DATA
       S.TieCheckBox(_("&Importing uncompressed audio files"),
                     wxT("/Warnings/CopyOrEditUncompressedDataAsk"),
                     true);
+#endif
    }
    S.EndStatic();
    S.EndScroller();
@@ -106,8 +106,9 @@ bool WarningsPrefs::Commit()
    return true;
 }
 
-PrefsPanel *WarningsPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+PrefsPanel::Factory
+WarningsPrefsFactory = [](wxWindow *parent, wxWindowID winid)
 {
    wxASSERT(parent); // to justify safenew
    return safenew WarningsPrefs(parent, winid);
-}
+};

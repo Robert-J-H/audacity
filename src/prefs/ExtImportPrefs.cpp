@@ -23,7 +23,8 @@
 
 #include "../Prefs.h"
 #include "../ShuttleGui.h"
-#include "../widgets/ErrorDialog.h"
+#include "../import/Import.h"
+#include "../widgets/AudacityMessageBox.h"
 #include "../widgets/Grid.h"
 
 #define EXTIMPORT_MIME_SUPPORT 0
@@ -821,8 +822,9 @@ void ExtImportPrefsDropTarget::OnLeave()
 {
 }
 
-PrefsPanel *ExtImportPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+PrefsPanel::Factory
+ExtImportPrefsFactory = [](wxWindow *parent, wxWindowID winid)
 {
    wxASSERT(parent); // to justify safenew
    return safenew ExtImportPrefs(parent, winid);
-}
+};

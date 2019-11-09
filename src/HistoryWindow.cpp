@@ -24,6 +24,7 @@ undo memory so as to free up space.
 #include <wx/button.h>
 #include <wx/dialog.h>
 #include <wx/event.h>
+#include <wx/frame.h>
 #include <wx/imaglist.h>
 #include <wx/intl.h>
 #include <wx/listctrl.h>
@@ -33,13 +34,13 @@ undo memory so as to free up space.
 #include <wx/textctrl.h>
 
 #include "AudioIO.h"
-#include "AudacityApp.h"
+#include "Clipboard.h"
 #include "../images/Arrow.xpm"
 #include "../images/Empty9x16.xpm"
 #include "UndoManager.h"
 #include "Project.h"
+#include "ProjectHistory.h"
 #include "ShuttleGui.h"
-#include "Track.h"
 
 enum {
    ID_AVAIL = 1000,
@@ -58,7 +59,7 @@ BEGIN_EVENT_TABLE(HistoryWindow, wxDialogWrapper)
 END_EVENT_TABLE()
 
 HistoryWindow::HistoryWindow(AudacityProject *parent, UndoManager *manager):
-   wxDialogWrapper((wxWindow*)parent, wxID_ANY, wxString(_("History")),
+   wxDialogWrapper(FindProjectFrame( parent ), wxID_ANY, wxString(_("History")),
       wxDefaultPosition, wxDefaultSize,
       wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER )
 {
@@ -95,20 +96,19 @@ HistoryWindow::HistoryWindow(AudacityProject *parent, UndoManager *manager):
 
          S.StartMultiColumn(3, wxCENTRE);
          {
-            // FIXME: Textbox labels have inconsistent capitalization
             mTotal = S.Id(ID_TOTAL).AddTextBox(_("&Total space used"), wxT("0"), 10);
             mTotal->Bind(wxEVT_KEY_DOWN,
                             // ignore it
                             [](wxEvent&){});
             S.AddVariableText( {} )->Hide();
 
-            mAvail = S.Id(ID_AVAIL).AddTextBox(_("&Undo Levels Available"), wxT("0"), 10);
+            mAvail = S.Id(ID_AVAIL).AddTextBox(_("&Undo levels available"), wxT("0"), 10);
             mAvail->Bind(wxEVT_KEY_DOWN,
                             // ignore it
                             [](wxEvent&){});
             S.AddVariableText( {} )->Hide();
 
-            S.AddPrompt(_("&Levels To Discard"));
+            S.AddPrompt(_("&Levels to discard"));
             mLevels = safenew wxSpinCtrl(S.GetParent(),
                                      ID_LEVELS,
                                      wxT("1"),
@@ -142,7 +142,6 @@ HistoryWindow::HistoryWindow(AudacityProject *parent, UndoManager *manager):
    S.EndVerticalLay();
    // ----------------------- End of main section --------------
 
-   DoUpdate();
    mList->SetMinSize(mList->GetSize());
    Fit();
    SetMinSize(GetSize());
@@ -157,10 +156,12 @@ HistoryWindow::HistoryWindow(AudacityProject *parent, UndoManager *manager):
                      &HistoryWindow::OnAudioIO,
                      this);
 
-   wxTheApp->Bind(EVT_CLIPBOARD_CHANGE, &HistoryWindow::UpdateDisplay, this);
-   manager->Bind(EVT_UNDO_PUSHED, &HistoryWindow::UpdateDisplay, this);
-   manager->Bind(EVT_UNDO_MODIFIED, &HistoryWindow::UpdateDisplay, this);
-   manager->Bind(EVT_UNDO_RESET, &HistoryWindow::UpdateDisplay, this);
+   Clipboard::Get().Bind(
+      EVT_CLIPBOARD_CHANGE, &HistoryWindow::UpdateDisplay, this);
+   parent->Bind(EVT_UNDO_PUSHED, &HistoryWindow::UpdateDisplay, this);
+   parent->Bind(EVT_UNDO_MODIFIED, &HistoryWindow::UpdateDisplay, this);
+   parent->Bind(EVT_UNDO_OR_REDO, &HistoryWindow::UpdateDisplay, this);
+   parent->Bind(EVT_UNDO_RESET, &HistoryWindow::UpdateDisplay, this);
 }
 
 void HistoryWindow::OnAudioIO(wxCommandEvent& evt)
@@ -180,6 +181,13 @@ void HistoryWindow::UpdateDisplay(wxEvent& e)
    e.Skip();
    if(IsShown())
       DoUpdate();
+}
+
+bool HistoryWindow::Show( bool show )
+{
+   if ( show && !IsShown())
+      DoUpdate();
+   return wxDialogWrapper::Show( show );
 }
 
 void HistoryWindow::DoUpdate()
@@ -248,7 +256,7 @@ void HistoryWindow::OnDiscard(wxCommandEvent & WXUNUSED(event))
 
    mSelected -= i;
    mManager->RemoveStates(i);
-   mProject->SetStateTo(mSelected + 1);
+   ProjectHistory::Get( *mProject ).SetStateTo(mSelected + 1);
 
    while(--i >= 0)
       mList->DeleteItem(i);
@@ -258,8 +266,7 @@ void HistoryWindow::OnDiscard(wxCommandEvent & WXUNUSED(event))
 
 void HistoryWindow::OnDiscardClipboard(wxCommandEvent & WXUNUSED(event))
 {
-   AudacityProject::ClearClipboard();
-   DoUpdate();
+   Clipboard::Get().Clear();
 }
 
 void HistoryWindow::OnItemSelected(wxListEvent &event)
@@ -287,7 +294,7 @@ void HistoryWindow::OnItemSelected(wxListEvent &event)
    // entry.  Doing so can cause unnecessary delays upon initial load or while
    // clicking the same entry over and over.
    if (selected != mSelected) {
-      mProject->SetStateTo(selected + 1);
+      ProjectHistory::Get( *mProject ).SetStateTo(selected + 1);
    }
    mSelected = selected;
 

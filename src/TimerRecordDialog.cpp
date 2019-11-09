@@ -44,15 +44,18 @@
 
 #include "DirManager.h"
 #include "ShuttleGui.h"
-#include "Menus.h"
+#include "MissingAliasFileDialog.h"
 #include "Project.h"
-#include "Internat.h"
+#include "ProjectAudioManager.h"
+#include "ProjectFileManager.h"
+#include "ProjectManager.h"
 #include "Prefs.h"
+#include "Track.h"
 #include "widgets/NumericTextCtrl.h"
 #include "widgets/HelpSystem.h"
+#include "widgets/AudacityMessageBox.h"
 #include "widgets/ErrorDialog.h"
 #include "widgets/ProgressDialog.h"
-#include "commands/CommandContext.h"
 
 #if wxUSE_ACCESSIBILITY
 #include "widgets/WindowAccessible.h"
@@ -416,9 +419,10 @@ void TimerRecordDialog::OnOK(wxCommandEvent& WXUNUSED(event))
    // as its possible that they plan to free up some
    // space before the recording begins
    AudacityProject* pProject = GetActiveProject();
+   auto &projectManager = ProjectManager::Get( *pProject );
 
    // How many minutes do we have left on the disc?
-   int iMinsLeft = pProject->GetEstimatedRecordingMinsLeftOnDisk();
+   int iMinsLeft = projectManager.GetEstimatedRecordingMinsLeftOnDisk();
 
    // How many minutes will this recording require?
    int iMinsRecording = m_TimeSpan_Duration.GetMinutes();
@@ -428,9 +432,9 @@ void TimerRecordDialog::OnOK(wxCommandEvent& WXUNUSED(event))
 
       // Format the strings
       wxString sRemainingTime;
-      sRemainingTime = pProject->GetHoursMinsString(iMinsLeft);
+      sRemainingTime = projectManager.GetHoursMinsString(iMinsLeft);
       wxString sPlannedTime;
-      sPlannedTime = pProject->GetHoursMinsString(iMinsRecording);
+      sPlannedTime = projectManager.GetHoursMinsString(iMinsRecording);
 
       // Create the message string
       wxString sMessage;
@@ -539,7 +543,7 @@ int TimerRecordDialog::RunWaitDialog()
       return POST_TIMER_RECORD_CANCEL_WAIT;
    } else {
       // Record for specified time.
-      TransportActions::DoRecord(*pProject);
+      ProjectAudioManager::Get( *pProject ).OnRecord(false);
       bool bIsRecording = true;
 
       wxString sPostAction = m_pTimerAfterCompleteChoiceCtrl->GetString(m_pTimerAfterCompleteChoiceCtrl->GetSelection());
@@ -587,7 +591,7 @@ int TimerRecordDialog::RunWaitDialog()
 
    // Must do this AFTER the timer project dialog has been deleted to ensure the application
    // responds to the AUDIOIO events...see not about bug #334 in the ProgressDialog constructor.
-   TransportActions::DoStop(*pProject);
+   ProjectAudioManager::Get( *pProject ).Stop();
 
    // Let the caller handle cancellation or failure from recording progress.
    if (updateResult == ProgressResult::Cancelled || updateResult == ProgressResult::Failed)
@@ -618,18 +622,23 @@ int TimerRecordDialog::ExecutePostRecordActions(bool bWasStopped) {
    // Do Automatic Save?
    if (m_bAutoSaveEnabled) {
 
+      auto &projectFileManager = ProjectFileManager::Get( *pProject );
       // MY: If this project has already been saved then simply execute a Save here
       if (m_bProjectAlreadySaved) {
-         bSaveOK = pProject->Save();
+         bSaveOK = projectFileManager.Save();
       } else {
-         bSaveOK = pProject->SaveFromTimerRecording(m_fnAutoSaveFile);
+         bSaveOK = projectFileManager.SaveFromTimerRecording(m_fnAutoSaveFile);
       }
    }
 
    // Do Automatic Export?
    if (m_bAutoExportEnabled) {
-      bExportOK = pProject->ExportFromTimerRecording(m_fnAutoExportFile, m_iAutoExportFormat,
-                                                     m_iAutoExportSubFormat, m_iAutoExportFilterIndex);
+      Exporter e;
+      MissingAliasFilesDialog::SetShouldShow(true);
+      bExportOK = e.ProcessFromTimerRecording(
+         pProject, false, 0.0, TrackList::Get( *pProject ).GetEndTime(),
+            m_fnAutoExportFile, m_iAutoExportFormat,
+            m_iAutoExportSubFormat, m_iAutoExportFilterIndex);
    }
 
    // Check if we need to override the post recording action

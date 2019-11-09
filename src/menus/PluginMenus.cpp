@@ -1,31 +1,60 @@
 #include "../Audacity.h"
 #include "../Experimental.h"
 
-#include "../AudacityApp.h"
 #include "../AudioIO.h"
 #include "../BatchProcessDialog.h"
 #include "../Benchmark.h"
+#include "../CommonCommandFlags.h"
 #include "../FreqWindow.h"
 #include "../Menus.h"
 #include "../PluginManager.h"
 #include "../Prefs.h"
 #include "../Project.h"
+#include "../ProjectWindow.h"
 #include "../Screenshot.h"
-#include "../TrackPanel.h"
-#include "../WaveTrack.h"
 #include "../commands/CommandContext.h"
 #include "../commands/CommandManager.h"
 #include "../commands/ScreenshotCommand.h"
 #include "../effects/Contrast.h"
 #include "../effects/EffectManager.h"
+#include "../effects/RealtimeEffectManager.h"
 
 // private helper classes and functions
 namespace {
 
-void DoManagePluginsMenu
-(AudacityProject &project, EffectType type)
+AudacityProject::AttachedWindows::RegisteredFactory sContrastDialogKey{
+   []( AudacityProject &parent ) -> wxWeakRef< wxWindow > {
+      auto &window = ProjectWindow::Get( parent );
+      return safenew ContrastDialog(
+         &window, -1, _("Contrast Analysis (WCAG 2 compliance)"),
+         wxPoint{ 150, 150 }
+      );
+   }
+};
+
+AudacityProject::AttachedWindows::RegisteredFactory sFrequencyWindowKey{
+   []( AudacityProject &parent ) -> wxWeakRef< wxWindow > {
+      auto &window = ProjectWindow::Get( parent );
+      return safenew FreqWindow(
+         &window, -1, _("Frequency Analysis"),
+         wxPoint{ 150, 150 }
+      );
+   }
+};
+
+AudacityProject::AttachedWindows::RegisteredFactory sMacrosWindowKey{
+   []( AudacityProject &parent ) -> wxWeakRef< wxWindow > {
+      auto &window = ProjectWindow::Get( parent );
+      return safenew MacrosWindow(
+         &window, true
+      );
+   }
+};
+
+void DoManagePluginsMenu(AudacityProject &project, EffectType type)
 {
-   if (PluginManager::Get().ShowManager(&project, type))
+   auto &window = GetProjectFrame( project );
+   if (PluginManager::Get().ShowManager(&window, type))
       MenuCreator::RebuildAllMenuBars();
 }
 
@@ -174,6 +203,15 @@ void AddEffectMenuItems(
       grouped = true;
    }
 
+   // Some weird special case stuff just for Noise Reduction so that there is
+   // more informative help
+   const auto getBatchFlags = [&]( const PluginDescriptor *plug ){
+      if ( plug->GetSymbol().Msgid() == wxT( "Noise Reduction" ) )
+         return
+            ( batchflags | NoiseReductionTimeSelectedFlag ) & ~TimeSelectedFlag;
+      return batchflags;
+   };
+
    std::vector<bool> vHasDialog;
    wxArrayString groupNames;
    PluginIDs groupPlugs;
@@ -237,7 +275,7 @@ void AddEffectMenuItems(
          vHasDialog.push_back(hasDialog);
          groupPlugs.push_back(plug->GetID());
          groupFlags.push_back(
-            plug->IsEffectRealtime() ? realflags : batchflags);
+            plug->IsEffectRealtime() ? realflags : getBatchFlags( plug ) );
       }
 
       if (groupNames.size() > 0)
@@ -291,7 +329,8 @@ void AddEffectMenuItems(
          groupNames.push_back(group + name);
          vHasDialog.push_back(hasDialog);
          groupPlugs.push_back(plug->GetID());
-         groupFlags.push_back(plug->IsEffectRealtime() ? realflags : batchflags);
+         groupFlags.push_back(
+            plug->IsEffectRealtime() ? realflags : getBatchFlags( plug ) );
       }
 
       if (groupNames.size() > 0)
@@ -319,9 +358,12 @@ MenuTable::BaseItemPtrs PopulateEffectsMenu(
    std::vector<const PluginDescriptor*> defplugs;
    std::vector<const PluginDescriptor*> optplugs;
 
+   EffectManager & em = EffectManager::Get();
    const PluginDescriptor *plug = pm.GetFirstPluginForEffectType(type);
    while (plug)
    {
+      if( plug->IsInstantiated() && em.IsHidden(plug->GetID()) )
+         continue;
       if ( !plug->IsEnabled() ){
          ;// don't add to menus!
       }
@@ -378,175 +420,6 @@ MenuTable::BaseItemPtrs PopulateMacrosMenu( CommandFlag flags  );
 
 namespace PluginActions {
 
-// exported helper functions
-
-/// DoEffect() takes a PluginID and has the EffectManager execute the associated
-/// effect.
-///
-/// At the moment flags are used only to indicate whether to prompt for
-//  parameters, whether to save the state to history and whether to allow
-/// 'Repeat Last Effect'.
-bool DoEffect(
-   const PluginID & ID, const CommandContext &context, unsigned flags )
-{
-   AudacityProject &project = context.project;
-   auto tracks = project.GetTracks();
-   auto trackPanel = project.GetTrackPanel();
-   auto trackFactory = project.GetTrackFactory();
-   auto rate = project.GetRate();
-   auto &selectedRegion = project.GetViewInfo().selectedRegion;
-   auto commandManager = project.GetCommandManager();
-
-   const PluginDescriptor *plug = PluginManager::Get().GetPlugin(ID);
-   if (!plug)
-      return false;
-
-   EffectType type = plug->GetEffectType();
-
-   // Make sure there's no activity since the effect is about to be applied
-   // to the project's tracks.  Mainly for Apply during RTP, but also used
-   // for batch commands
-   if (flags & kConfigured)
-   {
-      TransportActions::DoStop(project);
-      project.SelectAllIfNone();
-   }
-
-   wxGetApp().SetMissingAliasedFileWarningShouldShow(true);
-
-   auto nTracksOriginally = project.GetTrackCount();
-   wxWindow *focus = wxWindow::FindFocus();
-   wxWindow *parent = nullptr;
-   if (focus != nullptr) {
-      parent = focus->GetParent();
-   }
-
-   bool success = false;
-   auto cleanup = finally( [&] {
-
-      if (!success) {
-         // For now, we're limiting realtime preview to a single effect, so
-         // make sure the menus reflect that fact that one may have just been
-         // opened.
-         GetMenuManager(project).UpdateMenus(project, false);
-      }
-
-   } );
-
-   int count = 0;
-   bool clean = true;
-   for (auto t : tracks->Selected< const WaveTrack >()) {
-      if (t->GetEndTime() != 0.0)
-         clean = false;
-      count++;
-   }
-
-   EffectManager & em = EffectManager::Get();
-
-   success = em.DoEffect(ID, &project, rate,
-      tracks, trackFactory, &selectedRegion,
-      (flags & kConfigured) == 0);
-
-   if (!success)
-      return false;
-
-   if (em.GetSkipStateFlag())
-      flags = flags | kSkipState;
-
-   if (!(flags & kSkipState))
-   {
-      wxString shortDesc = em.GetCommandName(ID);
-      wxString longDesc = em.GetCommandDescription(ID);
-      project.PushState(longDesc, shortDesc);
-   }
-
-   if (!(flags & kDontRepeatLast))
-   {
-      // Only remember a successful effect, don't remember insert,
-      // or analyze effects.
-      if (type == EffectTypeProcess) {
-         wxString shortDesc = em.GetCommandName(ID);
-         GetMenuManager(project).mLastEffect = ID;
-         wxString lastEffectDesc;
-         /* i18n-hint: %s will be the name of the effect which will be
-          * repeated if this menu item is chosen */
-         lastEffectDesc.Printf(_("Repeat %s"), shortDesc);
-         commandManager->Modify(wxT("RepeatLastEffect"), lastEffectDesc);
-      }
-   }
-
-   //STM:
-   //The following automatically re-zooms after sound was generated.
-   // IMO, it was disorienting, removing to try out without re-fitting
-   //mchinen:12/14/08 reapplying for generate effects
-   if (type == EffectTypeGenerate)
-   {
-      if (count == 0 || (clean && selectedRegion.t0() == 0.0))
-         ViewActions::DoZoomFit(project);
-         //  trackPanel->Refresh(false);
-   }
-   project.RedrawProject();
-   if (focus != nullptr && focus->GetParent()==parent) {
-      focus->SetFocus();
-   }
-
-   // A fix for Bug 63
-   // New tracks added?  Scroll them into view so that user sees them.
-   // Don't care what track type.  An analyser might just have added a
-   // Label track and we want to see it.
-   if( project.GetTrackCount() > nTracksOriginally ){
-      // 0.0 is min scroll position, 1.0 is max scroll position.
-      trackPanel->VerticalScroll( 1.0 );
-   }  else {
-      trackPanel->EnsureVisible(trackPanel->GetFirstSelectedTrack());
-      trackPanel->Refresh(false);
-   }
-
-   return true;
-}
-
-/// DoAudacityCommand() takes a PluginID and executes the assocated command.
-///
-/// At the moment flags are used only to indicate whether to prompt for
-/// parameters
-bool DoAudacityCommand(
-   const PluginID & ID, const CommandContext & context, unsigned flags )
-{
-   auto &project = context.project;
-   const PluginDescriptor *plug = PluginManager::Get().GetPlugin(ID);
-   if (!plug)
-      return false;
-
-   if (flags & kConfigured)
-   {
-      TransportActions::DoStop(project);
-//    SelectAllIfNone();
-   }
-
-   EffectManager & em = EffectManager::Get();
-   bool success = em.DoAudacityCommand(ID, 
-      context,
-      &project,
-      (flags & kConfigured) == 0);
-
-   if (!success)
-      return false;
-
-/*
-   if (em.GetSkipStateFlag())
-      flags = flags | OnEffectFlags::kSkipState;
-
-   if (!(flags & OnEffectFlags::kSkipState))
-   {
-      wxString shortDesc = em.GetCommandName(ID);
-      wxString longDesc = em.GetCommandDescription(ID);
-      PushState(longDesc, shortDesc);
-   }
-*/
-   project.RedrawProject();
-   return true;
-}
-
 // Menu handler functions
 
 struct Handler : CommandHandlerObject {
@@ -559,7 +432,8 @@ void OnManageGenerators(const CommandContext &context)
 
 void OnEffect(const CommandContext &context)
 {
-   DoEffect(context.parameter, context, 0);
+   // using GET to interpret parameter as a PluginID
+   EffectManager::DoEffect(context.parameter.GET(), context, 0);
 }
 
 void OnManageEffects(const CommandContext &context)
@@ -570,10 +444,11 @@ void OnManageEffects(const CommandContext &context)
 
 void OnRepeatLastEffect(const CommandContext &context)
 {
-   auto lastEffect = GetMenuManager(context.project).mLastEffect;
+   auto lastEffect = MenuManager::Get(context.project).mLastEffect;
    if (!lastEffect.empty())
    {
-      DoEffect( lastEffect, context, kConfigured );
+      EffectManager::DoEffect(
+         lastEffect, context, EffectManager::kConfigured );
    }
 }
 
@@ -586,8 +461,8 @@ void OnManageAnalyzers(const CommandContext &context)
 void OnContrast(const CommandContext &context)
 {
    auto &project = context.project;
-   auto contrastDialog = project.GetContrastDialog(true);
-
+   auto contrastDialog =
+      &project.AttachedWindows::Get< ContrastDialog >( sContrastDialogKey );
 
    contrastDialog->CentreOnParent();
    if( ScreenshotCommand::MayCapture( contrastDialog ) )
@@ -598,8 +473,8 @@ void OnContrast(const CommandContext &context)
 void OnPlotSpectrum(const CommandContext &context)
 {
    auto &project = context.project;
-   auto freqWindow = project.GetFreqWindow(true);
-
+   auto freqWindow =
+      &project.AttachedWindows::Get< FreqWindow >( sFrequencyWindowKey );
 
    if( ScreenshotCommand::MayCapture( freqWindow ) )
       return;
@@ -617,13 +492,25 @@ void OnManageTools(const CommandContext &context )
 void OnManageMacros(const CommandContext &context )
 {
    auto &project = context.project;
-   project.GetMacrosWindow( true, true );
+   auto macrosWindow =
+      &project.AttachedWindows::Get< MacrosWindow >( sMacrosWindowKey );
+   if (macrosWindow) {
+      macrosWindow->Show();
+      macrosWindow->Raise();
+      macrosWindow->UpdateDisplay( true );
+   }
 }
 
 void OnApplyMacrosPalette(const CommandContext &context )
 {
    auto &project = context.project;
-   project.GetMacrosWindow( false, true );
+   auto macrosWindow =
+      &project.AttachedWindows::Get< MacrosWindow >( sMacrosWindowKey );
+   if (macrosWindow) {
+      macrosWindow->Show();
+      macrosWindow->Raise();
+      macrosWindow->UpdateDisplay( false );
+   }
 }
 
 void OnScreenshot(const CommandContext &WXUNUSED(context) )
@@ -634,35 +521,39 @@ void OnScreenshot(const CommandContext &WXUNUSED(context) )
 void OnBenchmark(const CommandContext &context)
 {
    auto &project = context.project;
-   ::RunBenchmark(&project);
+   auto &window = GetProjectFrame( project );
+   ::RunBenchmark(&window);
 }
 
 void OnSimulateRecordingErrors(const CommandContext &context)
 {
    auto &project = context.project;
-   auto commandManager = project.GetCommandManager();
+   auto &commandManager = CommandManager::Get( project );
 
+   auto gAudioIO = AudioIO::Get();
    bool &setting = gAudioIO->mSimulateRecordingErrors;
-   commandManager->Check(wxT("SimulateRecordingErrors"), !setting);
+   commandManager.Check(wxT("SimulateRecordingErrors"), !setting);
    setting = !setting;
 }
 
 void OnDetectUpstreamDropouts(const CommandContext &context)
 {
    auto &project = context.project;
-   auto commandManager = project.GetCommandManager();
+   auto &commandManager = CommandManager::Get( project );
 
+   auto gAudioIO = AudioIO::Get();
    bool &setting = gAudioIO->mDetectUpstreamDropouts;
-   commandManager->Check(wxT("DetectUpstreamDropouts"), !setting);
+   commandManager.Check(wxT("DetectUpstreamDropouts"), !setting);
    setting = !setting;
 }
 
 void OnApplyMacroDirectly(const CommandContext &context )
 {
    auto &project = context.project;
+   auto &window = ProjectWindow::Get( project );
 
    //wxLogDebug( "Macro was: %s", context.parameter);
-   ApplyMacroDialog dlg( &project );
+   ApplyMacroDialog dlg( &window );
    const auto &Name = context.parameter;
 
 // We used numbers previously, but macros could get renumbered, making
@@ -680,10 +571,12 @@ void OnApplyMacroDirectly(const CommandContext &context )
 
 void OnAudacityCommand(const CommandContext & ctx)
 {
-   wxLogDebug( "Command was: %s", ctx.parameter);
+   // using GET in a log message for devs' eyes only
+   wxLogDebug( "Command was: %s", ctx.parameter.GET());
    // Not configured, so prompt user.
-   DoAudacityCommand(EffectManager::Get().GetEffectByIdentifier(ctx.parameter),
-      ctx, kNone);
+   MacroCommands::DoAudacityCommand(
+      EffectManager::Get().GetEffectByIdentifier(ctx.parameter),
+      ctx, EffectManager::kNone);
 }
 
 }; // struct Handler
@@ -866,13 +759,20 @@ MenuTable::BaseItemPtr GenerateMenu( AudacityProject & )
    );
 }
 
+const ReservedCommandFlag
+   IsRealtimeNotActiveFlag{
+      [](const AudacityProject &){
+         return !RealtimeEffectManager::Get().RealtimeIsActive();
+      }
+   };  //lll
+
 MenuTable::BaseItemPtr EffectMenu( AudacityProject &project )
 {
    using namespace MenuTable;
    // All of this is a bit hacky until we can get more things connected into
    // the plugin manager...sorry! :-(
 
-   const auto &lastEffect = GetMenuManager(project).mLastEffect;
+   const auto &lastEffect = MenuManager::Get(project).mLastEffect;
    wxString buildMenuLabel;
    if (!lastEffect.empty()) {
       buildMenuLabel.Printf(_("Repeat %s"),
@@ -936,6 +836,7 @@ MenuTable::BaseItemPtr ToolsMenu( AudacityProject & )
 {
    using namespace MenuTable;
    using Options = CommandManager::Options;
+   auto gAudioIO = AudioIO::Get();
 
    return Menu( _("T&ools"),
 

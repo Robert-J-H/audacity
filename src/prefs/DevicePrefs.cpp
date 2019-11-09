@@ -25,6 +25,8 @@ other settings.
 #include "../Audacity.h"
 #include "DevicePrefs.h"
 
+#include "RecordingPrefs.h"
+
 #include <wx/defs.h>
 
 #include <wx/choice.h>
@@ -34,8 +36,6 @@ other settings.
 
 #include "portaudio.h"
 
-#include "../AudioIO.h"
-#include "../Internat.h"
 #include "../Prefs.h"
 #include "../ShuttleGui.h"
 #include "../DeviceManager.h"
@@ -420,8 +420,10 @@ bool DevicePrefs::Commit()
    return true;
 }
 
-PrefsPanel *DevicePrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
+PrefsPanel::Factory
+DevicePrefsFactory = [](wxWindow *parent, wxWindowID winid)
+
 {
    wxASSERT(parent); // to justify safenew
    return safenew DevicePrefs(parent, winid);
-}
+};

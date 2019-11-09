@@ -65,6 +65,7 @@ and in the spectrogram spectral selection.
 #include <wx/stattext.h>
 #include <wx/statusbr.h>
 
+#include <wx/textctrl.h>
 #include <wx/textfile.h>
 
 #include <math.h>
@@ -72,22 +73,20 @@ and in the spectrogram spectral selection.
 #include "ShuttleGui.h"
 #include "AColor.h"
 #include "FFT.h"
-#include "Internat.h"
 #include "PitchName.h"
 #include "prefs/GUISettings.h"
 #include "Prefs.h"
 #include "Project.h"
 #include "WaveClip.h"
-#include "Theme.h"
+#include "ViewInfo.h"
 #include "AllThemeResources.h"
 
 #include "FileNames.h"
 
 #include "WaveTrack.h"
 
-#include "./widgets/LinkingHtmlWindow.h"
 #include "./widgets/HelpSystem.h"
-#include "widgets/ErrorDialog.h"
+#include "widgets/AudacityMessageBox.h"
 #include "widgets/Ruler.h"
 
 #if wxUSE_ACCESSIBILITY
@@ -584,11 +583,12 @@ void FreqWindow::GetAudio()
 
    int selcount = 0;
    bool warning = false;
-   for (auto track : p->GetTracks()->Selected< const WaveTrack >()) {
+   for (auto track : TrackList::Get( *p ).Selected< const WaveTrack >()) {
+      auto &selectedRegion = ViewInfo::Get( *p ).selectedRegion;
       if (selcount==0) {
          mRate = track->GetRate();
-         auto start = track->TimeToLongSamples(p->mViewInfo.selectedRegion.t0());
-         auto end = track->TimeToLongSamples(p->mViewInfo.selectedRegion.t1());
+         auto start = track->TimeToLongSamples(selectedRegion.t0());
+         auto end = track->TimeToLongSamples(selectedRegion.t1());
          auto dataLen = end - start;
          if (dataLen > 10485760) {
             warning = true;
@@ -609,7 +609,7 @@ void FreqWindow::GetAudio()
             mDataLen = 0;
             return;
          }
-         auto start = track->TimeToLongSamples(p->mViewInfo.selectedRegion.t0());
+         auto start = track->TimeToLongSamples(selectedRegion.t0());
          Floats buffer2{ mDataLen };
          // Again, stop exceptions
          track->Get((samplePtr)buffer2.get(), floatSample, start, mDataLen,
@@ -1053,8 +1053,13 @@ void FreqWindow::OnExport(wxCommandEvent & WXUNUSED(event))
    wxString fName = _("spectrum.txt");
 
    fName = FileNames::SelectFile(FileNames::Operation::Export,
-      _("Export Spectral Data As:"),
-      wxEmptyString, fName, wxT("txt"), wxT("*.txt"), wxFD_SAVE | wxRESIZE_BORDER, this);
+                                 _("Export Spectral Data As:"),
+                                 wxEmptyString,
+                                 fName,
+                                 wxT("txt"),
+                                 _("Text files (*.txt)|*.txt|All files|*"),
+                                 wxFD_SAVE | wxRESIZE_BORDER,
+                                 this);
 
    if (fName.empty())
       return;

@@ -41,9 +41,11 @@ of the BlockFile system.
 #include "WaveTrack.h"
 #include "Sequence.h"
 #include "Prefs.h"
+#include "ViewInfo.h"
 
 #include "FileNames.h"
-#include "widgets/ErrorDialog.h"
+#include "widgets/AudacityMessageBox.h"
+#include "widgets/wxPanelWrapper.h"
 
 class BenchmarkDialog final : public wxDialogWrapper
 {
@@ -93,7 +95,8 @@ _("This will close all project windows (without saving)\nand open the Audacity B
    if (action != wxYES)
       return;
 
-   CloseAllProjects();
+   for ( auto pProject : AllProjects{} )
+      GetProjectFrame( *pProject ).Close();
    */
 
    BenchmarkDialog dlog(parent);
@@ -359,7 +362,7 @@ void BenchmarkDialog::OnRun( wxCommandEvent & WXUNUSED(event))
    HoldPrint(true);
 
    ZoomInfo zoomInfo(0.0, ZoomInfo::GetDefaultZoom());
-   auto dd = std::make_shared<DirManager>();
+   auto dd = DirManager::Create();
    const auto t = TrackFactory{ dd, &zoomInfo }.NewWaveTrack(int16Sample);
 
    t->SetRate(1);

@@ -15,7 +15,6 @@
 
 #include <wx/filename.h>
 
-#include "../EffectManager.h"
 #include "VampEffect.h"
 
 #include <iostream>
@@ -112,9 +111,10 @@ void VampEffectsModule::Terminate()
    return;
 }
 
-FileExtensions VampEffectsModule::GetFileExtensions()
+const FileExtensions &VampEffectsModule::GetFileExtensions()
 {
-   return {};
+   static FileExtensions empty;
+   return empty;
 }
 
 bool VampEffectsModule::AutoRegisterPlugins(PluginManagerInterface & WXUNUSED(pm))

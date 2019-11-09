@@ -21,13 +21,13 @@
 #include "SetProjectCommand.h"
 
 #include "../Project.h"
-#include "../Track.h"
-#include "../TrackPanel.h"
 #include "../WaveTrack.h"
 #include "../Shuttle.h"
 #include "../ShuttleGui.h"
 #include "CommandContext.h"
 #include "../toolbars/SelectionBar.h"
+
+#include <wx/frame.h>
 
 SetProjectCommand::SetProjectCommand()
 {
@@ -67,22 +67,21 @@ void SetProjectCommand::PopulateOrExchange(ShuttleGui & S)
 
 bool SetProjectCommand::Apply(const CommandContext & context)
 {
-   AudacityProject * pProj = context.GetProject();
+   auto &project = context.project;
+   auto &window = GetProjectFrame( project );
    if( bHasName )
-      pProj->SetLabel(mName);
+      window.SetLabel(mName);
 
    if( bHasRate && mRate >= 1 && mRate <= 1000000 )
    {
-      auto *bar = pProj->GetSelectionBar();
-      if( bar ){
-         bar->SetRate( mRate );
-      }
+      auto &bar = SelectionBar::Get( project );
+      bar.SetRate( mRate );
    }
 
    if( bHasSizing )
    {
-      pProj->SetPosition( wxPoint( mPosX, mPosY));
-      pProj->SetSize( wxSize( mWidth, mHeight ));
+      window.SetPosition( wxPoint( mPosX, mPosY));
+      window.SetSize( wxSize( mWidth, mHeight ));
    }
    return true;
 }

@@ -21,9 +21,8 @@
 #include <wx/intl.h>
 
 #include "FileNames.h"
-#include "AboutDialog.h"
-#include "AllThemeResources.h"
 #include "Internat.h"
+#include "AllThemeResources.h"
 
 
 wxString HtmlColourOfIndex( int i ){
@@ -211,9 +210,8 @@ static wxString HelpTextBuiltIn( const wxString & Key )
 
       if (Key == wxT("welcome"))
    {
-      /// TO-DO: Make the links to help here use the widgets/HelpSystem mechanism
-      /// so that they are consistent
-      /* i18n-hint: Preserve [[file:quick_help.html as it's the name of a file.*/
+      /* i18n-hint: Preserve '[[help:Quick_Help|' as it's the name of a link.*/
+      /* i18n-hint: Preserve '[[help:Main_Page|' as it's the name of a link.*/
       wxString result = 
          wxString(wxT("")) + 
 #if defined(IS_ALPHA) || defined(IS_BETA)
@@ -245,8 +243,8 @@ static wxString HelpTextBuiltIn( const wxString & Key )
          wxT("<center><h3>Audacity ") + AUDACITY_VERSION_STRING + wxT("</h3><h3>") +
          _("How to get help") + wxT("</h3></center>") + 
          _("These are our support methods:") + wxT("<p><ul><li>") +
-         _(" [[file:quick_help.html|Quick Help]] - if not installed locally, [[https://manual.audacityteam.org/quick_help.html|view online]]") + wxT("</li><li>") +
-         _(" [[file:index.html|Manual]] - if not installed locally, [[https://manual.audacityteam.org/|view online]]") + wxT("</li><li>") +
+         _("[[help:Quick_Help|Quick Help]] - if not installed locally, [[https://manual.audacityteam.org/quick_help.html|view online]]") + wxT("</li><li>") +
+         _(" [[help:Main_Page|Manual]] - if not installed locally, [[https://manual.audacityteam.org/|view online]]") + wxT("</li><li>") +
          _(" [[https://forum.audacityteam.org/|Forum]] - ask your question directly, online.") + wxT("</li></ul></p><p>") + wxT("<b>") +
          _("More:</b> Visit our [[https://wiki.audacityteam.org/index.php|Wiki]] for tips, tricks, extra tutorials and effects plug-ins.") + wxT("</p>");
 #endif
@@ -328,4 +326,36 @@ wxString FormatHtmlText( const wxString & Text ){
       wxT("\"></head>") +
       WrapText( LinkExpand( Text ))+
       wxT("</html>");
+}
+
+// Function to give the extra arguments to put on the version check string.
+const wxString VerCheckArgs(){
+   wxString result = wxString("from_ver=") + AUDACITY_VERSION_STRING;
+#ifdef REV_LONG
+   result += wxString("&CommitId=")+wxString(REV_LONG).Left(6);
+#endif
+   result += wxString("&Time=") + wxString( __DATE__ ) + wxString( __TIME__ );
+   result.Replace(" ","");
+   return result;
+}
+
+// Text of hyperlink to check versions.
+const wxString VerCheckHtml(){
+
+   wxString result = "<center>[[";
+   result += VerCheckUrl() + "|" + _("Check Online");
+   result += "]]</center>\n";
+   return result;
+}
+
+// Url with Version check args attached.
+const wxString VerCheckUrl(){
+   //The version we intend to use for live Audacity.
+#define VER_CHECK_URL "https://www.audacityteam.org/download/?"
+//For testing of our scriptlet.
+//#define VER_CHECK_URL "http://www.audacityteam.org/slug/?"
+//For testing locally
+//#define VER_CHECK_URL "http://localhost:63342/WorkingDocs/demos/download.html?"
+
+   return wxString( wxT(VER_CHECK_URL)) +VerCheckArgs();
 }

@@ -22,11 +22,9 @@
 #include "../AColor.h"
 #include "../ShuttleGui.h"
 #include "../commands/CommandManager.h"
-#include "../commands/Keyboard.h"
 
 #include <wx/dc.h>
 #include <wx/menu.h>
-#include "../Internat.h"
 
 #if wxUSE_ACCESSIBILITY
 #include "WindowAccessible.h"
@@ -252,7 +250,7 @@ KeyView::GetIndexByName(const CommandID & name) const
    // Search the nodes for the key
    for (int i = 0; i < cnt; i++)
    {
-      if (name.CmpNoCase(mNodes[i].name) == 0)
+      if (name == mNodes[i].name)
       {
          return mNodes[i].index;
       }
@@ -288,7 +286,7 @@ KeyView::GetNameByKey(const NormalizedKeyString & key) const
    // Search the nodes for the key
    for (int i = 0; i < cnt; i++)
    {
-      if (key.NoCaseEqual( mNodes[i].key))
+      if ( key == mNodes[i].key )
       {
          return mNodes[i].name;
       }
@@ -308,7 +306,7 @@ KeyView::GetIndexByKey(const NormalizedKeyString & key) const
    // Search the nodes for the key
    for (int i = 0; i < cnt; i++)
    {
-      if (key.NoCaseEqual( mNodes[i].key))
+      if ( key == mNodes[i].key )
       {
          return mNodes[i].index;
       }
@@ -457,6 +455,13 @@ KeyView::SetView(ViewByType type)
       SelectNode(index);
    }
 
+   // ensure that a node is selected so that when the keyview is the focus,
+   // this is indicated visually, and the Narrator screen reader reads it.
+   if ((GetSelection() == wxNOT_FOUND))
+   {
+      SelectNode(LineToIndex(0));
+   }
+
    return;
 }
 
@@ -481,6 +486,13 @@ KeyView::SetFilter(const wxString & filter)
    if (index != wxNOT_FOUND)
    {
       SelectNode(index);
+   }
+
+   // ensure that a node is selected so that when the keyview is the focus,
+   // this is indicated visually, and the Narrator screen reader reads it.
+   if ((GetSelection() == wxNOT_FOUND))
+   {
+      SelectNode(LineToIndex(0));
    }
 }
 
@@ -1333,32 +1345,18 @@ KeyView::OnSetFocus(wxFocusEvent & event)
    // Allow further processing
    event.Skip();
 
+   // Refresh the selected line to pull in any changes while
+   // focus was away...like when setting a NEW key value.  This
+   // will also refresh the visual (highlighted) state.
    if (GetSelection() != wxNOT_FOUND)
    {
-      // Refresh the selected line to pull in any changes while
-      // focus was away...like when setting a NEW key value.  This
-      // will also refresh the visual (highlighted) state.
 	   RefreshRow(GetSelection());
-#if wxUSE_ACCESSIBILITY
-      // Tell accessibility of the change
-      mAx->SetCurrentLine(GetSelection());
-#endif
    }
-   else
-   {
-      if (mLines.size() > 0)
-      {
-         // if no selection, select first line, if there is one
-         SelectNode(LineToIndex(0));
-      }
-      else
-      {
+
 #if wxUSE_ACCESSIBILITY
-         // Tell accessibility, since there may have been a change
-         mAx->SetCurrentLine(wxNOT_FOUND);
+   // Tell accessibility of the change
+   mAx->SetCurrentLine(GetSelection());
 #endif
-      }
-   }
 }
 
 //
@@ -1658,6 +1656,14 @@ KeyView::OnLeftDown(wxMouseEvent & event)
 
          // And make sure current line is still selected
          SelectNode(LineToIndex(line));
+
+         // If a node is closed near the bottom of the tree,
+         // the node may move down, and no longer be at the
+         // mouse pointer position. So don't allow further processing as this
+         // selects the line at the mouse position. Bug 1723.
+         // So we need to set the focus.
+         SetFocus();
+         return;
       }
    }
 
@@ -1933,10 +1939,12 @@ KeyViewAx::SetCurrentLine(int line)
       LineToId(line, mLastId);
 
       // Send notifications that the line has focus
-      NotifyEvent(wxACC_EVENT_OBJECT_FOCUS,
-                  mView,
-                  wxOBJID_CLIENT,
-                  mLastId);
+      if (mView == wxWindow::FindFocus()) {
+         NotifyEvent(wxACC_EVENT_OBJECT_FOCUS,
+                     mView,
+                     wxOBJID_CLIENT,
+                     mLastId);
+      }
 
       // And is selected
       NotifyEvent(wxACC_EVENT_OBJECT_SELECTION,

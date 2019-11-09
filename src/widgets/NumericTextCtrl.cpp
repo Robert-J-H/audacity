@@ -169,10 +169,9 @@ different formats.
 #include "NumericTextCtrl.h"
 
 #include "audacity/Types.h"
-#include "../Theme.h"
 #include "../AllThemeResources.h"
 #include "../AColor.h"
-#include "../Project.h"
+#include "../KeyboardCapture.h"
 #include "../TranslatableStringArray.h"
 
 #include <algorithm>
@@ -1052,17 +1051,23 @@ void NumericConverter::ControlsToValue()
    mValue = std::max(mMinValue, std::min(mMaxValue, t));
 }
 
-void NumericConverter::SetFormatName(const NumericFormatSymbol & formatName)
+bool NumericConverter::SetFormatName(const NumericFormatSymbol & formatName)
 {
-   SetFormatString(GetBuiltinFormat(formatName));
+   return
+      SetFormatString(GetBuiltinFormat(formatName));
 }
 
-void NumericConverter::SetFormatString(const wxString & formatString)
+bool NumericConverter::SetFormatString(const wxString & formatString)
 {
-   mFormatString = formatString;
-   ParseFormatString(mFormatString);
-   ValueToControls();
-   ControlsToValue();
+   if (mFormatString != formatString) {
+      mFormatString = formatString;
+      ParseFormatString(mFormatString);
+      ValueToControls();
+      ControlsToValue();
+      return true;
+   }
+   else
+      return false;
 }
 
 void NumericConverter::SetSampleRate(double sampleRate)
@@ -1367,19 +1372,24 @@ void NumericTextCtrl::UpdateAutoFocus()
    }
 }
 
-void NumericTextCtrl::SetFormatName(const NumericFormatSymbol & formatName)
+bool NumericTextCtrl::SetFormatName(const NumericFormatSymbol & formatName)
 {
-   SetFormatString(GetBuiltinFormat(formatName));
+   return
+      SetFormatString(GetBuiltinFormat(formatName));
 }
 
-void NumericTextCtrl::SetFormatString(const wxString & formatString)
+bool NumericTextCtrl::SetFormatString(const wxString & formatString)
 {
-   NumericConverter::SetFormatString(formatString);
-   Layout();
-   Fit();
-   ValueToControls();
-   ControlsToValue();
-   UpdateAutoFocus();
+   auto result =
+      NumericConverter::SetFormatString(formatString);
+   if (result) {
+      Layout();
+      Fit();
+      ValueToControls();
+      ControlsToValue();
+      UpdateAutoFocus();
+   }
+   return result;
 }
 
 void NumericTextCtrl::SetSampleRate(double sampleRate)
@@ -1708,16 +1718,13 @@ void NumericTextCtrl::OnMouse(wxMouseEvent &event)
 
 void NumericTextCtrl::OnFocus(wxFocusEvent &event)
 {
-   if (event.GetEventType() == wxEVT_KILL_FOCUS) {
-      AudacityProject::ReleaseKeyboard(this);
-   }
-   else {
-      AudacityProject::CaptureKeyboard(this);
-      if( mFocusedDigit <=0 )
-         UpdateAutoFocus();
-   }
+   KeyboardCapture::OnFocus( *this, event );
 
-   Refresh(false);
+   if (event.GetEventType() != wxEVT_KILL_FOCUS &&
+       mFocusedDigit <= 0 )
+      UpdateAutoFocus();
+
+   event.Skip( false ); // PRL: not sure why, but preserving old behavior
 }
 
 void NumericTextCtrl::OnCaptureKey(wxCommandEvent &event)
@@ -1745,7 +1752,7 @@ void NumericTextCtrl::OnCaptureKey(wxCommandEvent &event)
          return;
 
       default:
-         if (keyCode >= '0' && keyCode <= '9')
+         if (keyCode >= '0' && keyCode <= '9' && !kevent->HasAnyModifiers())
             return;
    }
 
@@ -1763,7 +1770,7 @@ void NumericTextCtrl::OnKeyUp(wxKeyEvent &event)
    if ((keyCode >= WXK_NUMPAD0) && (keyCode <= WXK_NUMPAD9))
       keyCode -= WXK_NUMPAD0 - '0';
 
-   if ((keyCode >= '0' && keyCode <= '9') ||
+   if ((keyCode >= '0' && keyCode <= '9' && !event.HasAnyModifiers()) ||
        (keyCode == WXK_DELETE) ||
        (keyCode == WXK_BACK) ||
        (keyCode == WXK_UP) ||
@@ -1794,7 +1801,7 @@ void NumericTextCtrl::OnKeyDown(wxKeyEvent &event)
    if ((keyCode >= WXK_NUMPAD0) && (keyCode <= WXK_NUMPAD9))
       keyCode -= WXK_NUMPAD0 - '0';
 
-   if (!mReadOnly && (keyCode >= '0' && keyCode <= '9')) {
+   if (!mReadOnly && (keyCode >= '0' && keyCode <= '9' && !event.HasAnyModifiers())) {
       int digitPosition = mDigits[mFocusedDigit].pos;
       if (mValueString[digitPosition] == wxChar('-')) {
          mValue = std::max(mMinValue, std::min(mMaxValue, 0.0));

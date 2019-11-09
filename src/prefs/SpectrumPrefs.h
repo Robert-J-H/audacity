@@ -23,9 +23,10 @@
 
 #include "../Experimental.h"
 
+#include <vector>
 #include <wx/defs.h>
 
-#include "../WaveTrack.h"
+#include "../tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.h"
 
 #include "PrefsPanel.h"
 #include "SpectrogramSettings.h"
@@ -38,6 +39,7 @@ struct FFTParam;
 class ShuttleGui;
 class SpectrogramSettings;
 class WaveTrack;
+struct WaveTrackSubViewPlacement;
 
 #define SPECTRUM_PREFS_PLUGIN_SYMBOL ComponentInterfaceSymbol{ XO("Spectrum") }
 
@@ -98,21 +100,15 @@ class SpectrumPrefs final : public PrefsPanel
 
    SpectrogramSettings mTempSettings, mOrigSettings;
 
-   WaveTrack::WaveTrackDisplay mOrigDisplay;
+   std::vector<WaveTrackSubViewPlacement> mOrigPlacements;
    float mOrigMin, mOrigMax;
 
    bool mPopulating;
    bool mCommitted{};
 };
 
-/// A PrefsPanelFactory that creates one SpectrumPrefs panel.
-class SpectrumPrefsFactory final : public PrefsPanelFactory
-{
-public:
-   explicit SpectrumPrefsFactory(WaveTrack *wt = 0);
-   PrefsPanel *operator () (wxWindow *parent, wxWindowID winid) override;
-
-private:
-   WaveTrack *const mWt;
-};
+/// A PrefsPanel::Factory that creates one SpectrumPrefs panel.
+/// This factory can be parametrized by a single track, to change settings
+/// non-globally
+extern PrefsPanel::Factory SpectrumPrefsFactory( WaveTrack *wt = 0 );
 #endif

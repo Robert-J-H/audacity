@@ -103,6 +103,7 @@ audacity_SOURCES = \
 	AdornedRulerPanel.cpp \
 	AdornedRulerPanel.h \
 	AllThemeResources.h \
+	AttachedVirtualFunction.h \
 	Audacity.h \
 	AudacityApp.cpp \
 	AudacityApp.h \
@@ -112,9 +113,13 @@ audacity_SOURCES = \
 	AudacityLogger.h \
 	AudioIO.cpp \
 	AudioIO.h \
+	AudioIOBase.cpp \
+	AudioIOBase.h \
 	AudioIOListener.h \
 	AutoRecovery.cpp \
 	AutoRecovery.h \
+	AutoRecoveryDialog.cpp \
+	AutoRecoveryDialog.h \
 	BatchCommandDialog.cpp \
 	BatchCommandDialog.h \
 	BatchCommands.cpp \
@@ -125,6 +130,14 @@ audacity_SOURCES = \
 	Benchmark.h \
 	CellularPanel.cpp \
 	CellularPanel.h \
+	ClientData.h \
+	ClientDataHelpers.h \
+        Clipboard.cpp \
+        Clipboard.h \
+        CommonCommandFlags.cpp \
+        CommonCommandFlags.h \
+        CrashReport.cpp \
+        CrashReport.h \
 	Dependencies.cpp \
 	Dependencies.h \
 	DeviceChange.cpp \
@@ -135,6 +148,8 @@ audacity_SOURCES = \
 	Diags.h \
 	Envelope.cpp \
 	Envelope.h \
+	EnvelopeEditor.cpp \
+	EnvelopeEditor.h \
 	Experimental.h \
 	FFmpeg.cpp \
 	FFmpeg.h \
@@ -160,6 +175,8 @@ audacity_SOURCES = \
 	InconsistencyException.h \
 	InterpolateAudio.cpp \
 	InterpolateAudio.h \
+	KeyboardCapture.cpp \
+	KeyboardCapture.h \
 	LabelDialog.cpp \
 	LabelDialog.h \
 	LabelTrack.cpp \
@@ -180,6 +197,8 @@ audacity_SOURCES = \
 	MemoryX.h \
 	Menus.cpp \
 	Menus.h \
+	MissingAliasFileDialog.cpp \
+	MissingAliasFileDialog.h \
 	Mix.cpp \
 	Mix.h \
 	MixerBoard.cpp \
@@ -199,6 +218,30 @@ audacity_SOURCES = \
 	Profiler.h \
 	Project.cpp \
 	Project.h \
+	ProjectAudioIO.cpp \
+	ProjectAudioIO.h \
+	ProjectAudioManager.cpp \
+	ProjectAudioManager.h \
+	ProjectFileIO.cpp \
+	ProjectFileIO.h \
+	ProjectFileIORegistry.cpp \
+	ProjectFileIORegistry.h \
+	ProjectFileManager.cpp \
+	ProjectFileManager.h \
+	ProjectFSCK.cpp \
+	ProjectFSCK.h \
+	ProjectHistory.cpp \
+	ProjectHistory.h \
+	ProjectManager.cpp \
+	ProjectManager.h \
+	ProjectSelectionManager.cpp \
+	ProjectSelectionManager.h \
+	ProjectSettings.cpp \
+	ProjectSettings.h \
+	ProjectStatus.cpp \
+	ProjectStatus.h \
+	ProjectWindow.cpp \
+	ProjectWindow.h \
 	RealFFTf.cpp \
 	RealFFTf.h \
 	RealFFTf48x.cpp \
@@ -211,12 +254,16 @@ audacity_SOURCES = \
 	RingBuffer.h \
 	Screenshot.cpp \
 	Screenshot.h \
+	SelectUtilities.cpp \
+	SelectUtilities.h \
 	SelectedRegion.cpp \
 	SelectedRegion.h \
 	SelectionState.cpp \
 	SelectionState.h \
 	Shuttle.cpp \
 	Shuttle.h \
+	ShuttleGetDefinition.cpp \
+	ShuttleGetDefinition.h \
 	ShuttleGui.cpp \
 	ShuttleGui.h \
 	ShuttlePrefs.cpp \
@@ -246,11 +293,14 @@ audacity_SOURCES = \
 	Track.h \
 	TrackArtist.cpp \
 	TrackArtist.h \
+	TrackInfo.cpp \
+	TrackInfo.h \
 	TrackPanel.cpp \
 	TrackPanel.h \
 	TrackPanelAx.cpp \
 	TrackPanelAx.h \
 	TrackPanelCell.h \
+	TrackPanelDrawable.h \
 	TrackPanelDrawingContext.h \
 	TrackPanelListener.h \
 	TrackPanelMouseEvent.h \
@@ -258,6 +308,8 @@ audacity_SOURCES = \
 	TrackPanelResizeHandle.h \
 	TrackPanelResizerCell.cpp \
 	TrackPanelResizerCell.h \
+	TrackUtilities.cpp \
+	TrackUtilities.h \
 	TranslatableStringArray.h \
 	UIHandle.h \
 	UIHandle.cpp \
@@ -276,6 +328,8 @@ audacity_SOURCES = \
 	WaveTrackLocation.h \
 	WrappedType.cpp \
 	WrappedType.h \
+	ZoomInfo.cpp \
+	ZoomInfo.h \
 	wxFileNameWrapper.h \
 	commands/AppCommandEvent.cpp \
 	commands/AppCommandEvent.h \
@@ -407,6 +461,8 @@ audacity_SOURCES = \
 	effects/Paulstretch.h \
 	effects/Phaser.cpp \
 	effects/Phaser.h \
+	effects/RealtimeEffectManager.cpp \
+	effects/RealtimeEffectManager.h \
 	effects/Repair.cpp \
 	effects/Repair.h \
 	effects/Repeat.cpp \
@@ -459,16 +515,11 @@ audacity_SOURCES = \
 	import/Import.cpp \
 	import/Import.h \
 	import/ImportFLAC.cpp \
-	import/ImportFLAC.h \
 	import/ImportForwards.h \
 	import/ImportLOF.cpp \
-	import/ImportLOF.h \
 	import/ImportMP3.cpp \
-	import/ImportMP3.h \
 	import/ImportOGG.cpp \
-	import/ImportOGG.h \
 	import/ImportPCM.cpp \
-	import/ImportPCM.h \
 	import/ImportPlugin.h \
 	import/ImportRaw.cpp \
 	import/ImportRaw.h \
@@ -595,7 +646,8 @@ audacity_SOURCES = \
 	tracks/labeltrack/ui/LabelTextHandle.h \
 	tracks/labeltrack/ui/LabelTrackControls.cpp \
 	tracks/labeltrack/ui/LabelTrackControls.h \
-	tracks/labeltrack/ui/LabelTrackUI.cpp \
+	tracks/labeltrack/ui/LabelTrackView.cpp \
+	tracks/labeltrack/ui/LabelTrackView.h \
 	tracks/labeltrack/ui/LabelTrackVRulerControls.cpp \
 	tracks/labeltrack/ui/LabelTrackVRulerControls.h \
 	tracks/playabletrack/notetrack/ui/NoteTrackButtonHandle.cpp \
@@ -604,7 +656,8 @@ audacity_SOURCES = \
 	tracks/playabletrack/notetrack/ui/NoteTrackControls.h \
 	tracks/playabletrack/notetrack/ui/NoteTrackSliderHandles.cpp \
 	tracks/playabletrack/notetrack/ui/NoteTrackSliderHandles.h \
-	tracks/playabletrack/notetrack/ui/NoteTrackUI.cpp \
+	tracks/playabletrack/notetrack/ui/NoteTrackView.cpp \
+	tracks/playabletrack/notetrack/ui/NoteTrackView.h \
 	tracks/playabletrack/notetrack/ui/NoteTrackVRulerControls.cpp \
 	tracks/playabletrack/notetrack/ui/NoteTrackVRulerControls.h \
 	tracks/playabletrack/notetrack/ui/NoteTrackVZoomHandle.cpp \
@@ -613,30 +666,52 @@ audacity_SOURCES = \
 	tracks/playabletrack/notetrack/ui/StretchHandle.h \
 	tracks/playabletrack/ui/PlayableTrackButtonHandles.cpp \
 	tracks/playabletrack/ui/PlayableTrackButtonHandles.h \
+	tracks/playabletrack/ui/PlayableTrackControls.cpp \
+	tracks/playabletrack/ui/PlayableTrackControls.h \
 	tracks/playabletrack/wavetrack/ui/CutlineHandle.cpp \
 	tracks/playabletrack/wavetrack/ui/CutlineHandle.h \
 	tracks/playabletrack/wavetrack/ui/SampleHandle.cpp \
 	tracks/playabletrack/wavetrack/ui/SampleHandle.h \
+	tracks/playabletrack/wavetrack/ui/SpectrumView.cpp \
+	tracks/playabletrack/wavetrack/ui/SpectrumView.h \
+	tracks/playabletrack/wavetrack/ui/SpectrumVRulerControls.cpp \
+	tracks/playabletrack/wavetrack/ui/SpectrumVRulerControls.h \
+	tracks/playabletrack/wavetrack/ui/SpectrumVZoomHandle.cpp \
+	tracks/playabletrack/wavetrack/ui/SpectrumVZoomHandle.h \
+	tracks/playabletrack/wavetrack/ui/WaveformView.cpp \
+	tracks/playabletrack/wavetrack/ui/WaveformView.h \
+	tracks/playabletrack/wavetrack/ui/WaveformVRulerControls.cpp \
+	tracks/playabletrack/wavetrack/ui/WaveformVRulerControls.h \
+	tracks/playabletrack/wavetrack/ui/WaveformVZoomHandle.cpp \
+	tracks/playabletrack/wavetrack/ui/WaveformVZoomHandle.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackControls.cpp \
 	tracks/playabletrack/wavetrack/ui/WaveTrackControls.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackSliderHandles.cpp \
 	tracks/playabletrack/wavetrack/ui/WaveTrackSliderHandles.h \
+	tracks/playabletrack/wavetrack/ui/WaveTrackView.cpp \
+	tracks/playabletrack/wavetrack/ui/WaveTrackView.h \
+	tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.cpp \
+	tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackVRulerControls.cpp \
 	tracks/playabletrack/wavetrack/ui/WaveTrackVRulerControls.h \
 	tracks/playabletrack/wavetrack/ui/WaveTrackVZoomHandle.cpp \
 	tracks/playabletrack/wavetrack/ui/WaveTrackVZoomHandle.h \
-	tracks/playabletrack/wavetrack/ui/WaveTrackUI.cpp \
 	tracks/timetrack/ui/TimeTrackControls.cpp \
 	tracks/timetrack/ui/TimeTrackControls.h \
-	tracks/timetrack/ui/TimeTrackUI.cpp \
+	tracks/timetrack/ui/TimeTrackView.cpp \
+	tracks/timetrack/ui/TimeTrackView.h \
 	tracks/timetrack/ui/TimeTrackVRulerControls.cpp \
 	tracks/timetrack/ui/TimeTrackVRulerControls.h \
 	tracks/ui/BackgroundCell.cpp \
 	tracks/ui/BackgroundCell.h \
 	tracks/ui/ButtonHandle.h \
 	tracks/ui/ButtonHandle.cpp \
+	tracks/ui/CommonTrackControls.cpp \
+	tracks/ui/CommonTrackControls.h \
 	tracks/ui/CommonTrackPanelCell.cpp \
 	tracks/ui/CommonTrackPanelCell.h \
+	tracks/ui/CommonTrackView.cpp \
+	tracks/ui/CommonTrackView.h \
 	tracks/ui/EditCursorOverlay.cpp \
 	tracks/ui/EditCursorOverlay.h \
 	tracks/ui/EnvelopeHandle.cpp \
@@ -645,6 +720,8 @@ audacity_SOURCES = \
 	tracks/ui/PlayIndicatorOverlay.h \
 	tracks/ui/Scrubbing.cpp \
 	tracks/ui/Scrubbing.h \
+	tracks/ui/ScrubUI.cpp \
+	tracks/ui/ScrubUI.h \
 	tracks/ui/SelectHandle.cpp \
 	tracks/ui/SelectHandle.h \
 	tracks/ui/SliderHandle.cpp \
@@ -657,7 +734,8 @@ audacity_SOURCES = \
 	tracks/ui/TrackControls.h \
 	tracks/ui/TrackSelectHandle.cpp \
 	tracks/ui/TrackSelectHandle.h \
-	tracks/ui/TrackUI.cpp \
+	tracks/ui/TrackView.cpp \
+	tracks/ui/TrackView.h \
 	tracks/ui/TrackVRulerControls.cpp \
 	tracks/ui/TrackVRulerControls.h \
 	tracks/ui/ZoomHandle.cpp \
@@ -668,6 +746,8 @@ audacity_SOURCES = \
 	widgets/ASlider.h \
 	widgets/AttachableScrollBar.cpp \
 	widgets/AttachableScrollBar.h \
+	widgets/AudacityMessageBox.cpp \
+	widgets/AudacityMessageBox.h \
 	widgets/BackedPanel.cpp \
 	widgets/BackedPanel.h \
 	widgets/ErrorDialog.cpp \
@@ -688,10 +768,10 @@ audacity_SOURCES = \
 	widgets/ImageRoll.h \
 	widgets/KeyView.cpp \
 	widgets/KeyView.h \
-	widgets/LinkingHtmlWindow.cpp \
-	widgets/LinkingHtmlWindow.h \
 	widgets/Meter.cpp \
 	widgets/Meter.h \
+	widgets/MeterPanelBase.cpp \
+	widgets/MeterPanelBase.h \
 	widgets/MultiDialog.cpp \
 	widgets/MultiDialog.h \
 	widgets/NumericTextCtrl.cpp \
@@ -738,7 +818,6 @@ audacity_SOURCES += \
 	export/ExportFFmpegDialogs.cpp \
 	export/ExportFFmpegDialogs.h \
 	import/ImportFFmpeg.cpp \
-	import/ImportFFmpeg.h \
 	$(NULL)
 endif
 
@@ -747,7 +826,6 @@ audacity_CPPFLAGS += $(GSTREAMER_CFLAGS)
 audacity_LDADD += $(GSTREAMER_LIBS)
 audacity_SOURCES += \
 	import/ImportGStreamer.cpp \
-	import/ImportGStreamer.h \
 	$(NULL)
 endif
 
@@ -843,7 +921,6 @@ audacity_CPPFLAGS += $(QUICKTIME_CFLAGS)
 audacity_LDADD += $(QUICKTIME_LIBS)
 audacity_SOURCES += \
 	import/ImportQT.cpp \
-	import/ImportQT.h \
 	$(NULL)
 endif
 

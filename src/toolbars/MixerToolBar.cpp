@@ -17,6 +17,8 @@
 #include "../Audacity.h" // for USE_* macros
 #include "MixerToolBar.h"
 
+#include "ToolManager.h"
+
 // For compilers that support precompilation, includes "wx/wx.h".
 #include <wx/wxprec.h>
 
@@ -34,9 +36,8 @@
 #include "../AllThemeResources.h"
 #include "../AudioIO.h"
 #include "../ImageManipulation.h"
+#include "../KeyboardCapture.h"
 #include "../Prefs.h"
-#include "../Project.h"
-#include "../Theme.h"
 #include "../widgets/ASlider.h"
 #include "../widgets/Grabber.h"
 
@@ -54,8 +55,8 @@ BEGIN_EVENT_TABLE(MixerToolBar, ToolBar)
 END_EVENT_TABLE()
 
 //Standard contructor
-MixerToolBar::MixerToolBar()
-: ToolBar(MixerBarID, _("Mixer"), wxT("Mixer"), true)
+MixerToolBar::MixerToolBar( AudacityProject &project )
+: ToolBar(project, MixerBarID, _("Mixer"), wxT("Mixer"), true)
 {
    mInputSliderVolume = 0.0;
    mOutputSliderVolume = 0.0;
@@ -65,9 +66,21 @@ MixerToolBar::~MixerToolBar()
 {
 }
 
+MixerToolBar &MixerToolBar::Get( AudacityProject &project )
+{
+   auto &toolManager = ToolManager::Get( project );
+   return *static_cast<MixerToolBar*>( toolManager.GetToolBar(MixerBarID) );
+}
+
+const MixerToolBar &MixerToolBar::Get( const AudacityProject &project )
+{
+   return Get( const_cast<AudacityProject&>( project )) ;
+}
+
 void MixerToolBar::Create(wxWindow *parent)
 {
    ToolBar::Create(parent);
+   UpdatePrefs();
 }
 
 void MixerToolBar::Populate()
@@ -107,6 +120,7 @@ void MixerToolBar::Populate()
                  &MixerToolBar::OnFocus,
                  this);
    // Show or hide the input slider based on whether it works
+   auto gAudioIO = AudioIO::Get();
    mInputSlider->Enable(gAudioIO->InputMixerWorks());
 
    UpdateControls();
@@ -118,16 +132,7 @@ void MixerToolBar::Populate()
 //Also from SelectionBar;
 void MixerToolBar::OnFocus(wxFocusEvent &event)
 {
-   if (event.GetEventType() == wxEVT_KILL_FOCUS) {
-      AudacityProject::ReleaseKeyboard(this);
-   }
-   else {
-      AudacityProject::CaptureKeyboard(this);
-   }
-
-   Refresh(false);
-
-   event.Skip();
+   KeyboardCapture::OnFocus( *this, event );
 }
 
 void MixerToolBar::OnCaptureKey(wxCommandEvent &event)
@@ -160,6 +165,7 @@ void MixerToolBar::UpdatePrefs()
    int inputSource;
 
    // Reset the selected source
+   auto gAudioIO = AudioIO::Get();
    gAudioIO->GetMixer(&inputSource, &inputVolume, &playbackVolume);
 
    // Show or hide the input slider based on whether it works
@@ -206,6 +212,7 @@ void MixerToolBar::UpdateControls()
    int inputSource;
 
    // Show or hide the input slider based on whether it works
+   auto gAudioIO = AudioIO::Get();
    mInputSlider->Enable(gAudioIO->InputMixerWorks());
 
    gAudioIO->GetMixer(&inputSource, &inputVolume, &playbackVolume);
@@ -232,6 +239,7 @@ void MixerToolBar::SetMixer(wxCommandEvent & WXUNUSED(event))
    float oldIn, oldOut;
    int inputSource;
 
+   auto gAudioIO = AudioIO::Get();
    gAudioIO->GetMixer(&inputSource, &oldIn, &oldOut);
    gAudioIO->SetMixer(inputSource, inputVolume, outputVolume);
    mOutputSliderVolume = outputVolume;
@@ -293,6 +301,7 @@ void MixerToolBar::SetToolTips()
 
    if (mOutputSlider->IsEnabled()) {
       wxString format;
+      auto gAudioIO = AudioIO::Get();
       if (gAudioIO->OutputMixerEmulated())
          format = _("Playback Volume: %s (emulated)");
       else
@@ -305,3 +314,8 @@ void MixerToolBar::SetToolTips()
       mOutputSlider->SetToolTipTemplate(_("Playback Volume (Unavailable; use system mixer.)"));
    }
 }
+
+static RegisteredToolbarFactory factory{ MixerBarID,
+   []( AudacityProject &project ){
+      return ToolBar::Holder{ safenew MixerToolBar{ project } }; }
+};

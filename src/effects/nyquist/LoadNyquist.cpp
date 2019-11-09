@@ -8,7 +8,6 @@
 
 **********************************************************************/
 
-#include "../../AudacityApp.h"
 #include "LoadNyquist.h"
 
 #include <wx/log.h>
@@ -47,7 +46,6 @@ const static wxChar *kShippedEffects[] =
    wxT("StudioFadeOut.ny"),
    wxT("tremolo.ny"),
    wxT("vocalrediso.ny"),
-   wxT("vocalremover.ny"),
    wxT("vocoder.ny"),
 };
 
@@ -129,7 +127,7 @@ wxString NyquistEffectsModule::GetDescription()
 
 bool NyquistEffectsModule::Initialize()
 {
-   const auto &audacityPathList = wxGetApp().audacityPathList;
+   const auto &audacityPathList = FileNames::AudacityPathList();
 
    for (size_t i = 0, cnt = audacityPathList.size(); i < cnt; i++)
    {
@@ -156,9 +154,10 @@ void NyquistEffectsModule::Terminate()
    return;
 }
 
-FileExtensions NyquistEffectsModule::GetFileExtensions()
+const FileExtensions &NyquistEffectsModule::GetFileExtensions()
 {
-   return {{ _T("ny") }};
+   static FileExtensions result{{ _T("ny") }};
+   return result;
 }
 
 FilePath NyquistEffectsModule::InstallPath()

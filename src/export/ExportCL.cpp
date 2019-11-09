@@ -14,7 +14,7 @@
 #include "../Audacity.h"
 #include "ExportCL.h"
 
-#include "../Project.h"
+#include "../ProjectSettings.h"
 
 #include <wx/app.h>
 #include <wx/button.h>
@@ -34,13 +34,11 @@
 #include "../Mix.h"
 #include "../Prefs.h"
 #include "../ShuttleGui.h"
-#include "../Internat.h"
+#include "../Track.h"
 #include "../float_cast.h"
 #include "../widgets/FileHistory.h"
-#include "../widgets/ErrorDialog.h"
+#include "../widgets/AudacityMessageBox.h"
 #include "../widgets/ProgressDialog.h"
-
-#include "../Track.h"
 
 
 //----------------------------------------------------------------------------
@@ -109,6 +107,7 @@ void ExportCLOptions::PopulateOrExchange(ShuttleGui & S)
    wxString cmd;
 
    for (size_t i = 0; i < mHistory.GetCount(); i++) {
+      cmd = mHistory.GetHistoryFile(i);
       cmds.push_back(mHistory.GetHistoryFile(i));
    }
    cmd = cmds[0];
@@ -334,6 +333,11 @@ ProgressResult ExportCL::Export(AudacityProject *project,
    // Retrieve settings
    gPrefs->Read(wxT("/FileFormats/ExternalProgramShowOutput"), &show, false);
    cmd = gPrefs->Read(wxT("/FileFormats/ExternalProgramExportCommand"), wxT("lame - \"%f.mp3\""));
+   // Bug 2178 - users who don't know what they are doing will 
+   // now get a file extension of .wav appended to their ffmpeg filename
+   // and therefore ffmpeg will be able to choose a file type.
+   if( cmd == wxT("ffmpeg -i - \"%f\"") && fName.Index( '.' )==wxNOT_FOUND)
+      cmd.Replace( "%f", "%f.wav" );
    cmd.Replace(wxT("%f"), fName);
 
 #if defined(__WXMSW__)
@@ -390,7 +394,7 @@ ProgressResult ExportCL::Export(AudacityProject *project,
    wxLogNull nolog;
 
    // establish parameters
-   int rate = lrint(project->GetRate());
+   int rate = lrint( ProjectSettings::Get( *project ).GetRate());
    const size_t maxBlockLen = 44100 * 5;
    unsigned long totalSamples = lrint((t1 - t0) * rate);
    unsigned long sampleBytes = totalSamples * channels * SAMPLE_SIZE(int16Sample);
@@ -429,12 +433,10 @@ ProgressResult ExportCL::Export(AudacityProject *project,
    os->Write(&header, sizeof(wav_header));
 
    // Mix 'em up
-   const TrackList *tracks = project->GetTracks();
-   const WaveTrackConstArray waveTracks =
-      tracks->GetWaveTrackConstArray(selectionOnly, false);
+   const auto &tracks = TrackList::Get( *project );
    auto mixer = CreateMixer(
-                            waveTracks,
-                            tracks->GetTimeTrack(),
+                            tracks,
+                            selectionOnly,
                             t0,
                             t1,
                             channels,

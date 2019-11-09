@@ -16,9 +16,12 @@
 
 #include "../Experimental.h"
 
+#include "Effect.h"
+#include "EffectManager.h"
+#include "RealtimeEffectManager.h"
+
 #if defined(EXPERIMENTAL_EFFECTS_RACK)
 
-#include "../MemoryX.h"
 #include "../UndoManager.h"
 
 #include <wx/defs.h>
@@ -35,11 +38,11 @@
 #include <wx/timer.h>
 #include <wx/tglbtn.h>
 
-#include "EffectManager.h"
 #include "../commands/CommandContext.h"
-#include "../Menus.h"
 #include "../Prefs.h"
 #include "../Project.h"
+#include "../ProjectHistory.h"
+#include "../widgets/wxPanelWrapper.h"
 
 #include "../../images/EffectRack/EffectRack.h"
 
@@ -78,7 +81,7 @@ BEGIN_EVENT_TABLE(EffectRack, wxFrame)
 END_EVENT_TABLE()
 
 EffectRack::EffectRack()
-:  wxFrame(GetActiveProject(),
+:  wxFrame( FindProjectFrame( GetActiveProject() ),
       wxID_ANY,
       _("Effects Rack"),
       wxDefaultPosition,
@@ -282,7 +285,7 @@ void EffectRack::OnClose(wxCloseEvent & evt)
 
 void EffectRack::OnTimer(wxTimerEvent & WXUNUSED(evt))
 {
-   int latency = EffectManager::Get().GetRealtimeLatency();
+   int latency = RealtimeEffectManager::Get().GetRealtimeLatency();
    if (latency != mLastLatency)
    {
       mLatency->SetLabel(wxString::Format(_("Latency: %4d"), latency));
@@ -296,19 +299,19 @@ void EffectRack::OnApply(wxCommandEvent & WXUNUSED(evt))
    AudacityProject *project = GetActiveProject();
 
    bool success = false;
-   auto state = project->GetUndoManager()->GetCurrentState();
+   auto state = UndoManager::Get( *project ).GetCurrentState();
    auto cleanup = finally( [&] {
       if(!success)
-         project->SetStateTo(state);
+         ProjectHistory::Get( *project ).SetStateTo( state );
    } );
 
    for (size_t i = 0, cnt = mEffects.size(); i < cnt; i++)
    {
       if (mPowerState[i])
       {
-         if (!PluginActions::DoEffect(mEffects[i]->GetID(),
+         if (!EffectManager::DoEffect(mEffects[i]->GetID(),
                            *project,
-                           PluginActions::kConfigured))
+                           EffectManager::kConfigured))
             // If any effect fails (or throws), then stop.
             return;
       }
@@ -560,7 +563,9 @@ void EffectRack::UpdateActive()
       }
    }
 
-   EffectManager::Get().RealtimeSetEffects(mActive);
+   RealtimeEffectManager::Get().RealtimeSetEffects(
+      { mActive.begin(), mActive.end() }
+   );
 }
 
 #endif

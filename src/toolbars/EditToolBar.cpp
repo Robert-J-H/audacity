@@ -49,14 +49,11 @@
 #endif
 
 #include "../AllThemeResources.h"
-#include "../AudioIO.h"
+#include "../BatchCommands.h"
 #include "../ImageManipulation.h"
-#include "../Internat.h"
 #include "../Menus.h"
 #include "../Prefs.h"
 #include "../Project.h"
-#include "../Theme.h"
-#include "../Track.h"
 #include "../UndoManager.h"
 #include "../widgets/AButton.h"
 
@@ -80,8 +77,8 @@ BEGIN_EVENT_TABLE( EditToolBar, ToolBar )
 END_EVENT_TABLE()
 
 //Standard contructor
-EditToolBar::EditToolBar()
-: ToolBar(EditBarID, _("Edit"), wxT("Edit"))
+EditToolBar::EditToolBar( AudacityProject &project )
+: ToolBar(project, EditBarID, _("Edit"), wxT("Edit"))
 {
 }
 
@@ -92,6 +89,7 @@ EditToolBar::~EditToolBar()
 void EditToolBar::Create(wxWindow * parent)
 {
    ToolBar::Create(parent);
+   UpdatePrefs();
 }
 
 void EditToolBar::AddSeparator()
@@ -262,10 +260,8 @@ void EditToolBar::ForAllButtons(int Action)
    CommandManager* cm = nullptr;
 
    if( Action & ETBActEnableDisable ){
-      p = GetActiveProject();
-      if (!p) return;
-      cm = p->GetCommandManager();
-      if (!cm) return;
+      p = &mProject;
+      cm = &CommandManager::Get( *p );
 #ifdef OPTION_SYNC_LOCK_BUTTON
       bool bSyncLockTracks;
       gPrefs->Read(wxT("/GUI/SyncLockTracks"), &bSyncLockTracks, false);
@@ -283,7 +279,8 @@ void EditToolBar::ForAllButtons(int Action)
       if( Action & ETBActTooltips ){
          TranslatedInternalString command{
             entry.commandName, wxGetTranslation(entry.untranslatedLabel) };
-         ToolBar::SetButtonToolTip( *mButtons[entry.tool], &command, 1u );
+         ToolBar::SetButtonToolTip( mProject,
+            *mButtons[entry.tool], &command, 1u );
       }
 #endif
       if (cm) {
@@ -298,14 +295,16 @@ void EditToolBar::OnButton(wxCommandEvent &event)
    // Be sure the pop-up happens even if there are exceptions, except for buttons which toggle.
    auto cleanup = finally( [&] { mButtons[id]->InteractionOver();});
 
-   AudacityProject *p = GetActiveProject();
-   if (!p) return;
-   CommandManager* cm = p->GetCommandManager();
-   if (!cm) return;
+   AudacityProject *p = &mProject;
+   auto &cm = CommandManager::Get( *p );
 
-   auto flags = GetMenuManager(*p).GetUpdateFlags(*p);
-   const CommandContext context( *GetActiveProject() );
-   cm->HandleTextualCommand(EditToolbarButtonList[id].commandName, context, flags, NoFlagsSpecified);
+   auto flags = MenuManager::Get(*p).GetUpdateFlags();
+   const CommandContext context( *p );
+   MacroCommands::HandleTextualCommand( cm,
+      EditToolbarButtonList[id].commandName, context, flags, false);
 }
 
-
+static RegisteredToolbarFactory factory{ EditBarID,
+   []( AudacityProject &project ){
+      return ToolBar::Holder{ safenew EditToolBar{ project } }; }
+};

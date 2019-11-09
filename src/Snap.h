@@ -17,8 +17,7 @@
 
 #include <vector>
 #include <wx/defs.h>
-#include "widgets/NumericTextCtrl.h"
-#include "Internat.h"
+#include "widgets/NumericTextCtrl.h" // member variable
 
 class AudacityProject;
 class Track;
@@ -47,13 +46,6 @@ public:
 };
 
 class TrackClipArray : public std::vector < TrackClip > {};
-
-enum
-{
-   SNAP_OFF,
-   SNAP_NEAREST,
-   SNAP_PRIOR
-};
 
 const int kPixelTolerance = 4;
 

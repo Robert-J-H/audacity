@@ -38,7 +38,7 @@
 
 #include "../../ShuttleGui.h"
 #include "../../widgets/valnum.h"
-#include "../../widgets/ErrorDialog.h"
+#include "../../widgets/AudacityMessageBox.h"
 
 #include "../../LabelTrack.h"
 #include "../../WaveTrack.h"
@@ -759,7 +759,7 @@ void VampEffect::AddFeatures(LabelTrack *ltrack,
          }
       }
 
-      ltrack->AddLabel(SelectedRegion(ltime0, ltime1), label, -2);
+      ltrack->AddLabel(SelectedRegion(ltime0, ltime1), label);
    }
 }
 

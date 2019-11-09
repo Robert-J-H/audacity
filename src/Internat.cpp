@@ -23,6 +23,7 @@ and on Mac OS X for the filesystem.
 #include "Internat.h"
 
 #include "Experimental.h"
+#include "MemoryX.h"
 
 #include <wx/log.h>
 #include <wx/intl.h>
@@ -31,8 +32,6 @@ and on Mac OS X for the filesystem.
 #include <locale.h>
 #include <math.h> // for pow()
 
-#include "FileNames.h"
-#include "widgets/ErrorDialog.h"
 #include "../include/audacity/ComponentInterface.h"
 
 // in order for the static member variables to exist, they must appear here
@@ -41,7 +40,6 @@ and on Mac OS X for the filesystem.
 
 wxChar Internat::mDecimalSeparator = wxT('.'); // default
 wxArrayString Internat::exclude;
-wxCharBuffer Internat::mFilename;
 
 // DA: Use tweaked translation mechanism to replace 'Audacity' by 'DarkAudacity'.
 #ifdef EXPERIMENTAL_DA
@@ -226,46 +224,6 @@ wxString Internat::FormatSize(double size)
    return sizeStr;
 }
 
-#if defined(__WXMSW__)
-//
-// On Windows, wxString::mb_str() can return a NULL pointer if the
-// conversion to multi-byte fails.  So, based on direction intent,
-// returns a pointer to an empty string or prompts for a NEW name.
-//
-char *Internat::VerifyFilename(const wxString &s, bool input)
-{
-   static wxCharBuffer buf;
-   wxString name = s;
-
-   if (input) {
-      if ((char *) (const char *)name.mb_str() == NULL) {
-         name = wxEmptyString;
-      }
-   }
-   else {
-      wxFileName ff(name);
-      wxString ext;
-      while ((char *) (const char *)name.mb_str() == NULL) {
-         AudacityMessageBox(_("The specified filename could not be converted due to Unicode character use."));
-
-         ext = ff.GetExt();
-         name = FileNames::SelectFile(FileNames::Operation::_None,
-                             _("Specify New Filename:"),
-                             wxEmptyString,
-                             name,
-                             ext,
-                             wxT("*.") + ext,
-                             wxFD_SAVE | wxRESIZE_BORDER,
-                             wxGetTopLevelParent(NULL));
-      }
-   }
-
-   mFilename = name.mb_str();
-
-   return (char *) (const char *) mFilename;
-}
-#endif
-
 bool Internat::SanitiseFilename(wxString &name, const wxString &sub)
 {
    bool result = false;
@@ -309,4 +267,26 @@ wxArrayStringEx LocalizedStrings(
       strings, strings + nStrings,
       std::mem_fn( &EnumValueSymbol::Translation )
    );
+}
+
+// Find a better place for this?
+#include "audacity/Types.h"
+Identifier::Identifier(
+                       std::initializer_list<Identifier> components, wxChar separator )
+{
+   if( components.size() < 2 )
+   {
+      wxASSERT( false );
+      return;
+   }
+   auto iter = components.begin(), end = components.end();
+   value = (*iter++).value;
+   while (iter != end)
+      value += separator + (*iter++).value;
+}
+
+std::vector< Identifier > Identifier::split( wxChar separator ) const
+{
+   auto strings = ::wxSplit( value, separator );
+   return { strings.begin(), strings.end() };
 }

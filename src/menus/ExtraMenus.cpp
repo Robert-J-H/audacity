@@ -1,9 +1,12 @@
+#include "../CommonCommandFlags.h"
 #include "../Prefs.h"
 #include "../Project.h"
 #include "../commands/CommandContext.h"
 #include "../commands/CommandManager.h"
 #include "../toolbars/MixerToolBar.h"
 #include "../toolbars/DeviceToolBar.h"
+
+#include <wx/frame.h>
 
 // helper functions and classes
 namespace {
@@ -22,7 +25,7 @@ struct Handler : CommandHandlerObject {
 void OnOutputGain(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tb = project.GetMixerToolBar();
+   auto tb = &MixerToolBar::Get( project );
 
    if (tb) {
       tb->ShowOutputGainDialog();
@@ -32,7 +35,7 @@ void OnOutputGain(const CommandContext &context)
 void OnOutputGainInc(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tb = project.GetMixerToolBar();
+   auto tb = &MixerToolBar::Get( project );
 
    if (tb) {
       tb->AdjustOutputGain(1);
@@ -42,7 +45,7 @@ void OnOutputGainInc(const CommandContext &context)
 void OnOutputGainDec(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tb = project.GetMixerToolBar();
+   auto tb = &MixerToolBar::Get( project );
 
    if (tb) {
       tb->AdjustOutputGain(-1);
@@ -52,7 +55,7 @@ void OnOutputGainDec(const CommandContext &context)
 void OnInputGain(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tb = project.GetMixerToolBar();
+   auto tb = &MixerToolBar::Get( project );
 
    if (tb) {
       tb->ShowInputGainDialog();
@@ -62,7 +65,7 @@ void OnInputGain(const CommandContext &context)
 void OnInputGainInc(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tb = project.GetMixerToolBar();
+   auto tb = &MixerToolBar::Get( project );
 
    if (tb) {
       tb->AdjustInputGain(1);
@@ -72,7 +75,7 @@ void OnInputGainInc(const CommandContext &context)
 void OnInputGainDec(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tb = project.GetMixerToolBar();
+   auto tb = &MixerToolBar::Get( project );
 
    if (tb) {
       tb->AdjustInputGain(-1);
@@ -82,51 +85,40 @@ void OnInputGainDec(const CommandContext &context)
 void OnInputDevice(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tb = project.GetDeviceToolBar();
-
-   if (tb) {
-      tb->ShowInputDialog();
-   }
+   auto &tb = DeviceToolBar::Get( project );
+   tb.ShowInputDialog();
 }
 
 void OnOutputDevice(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tb = project.GetDeviceToolBar();
-
-   if (tb) {
-      tb->ShowOutputDialog();
-   }
+   auto &tb = DeviceToolBar::Get( project );
+   tb.ShowOutputDialog();
 }
 
 void OnInputChannels(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tb = project.GetDeviceToolBar();
-
-   if (tb) {
-      tb->ShowChannelsDialog();
-   }
+   auto &tb = DeviceToolBar::Get( project );
+   tb.ShowChannelsDialog();
 }
 
 void OnAudioHost(const CommandContext &context)
 {
    auto &project = context.project;
-   auto tb = project.GetDeviceToolBar();
-
-   if (tb) {
-      tb->ShowHostDialog();
-   }
+   auto &tb = DeviceToolBar::Get( project );
+   tb.ShowHostDialog();
 }
 
 void OnFullScreen(const CommandContext &context)
 {
    auto &project = context.project;
-   auto commandManager = project.GetCommandManager();
+   auto &window = GetProjectFrame( project );
+   auto &commandManager = CommandManager::Get( project );
 
-   bool bChecked = !project.wxTopLevelWindow::IsFullScreen();
-   project.wxTopLevelWindow::ShowFullScreen(bChecked);
-   commandManager->Check(wxT("FullScreenOnOff"), bChecked);
+   bool bChecked = !window.wxTopLevelWindow::IsFullScreen();
+   window.wxTopLevelWindow::ShowFullScreen(bChecked);
+   commandManager.Check(wxT("FullScreenOnOff"), bChecked);
 }
 
 }; // struct Handler
@@ -255,8 +247,8 @@ MenuTable::BaseItemPtr ExtraMiscItems( AudacityProject &project )
       Command( wxT("FullScreenOnOff"), XXO("&Full Screen (on/off)"),
          FN(OnFullScreen),
          AlwaysEnabledFlag,
-         Options{ key }
-            .CheckState( project.wxTopLevelWindow::IsFullScreen() ) ),
+         Options{ key }.CheckState(
+            GetProjectFrame( project ).wxTopLevelWindow::IsFullScreen() ) ),
 
       ExtraWindowItems
    );

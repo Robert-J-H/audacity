@@ -12,16 +12,21 @@ Paul Licameli split from TrackPanel.cpp
 #define __AUDACITY_EDIT_CURSOR_OVERLAY__
 
 #include <memory>
+#include "../../ClientData.h" // to inherit
 #include "../../widgets/Overlay.h" // to inherit
 
 class AudacityProject;
 
-class EditCursorOverlay final : public Overlay
+class EditCursorOverlay final
+   : public Overlay
+   , public ClientData::Base
 {
 public:
+   explicit
    EditCursorOverlay(AudacityProject *project, bool isMaster = true);
 
 private:
+   unsigned SequenceNumber() const override;
    std::pair<wxRect, bool> DoGetRectangle(wxSize size) override;
    void Draw(OverlayPanel &panel, wxDC &dc) override;
 

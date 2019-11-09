@@ -20,12 +20,12 @@
 #include "DragCommand.h"
 
 #include "../Project.h"
-#include "../Track.h"
-#include "../TrackPanel.h"
 #include "../WaveTrack.h"
 #include "../Shuttle.h"
 #include "../ShuttleGui.h"
 #include "CommandContext.h"
+
+#include <wx/frame.h>
 
 DragCommand::DragCommand()
 {
@@ -91,7 +91,7 @@ bool DragCommand::Apply(const CommandContext & context)
    if( !bHasToY )
       mToY = 10;
 
-   wxWindow * pWin = context.GetProject();
+   wxWindow * pWin = &GetProjectFrame( context.project );
    wxWindow * pWin1 = nullptr;
    wxMouseEvent Evt( wxEVT_MOTION );
    Evt.m_x = mFromX;

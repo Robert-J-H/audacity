@@ -54,25 +54,27 @@ effects from this one class.
 #include <wx/stdpaths.h>
 
 #include "../EffectManager.h"
-#include "../../AudacityApp.h"
 #include "../../DirManager.h"
-#include "../../FileException.h"
 #include "../../FileNames.h"
-#include "../../Internat.h"
 #include "../../LabelTrack.h"
 #include "../../NoteTrack.h"
 #include "../../TimeTrack.h"
 #include "../../prefs/SpectrogramSettings.h"
 #include "../../Project.h"
-#include "../../Shuttle.h"
+#include "../../ProjectSettings.h"
+#include "../../ShuttleGetDefinition.h"
 #include "../../ShuttleGui.h"
+#include "../../ViewInfo.h"
 #include "../../WaveClip.h"
 #include "../../WaveTrack.h"
 #include "../../widgets/valnum.h"
-#include "../../widgets/ErrorDialog.h"
+#include "../../widgets/AudacityMessageBox.h"
 #include "../../Prefs.h"
 #include "../../wxFileNameWrapper.h"
+#include "../../prefs/GUIPrefs.h"
 #include "../../prefs/WaveformSettings.h"
+#include "../../tracks/playabletrack/wavetrack/ui/WaveTrackView.h"
+#include "../../tracks/playabletrack/wavetrack/ui/WaveTrackViewConstants.h"
 #include "../../widgets/NumericTextCtrl.h"
 #include "../../widgets/ProgressDialog.h"
 
@@ -541,8 +543,12 @@ bool NyquistEffect::Init()
       bool bAllowSpectralEditing = true;
 
       for ( auto t :
-               project->GetTracks()->Selected< const WaveTrack >() ) {
-         if (t->GetDisplay() != WaveTrack::Spectrum ||
+               TrackList::Get( *project ).Selected< const WaveTrack >() ) {
+         const auto displays = WaveTrackView::Get(*t).GetDisplays();
+         bool hasSpectral =
+            make_iterator_range( displays.begin(), displays.end())
+               .contains( WaveTrackViewConstants::Spectrum );
+         if ( !hasSpectral ||
              !(t->GetSpectrogramSettings().SpectralSelectionEnabled())) {
             bAllowSpectralEditing = false;
             break;
@@ -657,7 +663,7 @@ bool NyquistEffect::Process()
 
       mProps += wxString::Format(wxT("(putprop '*AUDACITY* (list %d %d %d) 'VERSION)\n"), AUDACITY_VERSION, AUDACITY_RELEASE, AUDACITY_REVISION);
       wxString lang = gPrefs->Read(wxT("/Locale/Language"), wxT(""));
-      lang = (lang.empty())? wxGetApp().SetLang(lang) : lang;
+      lang = (lang.empty())? GUIPrefs::SetLang(lang) : lang;
       mProps += wxString::Format(wxT("(putprop '*AUDACITY* \"%s\" 'LANGUAGE)\n"), lang);
 
       mProps += wxString::Format(wxT("(setf *DECIMAL-SEPARATOR* #\\%c)\n"), wxNumberFormatter::GetDecimalSeparator());
@@ -706,7 +712,8 @@ bool NyquistEffect::Process()
       mProps += wxString::Format(wxT("(putprop '*SYSTEM-TIME* \"%s\" 'MONTH-NAME)\n"), now.GetMonthName(month));
       mProps += wxString::Format(wxT("(putprop '*SYSTEM-TIME* \"%s\" 'DAY-NAME)\n"), now.GetWeekDayName(day));
 
-      mProps += wxString::Format(wxT("(putprop '*PROJECT* %d 'PROJECTS)\n"), (int) gAudacityProjects.size());
+      mProps += wxString::Format(wxT("(putprop '*PROJECT* %d 'PROJECTS)\n"),
+         (int) AllProjects{}.size());
       mProps += wxString::Format(wxT("(putprop '*PROJECT* \"%s\" 'NAME)\n"), project->GetProjectName());
 
       int numTracks = 0;
@@ -717,7 +724,7 @@ bool NyquistEffect::Process()
       wxString waveTrackList;   // track positions of selected audio tracks.
 
       {
-         auto countRange = project->GetTracks()->Leaders();
+         auto countRange = TrackList::Get( *project ).Leaders();
          for (auto t : countRange) {
             t->TypeSwitch( [&](const WaveTrack *) {
                numWave++;
@@ -738,7 +745,7 @@ bool NyquistEffect::Process()
       // numbers to Nyquist, whereas using "%g" will use the user's
       // decimal separator which may be a comma in some countries.
       mProps += wxString::Format(wxT("(putprop '*PROJECT* (float %s) 'RATE)\n"),
-                                 Internat::ToString(project->GetRate()));
+         Internat::ToString(ProjectSettings::Get(*project).GetRate()));
       mProps += wxString::Format(wxT("(putprop '*PROJECT* %d 'TRACKS)\n"), numTracks);
       mProps += wxString::Format(wxT("(putprop '*PROJECT* %d 'WAVETRACKS)\n"), numWave);
       mProps += wxString::Format(wxT("(putprop '*PROJECT* %d 'LABELTRACKS)\n"), numLabel);
@@ -932,7 +939,7 @@ finish:
       // Selection is to be set to whatever it is in the project.
       AudacityProject *project = GetActiveProject();
       if (project) {
-         auto &selectedRegion = project->GetViewInfo().selectedRegion;
+         auto &selectedRegion = ViewInfo::Get( *project ).selectedRegion;
          mT0 = selectedRegion.t0();
          mT1 = selectedRegion.t1();
       }
@@ -1060,16 +1067,22 @@ bool NyquistEffect::ProcessOne()
       wxString bitFormat;
       wxString spectralEditp;
 
+      using namespace WaveTrackViewConstants;
       mCurTrack[0]->TypeSwitch(
          [&](const WaveTrack *wt) {
             type = wxT("wave");
             spectralEditp = mCurTrack[0]->GetSpectrogramSettings().SpectralSelectionEnabled()? wxT("T") : wxT("NIL");
-            switch (wt->GetDisplay())
+            // To do: accommodate split views
+            auto viewType = WaveTrackViewConstants::NoDisplay;
+            auto displays = WaveTrackView::Get( *wt ).GetDisplays();
+            if (!displays.empty())
+               viewType = displays[0];
+            switch ( viewType )
             {
-            case WaveTrack::Waveform:
+            case Waveform:
                view = (mCurTrack[0]->GetWaveformSettings().scaleType == 0) ? wxT("\"Waveform\"") : wxT("\"Waveform (dB)\"");
                break;
-            case WaveTrack::Spectrum:
+            case Spectrum:
                view = wxT("\"Spectrogram\"");
                break;
             default: view = wxT("NIL"); break;
@@ -1405,7 +1418,7 @@ bool NyquistEffect::ProcessOne()
          // let Nyquist analyzers define more complicated selections
          nyx_get_label(l, &t0, &t1, &str);
 
-         ltrack->AddLabel(SelectedRegion(t0 + mT0, t1 + mT0), UTF8CTOWX(str), -2);
+         ltrack->AddLabel(SelectedRegion(t0 + mT0, t1 + mT0), UTF8CTOWX(str));
       }
       return (GetType() != EffectTypeProcess || mIsPrompt);
    }
@@ -1439,7 +1452,6 @@ bool NyquistEffect::ProcessOne()
       }
 
       outputTrack[i] = mFactory->NewWaveTrack(format, rate);
-      outputTrack[i]->SetWaveColorIndex( mCurTrack[i]->GetWaveColorIndex() );
 
       // Clean the initial buffer states again for the get callbacks
       // -- is this really needed?
@@ -1645,7 +1657,7 @@ double NyquistEffect::GetCtrlValue(const wxString &s)
    AudacityProject *project = GetActiveProject();
    if (project && s.IsSameAs(wxT("half-srate"), false)) {
       auto rate =
-         project->GetTracks()->Selected< const WaveTrack >()
+         TrackList::Get( *project ).Selected< const WaveTrack >()
             .min( &WaveTrack::GetRate );
       return (rate / 2.0);
    }
@@ -2352,15 +2364,15 @@ void NyquistEffect::OSCallback()
 
 FilePaths NyquistEffect::GetNyquistSearchPath()
 {
-   const auto &audacityPathList = wxGetApp().audacityPathList;
+   const auto &audacityPathList = FileNames::AudacityPathList();
    FilePaths pathList;
 
    for (size_t i = 0; i < audacityPathList.size(); i++)
    {
       wxString prefix = audacityPathList[i] + wxFILE_SEP_PATH;
-      wxGetApp().AddUniquePathToPathList(prefix + wxT("nyquist"), pathList);
-      wxGetApp().AddUniquePathToPathList(prefix + wxT("plugins"), pathList);
-      wxGetApp().AddUniquePathToPathList(prefix + wxT("plug-ins"), pathList);
+      FileNames::AddUniquePathToPathList(prefix + wxT("nyquist"), pathList);
+      FileNames::AddUniquePathToPathList(prefix + wxT("plugins"), pathList);
+      FileNames::AddUniquePathToPathList(prefix + wxT("plug-ins"), pathList);
    }
    pathList.push_back(FileNames::PlugInDir());
 
@@ -3187,8 +3199,8 @@ void * nyq_reformat_aud_do_response(const wxString & Str) {
    LVAL dst;
    LVAL message;
    LVAL success;
-   wxString Left = Str.BeforeLast('\n').BeforeLast('\n');
-   wxString Right = Str.BeforeLast('\n').AfterLast('\n');
+   wxString Left = Str.BeforeLast('\n').BeforeLast('\n').ToAscii();
+   wxString Right = Str.BeforeLast('\n').AfterLast('\n').ToAscii();
    message = cvstring(Left);
    success = Right.EndsWith("OK") ? s_true : nullptr;
    dst = cons(message, success);

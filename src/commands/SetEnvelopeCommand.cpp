@@ -19,15 +19,11 @@
 #include "../Audacity.h"
 #include "SetEnvelopeCommand.h"
 
-#include "../Project.h"
-#include "../Track.h"
-#include "../TrackPanel.h"
 #include "../WaveClip.h"
 #include "../WaveTrack.h"
 #include "../Envelope.h"
 #include "../Shuttle.h"
 #include "../ShuttleGui.h"
-#include "CommandContext.h"
 
 SetEnvelopeCommand::SetEnvelopeCommand()
 {
@@ -54,9 +50,8 @@ void SetEnvelopeCommand::PopulateOrExchange(ShuttleGui & S)
    S.EndMultiColumn();
 }
 
-bool SetEnvelopeCommand::ApplyInner( const CommandContext & context, Track * t )
+bool SetEnvelopeCommand::ApplyInner( const CommandContext &, Track * t )
 {
-   static_cast<void>(context);
    // if no time is specified, then
    //   - delete deletes any envelope in selected tracks.
    //   - value is not set for any clip
@@ -74,7 +69,7 @@ bool SetEnvelopeCommand::ApplyInner( const CommandContext & context, Track * t )
             // Inside this IF is where we actually apply the command
             Envelope* pEnv = pClip->GetEnvelope();
             if( bHasDelete && mbDelete )
-               pEnv->mEnv.clear();
+               pEnv->Clear();
             if( bHasT && bHasV )
                pEnv->InsertOrReplace( mT, pEnv->ClampValue( mV ) );
          }

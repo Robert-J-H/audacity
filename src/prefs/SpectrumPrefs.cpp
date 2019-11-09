@@ -23,17 +23,19 @@
 #include <wx/defs.h>
 #include <wx/intl.h>
 #include <wx/checkbox.h>
+#include <wx/textctrl.h>
 
 #include "../FFT.h"
 #include "../Project.h"
 #include "../ShuttleGui.h"
-#include "../WaveTrack.h"
 
 #include "../TrackPanel.h"
+#include "../WaveTrack.h"
+#include "../tracks/playabletrack/wavetrack/ui/WaveTrackView.h"
 
 #include <algorithm>
 
-#include "../widgets/ErrorDialog.h"
+#include "../widgets/AudacityMessageBox.h"
 
 SpectrumPrefs::SpectrumPrefs(wxWindow * parent, wxWindowID winid, WaveTrack *wt)
 :  PrefsPanel(parent, winid, wt ? _("Spectrogram Settings") : _("Spectrograms"))
@@ -47,7 +49,7 @@ SpectrumPrefs::SpectrumPrefs(wxWindow * parent, wxWindowID winid, WaveTrack *wt)
       wt->GetSpectrumBounds(&mOrigMin, &mOrigMax);
       mTempSettings.maxFreq = mOrigMax;
       mTempSettings.minFreq = mOrigMin;
-      mOrigDisplay = mWt->GetDisplay();
+      mOrigPlacements = WaveTrackView::Get( *mWt ).SavePlacements();
    }
    else  {
       mTempSettings = mOrigSettings = SpectrogramSettings::defaults();
@@ -422,13 +424,13 @@ void SpectrumPrefs::Rollback()
    if (mWt && isOpenPage) {
       auto channels = TrackList::Channels(mWt);
       for (auto channel : channels)
-         channel->SetDisplay(mOrigDisplay);
+         WaveTrackView::Get( *channel ).RestorePlacements( mOrigPlacements );
    }
 
    if (isOpenPage) {
-      TrackPanel *const tp = ::GetActiveProject()->GetTrackPanel();
-      tp->UpdateVRulers();
-      tp->Refresh(false);
+      auto &tp = TrackPanel::Get ( *::GetActiveProject() );
+      tp.UpdateVRulers();
+      tp.Refresh(false);
    }
 }
 
@@ -469,13 +471,14 @@ void SpectrumPrefs::Preview()
 
    if (mWt && isOpenPage) {
       for (auto channel : TrackList::Channels(mWt))
-         channel->SetDisplay(WaveTrack::Spectrum);
+         WaveTrackView::Get( *channel )
+            .SetDisplay( WaveTrackViewConstants::Spectrum );
    }
 
    if (isOpenPage) {
-      TrackPanel *const tp = ::GetActiveProject()->GetTrackPanel();
-      tp->UpdateVRulers();
-      tp->Refresh(false);
+      auto &tp = TrackPanel::Get( *::GetActiveProject() );
+      tp.UpdateVRulers();
+      tp.Refresh(false);
    }
 }
 
@@ -575,13 +578,12 @@ BEGIN_EVENT_TABLE(SpectrumPrefs, PrefsPanel)
 
 END_EVENT_TABLE()
 
-SpectrumPrefsFactory::SpectrumPrefsFactory(WaveTrack *wt)
-: mWt(wt)
+PrefsPanel::Factory
+SpectrumPrefsFactory( WaveTrack *wt )
 {
-}
-
-PrefsPanel *SpectrumPrefsFactory::operator () (wxWindow *parent, wxWindowID winid)
-{
-   wxASSERT(parent); // to justify safenew
-   return safenew SpectrumPrefs(parent, winid, mWt);
+   return [=](wxWindow *parent, wxWindowID winid)
+   {
+      wxASSERT(parent); // to justify safenew
+      return safenew SpectrumPrefs(parent, winid, wt);
+   };
 }

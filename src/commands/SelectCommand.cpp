@@ -35,11 +35,12 @@ explicitly code all three.
 #include <wx/string.h>
 #include <float.h>
 
-#include "../Project.h"
-#include "../Track.h"
+#include "../ProjectSelectionManager.h"
 #include "../TrackPanel.h"
 #include "../Shuttle.h"
 #include "../ShuttleGui.h"
+#include "../effects/Effect.h"
+#include "../ViewInfo.h"
 #include "CommandContext.h"
 
 
@@ -85,7 +86,7 @@ void SelectTimeCommand::PopulateOrExchange(ShuttleGui & S)
 bool SelectTimeCommand::Apply(const CommandContext & context){
    // Many commands need focus on track panel.
    // No harm in setting it with a scripted select.
-   context.GetProject()->GetTrackPanel()->SetFocus();
+   TrackPanel::Get( context.project ).SetFocus();
    if( !bHasT0 && !bHasT1 )
       return true;
 
@@ -97,12 +98,12 @@ bool SelectTimeCommand::Apply(const CommandContext & context){
    if( !bHasRelativeSpec )
       mRelativeTo = 0;
 
-   AudacityProject * p = context.GetProject();
-   double end = p->GetTracks()->GetEndTime();
+   AudacityProject * p = &context.project;
+   double end = TrackList::Get( *p ).GetEndTime();
    double t0;
    double t1;
 
-   const auto &selectedRegion = p->GetViewInfo().selectedRegion;
+   auto &selectedRegion = ViewInfo::Get( *p ).selectedRegion;
    switch( bHasRelativeSpec ? mRelativeTo : 0 ){
    default:
    case 0: //project start
@@ -131,7 +132,7 @@ bool SelectTimeCommand::Apply(const CommandContext & context){
       break;
    }
 
-   p->mViewInfo.selectedRegion.setTimes( t0, t1);
+   selectedRegion.setTimes( t0, t1 );
    return true;
 }
 
@@ -164,7 +165,7 @@ bool SelectFrequenciesCommand::Apply(const CommandContext & context){
    if( !bHasBottom )
       mBottom = 0.0;
 
-   context.GetProject()->SSBL_ModifySpectralSelection(
+   ProjectSelectionManager::Get( context.project ).SSBL_ModifySpectralSelection(
       mBottom, mTop, false);// false for not done.
    return true;
 }
@@ -214,7 +215,7 @@ bool SelectTracksCommand::Apply(const CommandContext &context)
    // Used to invalidate cached selection and tracks.
    Effect::IncEffectCounter();
    int index = 0;
-   TrackList *tracks = context.GetProject()->GetTracks();
+   auto &tracks = TrackList::Get( context.project );
 
    // Defaults if no value...
    if( !bHasNumTracks ) 
@@ -226,7 +227,7 @@ bool SelectTracksCommand::Apply(const CommandContext &context)
    double last = mFirstTrack+mNumTracks;
    double first = mFirstTrack;
 
-   for (auto t : tracks->Leaders()) {
+   for (auto t : tracks.Leaders()) {
       auto channels = TrackList::Channels(t);
       double term = 0.0;
       // Add 0.01 so we are free of rounding errors in comparisons.

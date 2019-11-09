@@ -15,12 +15,14 @@
 
 #ifdef EXPERIMENTAL_MIDI_OUT
 
-#include "../../../../HitTestResult.h"
-#include "../../../../Project.h"
+#include "NoteTrackControls.h"
+#include "../../../../ProjectHistory.h"
 #include "../../../../RefreshCode.h"
-#include "../../../../TrackPanel.h" // for TrackInfo
+#include "../../../../TrackInfo.h"
+#include "../../../../TrackPanel.h"
 #include "../../../../UndoManager.h"
 #include "../../../../NoteTrack.h"
+#include "../../../../ViewInfo.h"
 
 VelocitySliderHandle::VelocitySliderHandle
 ( SliderFn sliderFn, const wxRect &rect,
@@ -61,7 +63,9 @@ UIHandle::Result VelocitySliderHandle::SetValue
 UIHandle::Result VelocitySliderHandle::CommitChanges
 (const wxMouseEvent &, AudacityProject *pProject)
 {
-   pProject->PushState(_("Moved velocity slider"), _("Velocity"), UndoPush::CONSOLIDATE);
+   ProjectHistory::Get( *pProject )
+      .PushState(_("Moved velocity slider"), _("Velocity"),
+         UndoPush::CONSOLIDATE);
    return RefreshCode::RefreshCell;
 }
 
@@ -76,15 +80,15 @@ UIHandlePtr VelocitySliderHandle::HitTest
       return {};
 
    wxRect sliderRect;
-   TrackInfo::GetVelocityRect(rect.GetTopLeft(), sliderRect);
+   NoteTrackControls::GetVelocityRect(rect.GetTopLeft(), sliderRect);
    if ( TrackInfo::HideTopItem( rect, sliderRect, kTrackInfoSliderAllowance ) )
       return {};
    if (sliderRect.Contains(state.m_x, state.m_y)) {
       auto sliderFn =
       []( AudacityProject *pProject, const wxRect &sliderRect, Track *pTrack ) {
-         return TrackInfo::VelocitySlider
+         return NoteTrackControls::VelocitySlider
             (sliderRect, static_cast<NoteTrack*>( pTrack ), true,
-             const_cast<TrackPanel*>(pProject->GetTrackPanel()));
+             &TrackPanel::Get( *pProject ));
       };
       auto result = std::make_shared<VelocitySliderHandle>(
          sliderFn, sliderRect, pTrack );

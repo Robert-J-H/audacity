@@ -37,6 +37,18 @@ class GUIPrefs final : public PrefsPanel
    static void GetRangeChoices(
       wxArrayStringEx *pChoices, wxArrayStringEx *pCodes);
 
+   // If no input language given, defaults first to choice in preferences, then
+   // to system language.
+   // Returns the language actually used which is not lang if lang cannot be found.
+   static wxString InitLang( wxString lang = {} );
+
+   // If no input language given, defaults to system language.
+   // Returns the language actually used which is not lang if lang cannot be found.
+   static wxString SetLang( const wxString & lang );
+
+   // Returns the last language code that was set
+   static wxString GetLang();
+
  private:
    void Populate();
 
@@ -53,10 +65,9 @@ class GUIPrefs final : public PrefsPanel
    wxArrayStringEx mRangeChoices;
 };
 
-/// A PrefsPanelFactory that creates one GUIPrefs panel.
-class GUIPrefsFactory final : public PrefsPanelFactory
-{
-public:
-   PrefsPanel *operator () (wxWindow *parent, wxWindowID winid) override;
-};
+/// A PrefsPanel::Factory that creates one GUIPrefs panel.
+extern PrefsPanel::Factory GUIPrefsFactory;
+
+int ShowClippingPrefsID();
+
 #endif

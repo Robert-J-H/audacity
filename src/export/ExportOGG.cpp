@@ -28,15 +28,14 @@
 #include <vorbis/vorbisenc.h>
 
 #include "../FileIO.h"
-#include "../Project.h"
+#include "../ProjectSettings.h"
 #include "../Mix.h"
 #include "../Prefs.h"
 #include "../ShuttleGui.h"
 
-#include "../Internat.h"
 #include "../Tags.h"
 #include "../Track.h"
-#include "../widgets/ErrorDialog.h"
+#include "../widgets/AudacityMessageBox.h"
 #include "../widgets/ProgressDialog.h"
 
 //----------------------------------------------------------------------------
@@ -171,8 +170,8 @@ ProgressResult ExportOGG::Export(AudacityProject *project,
                        const Tags *metadata,
                        int WXUNUSED(subformat))
 {
-   double    rate    = project->GetRate();
-   const TrackList *tracks = project->GetTracks();
+   double    rate    = ProjectSettings::Get( *project ).GetRate();
+   const auto &tracks = TrackList::Get( *project );
    double    quality = (gPrefs->Read(wxT("/FileFormats/OggExportQuality"), 50)/(float)100.0);
 
    wxLogNull logNo;            // temporarily disable wxWidgets error messages
@@ -196,14 +195,11 @@ ProgressResult ExportOGG::Export(AudacityProject *project,
    vorbis_dsp_state dsp;
    vorbis_block     block;
 
-   auto cleanup = finally( [&] {
-      ogg_stream_clear(&stream);
 
-      vorbis_block_clear(&block);
-      vorbis_dsp_clear(&dsp);
+   auto cleanup1 = finally( [&] {
       vorbis_info_clear(&info);
-      vorbis_comment_clear(&comment);
    } );
+
 
    // Many of the library functions called below return 0 for success and
    // various nonzero codes for failure.
@@ -212,22 +208,28 @@ ProgressResult ExportOGG::Export(AudacityProject *project,
    vorbis_info_init(&info);
    if (vorbis_encode_init_vbr(&info, numChannels, (int)(rate + 0.5), quality)) {
       // TODO: more precise message
-      AudacityMessageBox(_("Unable to export"));
+      AudacityMessageBox(_("Unable to export - rate or quality problem"));
       return ProgressResult::Cancelled;
    }
 
+   auto cleanup2 = finally( [&] {
+      ogg_stream_clear(&stream);
+
+      vorbis_block_clear(&block);
+      vorbis_dsp_clear(&dsp);
+      vorbis_comment_clear(&comment);
+   } );
+
    // Retrieve tags
    if (!FillComment(project, &comment, metadata)) {
-      // TODO: more precise message
-      AudacityMessageBox(_("Unable to export"));
+      AudacityMessageBox(_("Unable to export - problem with metadata"));
       return ProgressResult::Cancelled;
    }
 
    // Set up analysis state and auxiliary encoding storage
    if (vorbis_analysis_init(&dsp, &info) ||
        vorbis_block_init(&dsp, &block)) {
-      // TODO: more precise message
-      AudacityMessageBox(_("Unable to export"));
+      AudacityMessageBox(_("Unable to export - problem initialising"));
       return ProgressResult::Cancelled;
    }
 
@@ -236,8 +238,7 @@ ProgressResult ExportOGG::Export(AudacityProject *project,
    // chained streams with concatenation.
    srand(time(NULL));
    if (ogg_stream_init(&stream, rand())) {
-      // TODO: more precise message
-      AudacityMessageBox(_("Unable to export"));
+      AudacityMessageBox(_("Unable to export - problem creating stream"));
       return ProgressResult::Cancelled;
    }
 
@@ -259,8 +260,7 @@ ProgressResult ExportOGG::Export(AudacityProject *project,
       ogg_stream_packetin(&stream, &bitstream_header) ||
       ogg_stream_packetin(&stream, &comment_header) ||
       ogg_stream_packetin(&stream, &codebook_header)) {
-      // TODO: more precise message
-      AudacityMessageBox(_("Unable to export"));
+      AudacityMessageBox(_("Unable to export - problem with packets"));
       return ProgressResult::Cancelled;
    }
 
@@ -269,17 +269,13 @@ ProgressResult ExportOGG::Export(AudacityProject *project,
    while (ogg_stream_flush(&stream, &page)) {
       if ( outFile.Write(page.header, page.header_len).GetLastError() ||
            outFile.Write(page.body, page.body_len).GetLastError()) {
-         // TODO: more precise message
-         AudacityMessageBox(_("Unable to export"));
+         AudacityMessageBox(_("Unable to export - problem with file"));
          return ProgressResult::Cancelled;
       }
    }
 
-   const WaveTrackConstArray waveTracks =
-      tracks->GetWaveTrackConstArray(selectionOnly, false);
    {
-      auto mixer = CreateMixer(waveTracks,
-         tracks->GetTimeTrack(),
+      auto mixer = CreateMixer(tracks, selectionOnly,
          t0, t1,
          numChannels, SAMPLES_PER_RUN, false,
          rate, floatSample, true, mixerSpec);
@@ -382,7 +378,7 @@ bool ExportOGG::FillComment(AudacityProject *project, vorbis_comment *comment, c
 {
    // Retrieve tags from project if not over-ridden
    if (metadata == NULL)
-      metadata = project->GetTags();
+      metadata = &Tags::Get( *project );
 
    vorbis_comment_init(comment);
 

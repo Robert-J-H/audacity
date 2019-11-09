@@ -32,6 +32,7 @@ click from the menu into the actaul function to be called.
 #include "ShuttleGui.h"
 #include "Project.h"
 #include "commands/CommandManager.h"
+#include "CommonCommandFlags.h"
 
 #if defined(__WXMSW__)
 #include <wx/init.h>
@@ -152,9 +153,9 @@ int ModuleDispatch(ModuleDispatchTypes type)
          if( p== NULL )
             return 0;
 
-         wxMenuBar * pBar = p->GetMenuBar();
+         wxMenuBar * pBar = GetProjectFrame( *p ).GetMenuBar();
          wxMenu * pMenu = pBar->GetMenu( 8 );  // Menu 8 is the Analyze Menu.
-         CommandManager * c = p->GetCommandManager();
+         CommandManager * c = &CommandManager::Get( *p );
 
          c->SetCurrentMenu( pMenu );
          c->AddSeparator();

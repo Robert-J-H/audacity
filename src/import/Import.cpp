@@ -37,6 +37,7 @@ and ImportLOF.cpp.
 
 #include "../Audacity.h" // for USE_* macros
 #include "Import.h"
+
 #include "ImportPlugin.h"
 
 #include <algorithm>
@@ -47,19 +48,11 @@ and ImportLOF.cpp.
 #include <wx/listbox.h>
 #include <wx/log.h>
 #include <wx/sizer.h>         //for wxBoxSizer
+#include "../FileNames.h"
 #include "../ShuttleGui.h"
 #include "../Project.h"
 #include "../WaveTrack.h"
 
-#include "ImportPCM.h"
-#include "ImportMP3.h"
-#include "ImportOGG.h"
-#include "ImportQT.h"
-#include "ImportRaw.h"
-#include "ImportLOF.h"
-#include "ImportFLAC.h"
-#include "ImportFFmpeg.h"
-#include "ImportGStreamer.h"
 #include "../Prefs.h"
 
 #include "../widgets/ProgressDialog.h"
@@ -84,30 +77,52 @@ Importer::~Importer()
 {
 }
 
+ImportPluginList &Importer::sImportPluginList()
+{
+   static ImportPluginList theList;
+   return theList;
+}
+
+Importer::RegisteredImportPlugin::RegisteredImportPlugin(
+   std::unique_ptr<ImportPlugin> pPlugin )
+{
+   if ( pPlugin )
+      sImportPluginList().emplace_back( std::move( pPlugin ) );
+}
+
+UnusableImportPluginList &Importer::sUnusableImportPluginList()
+{
+   static UnusableImportPluginList theList;
+   return theList;
+}
+
+Importer::RegisteredUnusableImportPlugin::RegisteredUnusableImportPlugin(
+   std::unique_ptr<UnusableImportPlugin> pPlugin )
+{
+   if ( pPlugin )
+      sUnusableImportPluginList().emplace_back( std::move( pPlugin ) );
+}
+
 bool Importer::Initialize()
 {
-   ImportPluginList{}.swap(mImportPluginList);
-   UnusableImportPluginList{}.swap(mUnusableImportPluginList);
-   ExtImportItems{}.swap(mExtImportItems);
-
    // build the list of import plugin and/or unusableImporters.
    // order is significant.  If none match, they will all be tried
    // in the order defined here.
-   GetPCMImportPlugin(mImportPluginList, mUnusableImportPluginList);
-   GetOGGImportPlugin(mImportPluginList, mUnusableImportPluginList);
-   GetFLACImportPlugin(mImportPluginList, mUnusableImportPluginList);
-   GetMP3ImportPlugin(mImportPluginList, mUnusableImportPluginList);
-   GetLOFImportPlugin(mImportPluginList, mUnusableImportPluginList);
 
-   #if defined(USE_FFMPEG)
-   GetFFmpegImportPlugin(mImportPluginList, mUnusableImportPluginList);
-   #endif
-   #ifdef USE_QUICKTIME
-   GetQTImportPlugin(mImportPluginList, mUnusableImportPluginList);
-   #endif
-   #if defined(USE_GSTREAMER)
-   GetGStreamerImportPlugin(mImportPluginList, mUnusableImportPluginList);
-   #endif
+   // They were pushed on the array at static initialization time in an
+   // unspecified sequence.  Sort according to the sequence numbers they
+   // report to make the order determinate.
+   auto &list = sImportPluginList();
+   std::sort( list.begin(), list.end(),
+      []( const ImportPluginList::value_type &a,
+          const ImportPluginList::value_type &b ){
+         return a->SequenceNumber() < b->SequenceNumber();
+      }
+   );
+
+   // Ordering of the unusable plugin list is not important.
+
+   ExtImportItems{}.swap(mExtImportItems);
 
    ReadImportItems();
 
@@ -117,15 +132,13 @@ bool Importer::Initialize()
 bool Importer::Terminate()
 {
    WriteImportItems();
-   ImportPluginList{}.swap( mImportPluginList );
-   UnusableImportPluginList{}.swap( mUnusableImportPluginList );
 
    return true;
 }
 
 void Importer::GetSupportedImportFormats(FormatList *formatList)
 {
-   for(const auto &importPlugin : mImportPluginList)
+   for(const auto &importPlugin : sImportPluginList())
    {
       formatList->emplace_back(importPlugin->GetPluginFormatDescription(),
                                importPlugin->GetSupportedExtensions());
@@ -207,7 +220,7 @@ void Importer::ReadImportItems()
       for (size_t i = 0; i < new_item->filters.size(); i++)
       {
          bool found = false;
-         for (const auto &importPlugin : mImportPluginList)
+         for (const auto &importPlugin : sImportPluginList())
          {
             if (importPlugin->GetPluginStringID() == new_item->filters[i])
             {
@@ -221,7 +234,7 @@ void Importer::ReadImportItems()
            new_item->filter_objects.push_back(nullptr);
       }
       /* Find all filter objects that are not present in the filter list */
-      for (const auto &importPlugin : mImportPluginList)
+      for (const auto &importPlugin : sImportPluginList())
       {
          bool found = false;
          for (size_t i = 0; i < new_item->filter_objects.size(); i++)
@@ -318,22 +331,13 @@ std::unique_ptr<ExtImportItem> Importer::CreateDefaultImportItem()
    new_item->extensions.push_back(wxT("*"));
    new_item->mime_types.push_back(wxT("*"));
 
-   for (const auto &importPlugin : mImportPluginList)
+   for (const auto &importPlugin : sImportPluginList())
    {
       new_item->filters.push_back(importPlugin->GetPluginStringID());
       new_item->filter_objects.push_back(importPlugin.get());
    }
    new_item->divider = -1;
    return new_item;
-}
-
-bool Importer::IsMidi(const FilePath &fName)
-{
-   const auto extension = fName.AfterLast(wxT('.'));
-   return
-      extension.IsSameAs(wxT("gro"), false) ||
-      extension.IsSameAs(wxT("midi"), false) ||
-      extension.IsSameAs(wxT("mid"), false);
 }
 
 // returns number of tracks imported
@@ -351,7 +355,7 @@ bool Importer::Import(const FilePath &fName,
    // Always refuse to import MIDI, even though the FFmpeg plugin pretends to know how (but makes very bad renderings)
 #ifdef USE_MIDI
    // MIDI files must be imported, not opened
-   if (IsMidi(fName)) {
+   if (FileNames::IsMidi(fName)) {
       errorMessage.Printf(_("\"%s\" \nis a MIDI file, not an audio file. \nAudacity cannot open this type of file for playing, but you can\nedit it by clicking File > Import > MIDI."), fName);
       return false;
    }
@@ -381,7 +385,7 @@ bool Importer::Import(const FilePath &fName,
 
    if (usersSelectionOverrides)
    {
-      for (const auto &plugin : mImportPluginList)
+      for (const auto &plugin : sImportPluginList())
       {
          if (plugin->GetPluginFormatDescription().CompareTo(type) == 0)
          {
@@ -451,16 +455,16 @@ bool Importer::Import(const FilePath &fName,
 
    // Add all plugins that support the extension
 
-   // Here we rely on the fact that the first plugin in mImportPluginList is libsndfile.
+   // Here we rely on the fact that the first plugin in sImportPluginList() is libsndfile.
    // We want to save this for later insertion ahead of libmad, if libmad supports the extension.
-   // The order of plugins in mImportPluginList is determined by the Importer constructor alone and
+   // The order of plugins in sImportPluginList() is determined by the Importer constructor alone and
    // is not changed by user selection overrides or any other mechanism, but we include an assert
    // in case subsequent code revisions to the constructor should break this assumption that
    // libsndfile is first.
-   ImportPlugin *libsndfilePlugin = mImportPluginList.begin()->get();
+   ImportPlugin *libsndfilePlugin = sImportPluginList().begin()->get();
    wxASSERT(libsndfilePlugin->GetPluginStringID() == wxT("libsndfile"));
 
-   for (const auto &plugin : mImportPluginList)
+   for (const auto &plugin : sImportPluginList())
    {
       // Make sure its not already in the list
       if (importPlugins.end() ==
@@ -496,7 +500,7 @@ bool Importer::Import(const FilePath &fName,
    // Otherwise, if FFmpeg (libav) has not been installed, libmad will still be there near the
    // end of the preference list importPlugins, where it will claim success importing FFmpeg file
    // formats unsuitable for it, and produce distorted results.
-   for (const auto &plugin : mImportPluginList)
+   for (const auto &plugin : sImportPluginList())
    {
       if (!(plugin->GetPluginStringID() == wxT("libmad")))
       {
@@ -575,7 +579,7 @@ bool Importer::Import(const FilePath &fName,
    // None of our plugins can handle this file.  It might be that
    // Audacity supports this format, but support was not compiled in.
    // If so, notify the user of this fact
-   for (const auto &unusableImportPlugin : mUnusableImportPluginList)
+   for (const auto &unusableImportPlugin : sUnusableImportPluginList())
    {
       if( unusableImportPlugin->SupportsExtension(extension) )
       {
@@ -662,6 +666,11 @@ bool Importer::Import(const FilePath &fName,
       // Audacity project
       if (extension.IsSameAs(wxT("aup"), false)) {
          errorMessage.Printf(_("\"%s\" is an Audacity Project file. \nUse the 'File > Open' command to open Audacity Projects."), fName);
+         return false;
+      }
+
+      if( !wxFileExists(fName)){
+         errorMessage.Printf(_("File \"%s\" not found."), fName);
          return false;
       }
 

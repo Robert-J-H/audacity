@@ -47,18 +47,19 @@ AliasedFile s.
 #include <wx/choice.h>
 #include <wx/clipbrd.h>
 #include <wx/dataobj.h>
+#include <wx/frame.h>
 #include <wx/stattext.h>
 
-#include "BlockFile.h"
+#include "blockfile/SimpleBlockFile.h"
 #include "DirManager.h"
-#include "Internat.h"
 #include "Prefs.h"
 #include "Project.h"
+#include "ProjectSettings.h"
 #include "Sequence.h"
 #include "ShuttleGui.h"
 #include "WaveTrack.h"
 #include "WaveClip.h"
-#include "widgets/ErrorDialog.h"
+#include "widgets/AudacityMessageBox.h"
 #include "widgets/ProgressDialog.h"
 
 #include <unordered_map>
@@ -76,7 +77,7 @@ using BoolBlockFileHash = std::unordered_map<BlockFile *, bool>;
 static void GetAllSeqBlocks(AudacityProject *project,
                             BlockPtrArray *outBlocks)
 {
-   for (auto waveTrack : project->GetTracks()->Any< WaveTrack >()) {
+   for (auto waveTrack : TrackList::Get( *project ).Any< WaveTrack >()) {
       for(const auto &clip : waveTrack->GetAllClips()) {
          Sequence *sequence = clip->GetSequence();
          BlockArray &blocks = sequence->GetBlockArray();
@@ -108,7 +109,8 @@ static void ReplaceBlockFiles(BlockPtrArray &blocks,
 void FindDependencies(AudacityProject *project,
                       AliasedFileArray &outAliasedFiles)
 {
-   sampleFormat format = project->GetDefaultFormat();
+   const auto &settings = ProjectSettings::Get( *project );
+   sampleFormat format = settings.GetDefaultFormat();
 
    BlockPtrArray blocks;
    GetAllSeqBlocks(project, &blocks);
@@ -125,7 +127,7 @@ void FindDependencies(AudacityProject *project,
          auto aliasBlockFile = static_cast<AliasBlockFile*>( &*f );
          const wxFileName &fileName = aliasBlockFile->GetAliasedFileName();
 
-         // In DirManager::ProjectFSCK(), if the user has chosen to
+         // In ProjectFSCK(), if the user has chosen to
          // "Replace missing audio with silence", the code there puts in an empty wxFileName.
          // Don't count those in dependencies.
          if (!fileName.IsOk())
@@ -164,7 +166,8 @@ static void RemoveDependencies(AudacityProject *project,
                                AliasedFileArray &aliasedFiles)
 // STRONG-GUARANTEE
 {
-   const auto &dirManager = project->GetDirManager();
+   auto &dirManager = DirManager::Get( *project );
+   const auto &settings = ProjectSettings::Get( *project );
 
    ProgressDialog progress
       (_("Removing Dependencies"),
@@ -184,7 +187,7 @@ static void RemoveDependencies(AudacityProject *project,
    BlockPtrArray blocks;
    GetAllSeqBlocks(project, &blocks);
 
-   const sampleFormat format = project->GetDefaultFormat();
+   const sampleFormat format = settings.GetDefaultFormat();
    ReplacedBlockFileHash blockFileHash;
    wxLongLong completedBytes = 0;
    for (const auto blockFile : blocks) {
@@ -205,11 +208,14 @@ static void RemoveDependencies(AudacityProject *project,
          BlockFilePtr newBlockFile;
          {
             SampleBuffer buffer(len, format);
-            // We tolerate exceptions from NewSimpleBlockFile and so we
-            // can allow exceptions from ReadData too
+            // We tolerate exceptions from NewBlockFile
+            // and so we can allow exceptions from ReadData too
             f->ReadData(buffer.ptr(), format, 0, len);
             newBlockFile =
-               dirManager->NewSimpleBlockFile(buffer.ptr(), len, format);
+               dirManager.NewBlockFile( [&]( wxFileNameWrapper filePath ) {
+                  return make_blockfile<SimpleBlockFile>(
+                     std::move(filePath), buffer.ptr(), len, format);
+               } );
          }
 
          // Update our hash so we know what block files we've done
@@ -595,6 +601,7 @@ void DependencyDialog::SaveFutureActionChoice()
 bool ShowDependencyDialogIfNeeded(AudacityProject *project,
                                   bool isSaving)
 {
+   auto pWindow = FindProjectFrame( project );
    AliasedFileArray aliasedFiles;
    FindDependencies(project, aliasedFiles);
 
@@ -602,20 +609,28 @@ bool ShowDependencyDialogIfNeeded(AudacityProject *project,
       if (!isSaving)
       {
          wxString msg =
+#ifdef EXPERIMENTAL_OD_DATA
 _("Your project is currently self-contained; it does not depend on any external audio files. \
 \n\nIf you change the project to a state that has external dependencies on imported \
 files, it will no longer be self-contained. If you then Save without copying those files in, \
 you may lose data.");
+#else
+_("Your project is self-contained; it does not depend on any external audio files. \
+\n\nSome older Audacity projects may not be self-contained, and care \n\
+is needed to keep their external dependencies in the right place.\n\
+New projects will be self-contained and are less risky.");
+#endif
          AudacityMessageBox(msg,
                       _("Dependency Check"),
                       wxOK | wxICON_INFORMATION,
-                      project);
+                      pWindow);
       }
       return true; // Nothing to do.
    }
 
    if (isSaving)
    {
+#ifdef EXPERIMENTAL_OD_DATA
       wxString action =
          gPrefs->Read(
             wxT("/FileFormats/SaveProjectWithDependencies"),
@@ -629,9 +644,13 @@ you may lose data.");
       if (action == wxT("never"))
          // User never wants to remove dependencies
          return true;
+#else 
+      RemoveDependencies(project, aliasedFiles);
+      return true;
+#endif
    }
 
-   DependencyDialog dlog(project, -1, project, aliasedFiles, isSaving);
+   DependencyDialog dlog(pWindow, -1, project, aliasedFiles, isSaving);
    int returnCode = dlog.ShowModal();
    if (returnCode == wxID_CANCEL)
       return false;

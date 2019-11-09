@@ -24,12 +24,8 @@ and sample size to help you importing data of an unknown format.
 #include "../Audacity.h"
 #include "ImportRaw.h"
 
-#include "Import.h"
-
 #include "../DirManager.h"
-#include "../FileException.h"
 #include "../FileFormats.h"
-#include "../Internat.h"
 #include "../Prefs.h"
 #include "../ShuttleGui.h"
 #include "../UserException.h"
@@ -55,7 +51,6 @@ and sample size to help you importing data of an unknown format.
 #include <wx/timer.h>
 
 // #include "RawAudioGuess.h"
-#include "MultiFormatReader.h"
 #include "FormatClassifier.h"
 
 #include "sndfile.h"

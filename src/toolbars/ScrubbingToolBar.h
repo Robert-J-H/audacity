@@ -17,7 +17,8 @@
 #include <wx/defs.h>
 
 #include "ToolBar.h"
-#include "../Theme.h"
+
+class AudacityProject;
 
 class wxCommandEvent;
 class wxDC;
@@ -39,8 +40,11 @@ class ScrubbingToolBar final : public ToolBar {
 
 public:
 
-   ScrubbingToolBar();
+   ScrubbingToolBar( AudacityProject &project );
    virtual ~ScrubbingToolBar();
+
+   static ScrubbingToolBar &Get( AudacityProject &project );
+   static const ScrubbingToolBar &Get( const AudacityProject &project );
 
    void Create(wxWindow *parent) override;
 
@@ -68,10 +72,19 @@ private:
    wxImage *downImage;
    wxImage *hiliteImage;
 
+   void OnIdle( wxIdleEvent &evt );
+
 public:
 
    DECLARE_CLASS(ScrubbingToolBar)
    DECLARE_EVENT_TABLE()
+
+private:
+   void DoRegenerateTooltips( bool force );
+
+   bool mLastScrub{ false };
+   bool mLastSeek{ false };
+   bool mLastRuler{ false };
 };
 
 #endif

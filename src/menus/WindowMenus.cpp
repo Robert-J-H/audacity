@@ -7,10 +7,12 @@
 
 #ifdef __WXMAC__
 
-#include "../AudacityApp.h"
+#include "../CommonCommandFlags.h"
 #include "../Menus.h"
 #include "../Project.h"
 #include "../commands/CommandContext.h"
+
+#include <wx/frame.h>
 
 #undef USE_COCOA
 
@@ -29,8 +31,8 @@ namespace {
 
 void DoMacMinimize(AudacityProject *project)
 {
-   auto window = project;
-   if (window) {
+   if (project) {
+      auto window = &GetProjectFrame( *project );
 #ifdef USE_COCOA
       // Adapted from mbarman.mm in wxWidgets 3.0.2
       auto peer = window->GetPeer();
@@ -45,7 +47,7 @@ void DoMacMinimize(AudacityProject *project)
 #endif
 
       // So that the Minimize menu command disables
-      GetMenuManager(*project).UpdateMenus(*project);
+      MenuManager::Get(*project).UpdateMenus();
    }
 }
 
@@ -68,7 +70,7 @@ void OnMacMinimize(const CommandContext &context)
 
 void OnMacZoom(const CommandContext &context)
 {
-   auto window = &context.project;
+   auto window = &GetProjectFrame( context.project );
    auto topWindow = static_cast<wxTopLevelWindow*>(window);
    auto maximized = topWindow->IsMaximized();
    if (window) {
@@ -90,14 +92,13 @@ void OnMacBringAllToFront(const CommandContext &)
 {
    // Reall this de-miniaturizes all, which is not exactly the standard
    // behavior.
-   for (const auto project : gAudacityProjects) {
-      project->Raise();
-   }
+   for (const auto project : AllProjects{})
+      GetProjectFrame( *project ).Raise();
 }
 
 void OnMacMinimizeAll(const CommandContext &)
 {
-   for (const auto project : gAudacityProjects) {
+   for (const auto project : AllProjects{}) {
       DoMacMinimize(project.get());
    }
 }
@@ -159,15 +160,6 @@ MenuTable::BaseItemPtr ExtraWindowItems( AudacityProject & )
 
 #undef XXO
 #undef FN
-
-// One more Objective C++ function for another class scope, kept in this file
-
-void AudacityApp::MacActivateApp()
-{
-   id app = [NSApplication sharedApplication];
-   if ( [app respondsToSelector:@selector(activateIgnoringOtherApps:)] )
-      [app activateIgnoringOtherApps:YES];
-}
 
 #else
 
